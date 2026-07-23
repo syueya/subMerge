@@ -1,0 +1,203 @@
+<div class="min-h-screen">
+	<header class="relative z-30 border-b border-theme backdrop-blur" style="background: var(--sm-header-bg)">
+		<div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+			<div class="flex items-center gap-6">
+				<div class="flex items-center gap-2.5">
+					<img src="logo.svg" alt="SubMerge" class="h-8 w-8" />
+					<div class="leading-tight">
+						<div class="text-lg font-semibold tracking-tight">
+							SubMerge
+							<span class="ml-1.5 text-xs font-normal text-muted-2">panel</span>
+						</div>
+					</div>
+				</div>
+				<nav class="flex flex-wrap gap-1">
+					@for (item of nav; track item.path) {
+						<a
+							class="nav-link rounded-lg px-3 py-1.5 text-sm text-muted"
+							routerLinkActive="nav-link-active"
+							[routerLink]="item.path"
+							>{{ item.label }}</a
+						>
+					}
+				</nav>
+			</div>
+
+			<div class="user-menu" #userMenuRoot>
+				<button
+					type="button"
+					class="user-avatar-btn"
+					[attr.aria-expanded]="menuOpen()"
+					aria-haspopup="menu"
+					(click)="toggleMenu($event)"
+					title="账户与设置"
+				>
+					@if (auth.user()?.avatar) {
+						<img class="user-avatar-img" [src]="auth.user()!.avatar" alt="" />
+					} @else {
+						<span class="user-avatar-letter">{{ auth.avatarLetter() }}</span>
+					}
+				</button>
+
+				@if (menuOpen()) {
+					<div class="user-menu-panel" role="menu">
+						<div class="user-menu-head">
+							<div class="user-menu-avatar-sm">
+								@if (auth.user()?.avatar) {
+									<img [src]="auth.user()!.avatar" alt="" />
+								} @else {
+									<span>{{ auth.avatarLetter() }}</span>
+								}
+							</div>
+							<div class="min-w-0">
+								<div class="truncate text-sm font-semibold text-fg">{{ auth.displayName() }}</div>
+								<div class="truncate text-xs text-muted-2">@{{ auth.user()?.username || 'admin' }}</div>
+							</div>
+						</div>
+
+						<div class="user-menu-section">
+							<div class="user-menu-label">外观</div>
+							<div class="theme-switch" role="group" aria-label="主题">
+								<button
+									type="button"
+									class="theme-opt"
+									[class.active]="!theme.isDark()"
+									(click)="setTheme('light')"
+								>
+									浅色
+								</button>
+								<button
+									type="button"
+									class="theme-opt"
+									[class.active]="theme.isDark()"
+									(click)="setTheme('dark')"
+								>
+									深色
+								</button>
+							</div>
+						</div>
+
+<div class="user-menu-actions">
+								<button type="button" class="btn-secondary btn-sm user-menu-btn" role="menuitem" (click)="openProfile()">
+									账户设置
+								</button>
+								<button type="button" class="btn-danger btn-sm user-menu-btn" role="menuitem" (click)="logout()">
+									退出登录
+								</button>
+							</div>
+					</div>
+				}
+			</div>
+		</div>
+	</header>
+
+	<main class="mx-auto max-w-6xl px-4 py-6">
+		<router-outlet />
+	</main>
+</div>
+
+@if (profileOpen()) {
+	<div class="dialog-overlay" (click)="closeProfile()">
+		<div class="dialog-panel dialog-panel-md" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+				<div class="dialog-header">
+					<button
+						class="dialog-close"
+						type="button"
+						[disabled]="busy()"
+						(click)="closeProfile()"
+						title="关闭"
+						aria-label="关闭"
+					>
+						<span class="dialog-close-x" aria-hidden="true">×</span>
+					</button>
+					<div class="dialog-header-text">
+						<h3 class="dialog-title">账户设置</h3>
+						<p class="dialog-header-sub">修改资料与密码；主题在头像菜单里切换</p>
+					</div>
+				</div>
+				<div class="dialog-body">
+<!-- 头像 + 基本信息：一行两列；头像居中，按钮在下 -->
+					<div class="grid gap-4 sm:grid-cols-2">
+						<div class="flex flex-col items-center text-center">
+							<label class="field-label self-center">头像</label>
+							<div class="user-avatar-preview">
+								@if (formAvatarPreview) {
+									<img [src]="formAvatarPreview" alt="" />
+								} @else {
+									<span>{{ (formDisplayName || formUsername || auth.avatarLetter()).slice(0, 1).toUpperCase() }}</span>
+								}
+							</div>
+							<div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+								<label class="btn-secondary btn-sm cursor-pointer">
+									上传
+									<input type="file" accept="image/*" class="hidden" (change)="onAvatarFile($event)" />
+								</label>
+								@if (formAvatarPreview) {
+									<button class="btn-secondary btn-sm" type="button" (click)="clearAvatar()">移除</button>
+								}
+							</div>
+							<p class="mt-1.5 text-xs text-muted-2">正方形，&lt;150KB</p>
+						</div>
+						<div class="grid gap-3 content-start">
+							<div>
+								<label class="field-label">登录名</label>
+								<input
+									class="w-full"
+									[(ngModel)]="formUsername"
+									maxlength="32"
+									autocomplete="username"
+									placeholder="字母数字 _ - ."
+								/>
+							</div>
+							<div>
+								<label class="field-label">昵称</label>
+								<input class="w-full" [(ngModel)]="formDisplayName" maxlength="32" placeholder="显示名称" />
+							</div>
+						</div>
+					</div>
+
+				<div class="mt-5 border-t border-theme pt-4">
+					<div class="mb-2 text-sm font-medium text-fg">修改密码（可选）</div>
+					<div class="grid gap-3 sm:grid-cols-2">
+						<div class="sm:col-span-2">
+							<label class="field-label">当前密码</label>
+							<input
+								class="w-full"
+								type="password"
+								[(ngModel)]="formOldPassword"
+								autocomplete="current-password"
+							/>
+						</div>
+						<div>
+							<label class="field-label">新密码</label>
+							<input
+								class="w-full"
+								type="password"
+								[(ngModel)]="formNewPassword"
+								autocomplete="new-password"
+								placeholder="至少 8 位"
+							/>
+						</div>
+						<div>
+							<label class="field-label">确认新密码</label>
+							<input
+								class="w-full"
+								type="password"
+								[(ngModel)]="formNewPassword2"
+								autocomplete="new-password"
+							/>
+						</div>
+					</div>
+					<p class="mt-1.5 text-xs text-muted-2">改密成功后会退出，需用新密码重新登录</p>
+				</div>
+			</div>
+
+			<div class="dialog-actions">
+				<button class="btn-secondary" type="button" [disabled]="busy()" (click)="closeProfile()">取消</button>
+				<button class="btn-primary" type="button" [disabled]="busy()" (click)="saveProfile()">
+					{{ busy() ? '保存中…' : '保存' }}
+				</button>
+			</div>
+		</div>
+	</div>
+}

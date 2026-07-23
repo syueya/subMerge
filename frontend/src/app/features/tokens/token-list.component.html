@@ -1,0 +1,346 @@
+<div class="space-y-4">
+	<div class="flex flex-wrap items-start justify-between gap-3">
+		<div>
+			<h2 class="text-xl font-semibold">分享令牌</h2>
+			<p class="text-sm text-muted">
+				为每位朋友生成独立订阅链接；可按源限制节点，并按策略组投影精简配置（默认自动剪掉空组）
+			</p>
+		</div>
+	</div>
+
+	<div class="card space-y-3">
+		<div class="flex flex-wrap items-end gap-3">
+			<div class="min-w-[240px] flex-1">
+				<label class="field-label">朋友备注名</label>
+				<input class="w-full" [(ngModel)]="name" placeholder="例如：Alice" (keydown.enter)="create()" />
+			</div>
+			<button class="btn-primary" type="button" (click)="create()">创建令牌</button>
+		</div>
+
+		<div class="token-source-picker">
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<label class="field-label mb-0!">包含的订阅源</label>
+				<label class="token-source-all">
+					<input
+						type="checkbox"
+						[checked]="createAllSources()"
+						(change)="setCreateAll($any($event.target).checked)"
+					/>
+					<span>全部源</span>
+				</label>
+			</div>
+			@if (sourceList().length === 0) {
+				<p class="text-xs text-muted mt-2">暂无订阅源；创建后默认为全部源，可在「订阅源」页添加后再编辑令牌。</p>
+			} @else {
+				<div class="token-source-grid mt-2">
+					@for (src of sourceList(); track src.id) {
+						<label class="token-source-item" [class.is-disabled]="!src.enabled">
+							<input
+								type="checkbox"
+								[checked]="isCreateSourceChecked(src.id)"
+								(change)="toggleCreateSource(src.id, $any($event.target).checked)"
+							/>
+							<span class="token-source-name">{{ src.name }}</span>
+							@if (!src.enabled) {
+								<span class="badge-warn">已禁用</span>
+							}
+							<span class="text-xs text-muted-2">{{ src.proxyCount }} 节点</span>
+						</label>
+					}
+				</div>
+				@if (createAllSources()) {
+					<p class="text-xs text-muted mt-2">
+						已全选：包含当前全部源，之后新增的启用源也会自动纳入该链接。
+					</p>
+				} @else {
+					<p class="text-xs text-muted mt-2">仅勾选的源会出现在该订阅链接中；未勾选源的节点不会下发。</p>
+				}
+			}
+		</div>
+
+		<div class="token-source-picker">
+			<label class="field-label">策略组</label>
+			<div class="flex flex-wrap gap-x-4 gap-y-2 mt-1">
+				@for (opt of groupModeOptions; track opt.value) {
+					<label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted">
+						<input
+							type="radio"
+							name="createGroupMode"
+							[checked]="createGroupMode() === opt.value"
+							(change)="setCreateGroupMode(opt.value)"
+						/>
+						{{ opt.text }}
+					</label>
+				}
+			</div>
+			@if (createGroupMode() === 'auto') {
+				<p class="text-xs text-muted mt-2">
+					自动：按该链接实际节点去掉空地区组；规则指向被去掉的组时回退直连（推荐）。
+				</p>
+			} @else if (createGroupMode() === 'all') {
+				<p class="text-xs text-muted mt-2">全部：保留模板里的策略组；没有节点的组会占位为直连。</p>
+			} @else {
+				<p class="text-xs text-muted mt-2">自定义：只下发勾选的策略组；空组仍会跳过。</p>
+				@if (groupList().length === 0) {
+					<p class="text-xs text-muted mt-1">暂无策略组，请先在规则页创建。</p>
+				} @else {
+					<div class="token-source-grid mt-2">
+						@for (g of groupList(); track g.id) {
+							<label class="token-source-item" [class.is-disabled]="!g.enabled">
+								<input
+									type="checkbox"
+									[checked]="isCreateGroupChecked(g.name)"
+									(change)="toggleCreateGroup(g.name, $any($event.target).checked)"
+								/>
+								<span class="token-source-name">{{ g.name }}</span>
+								@if (!g.enabled) {
+									<span class="badge-warn">已禁用</span>
+								}
+							</label>
+						}
+					</div>
+				}
+			}
+		</div>
+	</div>
+
+	<div class="card p-0! overflow-hidden">
+		<div class="overflow-x-auto">
+			<table class="table token-table">
+				<thead>
+					<tr>
+						<th class="token-col-status">状态</th>
+						<th class="token-col-name">名称</th>
+						<th class="token-col-sources">订阅源</th>
+						<th class="token-col-groups">策略组</th>
+						<th class="token-col-url">订阅链接</th>
+						<th class="token-col-access">访问</th>
+						<th class="token-col-actions">操作</th>
+					</tr>
+				</thead>
+				<tbody>
+					@for (item of items(); track item.id) {
+						<tr>
+							<td class="token-col-status">
+								<span [class]="statusClass(item.status)">{{ statusText(item.status) }}</span>
+								@if (item.lastAccessAt) {
+									<div class="mt-1 text-xs text-muted-2" [title]="item.lastAccessAt">
+										{{ formatTime(item.lastAccessAt) }}
+									</div>
+								}
+							</td>
+							<td class="token-col-name">
+								<div class="font-medium text-fg">{{ item.name }}</div>
+								<div class="text-xs text-muted-2">{{ formatTime(item.createdAt) }}</div>
+							</td>
+							<td class="token-col-sources">
+								<div class="token-scope-stack" [title]="sourceScopeTitle(item)">
+									@for (line of sourceScopeLines(item); track line) {
+										<span class="token-scope-text">{{ line }}</span>
+									}
+								</div>
+							</td>
+							<td class="token-col-groups">
+								<span class="token-scope-text" [title]="groupScopeTitle(item)">
+									{{ groupScopeText(item) }}
+								</span>
+							</td>
+							<td class="token-col-url">
+								@if (item.subscribeUrl) {
+									<div class="token-url-row">
+										<code class="token-url" [title]="item.subscribeUrl">{{
+											maskSubscribeUrl(item.subscribeUrl)
+										}}</code>
+										<button class="btn-secondary btn-sm" type="button" (click)="copy(item.subscribeUrl!)">
+											复制
+										</button>
+									</div>
+								} @else {
+									<div class="token-url-missing">
+										<span class="text-xs text-muted">旧令牌未保存明文，请重新生成后即可复制链接</span>
+										<button class="btn-secondary btn-sm" type="button" (click)="regenerate(item)">
+											重新生成
+										</button>
+									</div>
+								}
+							</td>
+							<td class="token-col-access">{{ item.accessCount }}</td>
+							<td class="token-col-actions">
+								<div class="token-actions">
+									<button
+										class="btn-secondary btn-sm"
+										type="button"
+										title="编辑该链接的订阅源与策略组"
+										(click)="openEditSources(item)"
+									>
+										编辑
+									</button>
+									@if (item.status === 'active') {
+										<button
+											class="btn-secondary btn-sm"
+											type="button"
+											title="临时停用，可再启用同一链接"
+											(click)="disable(item)"
+										>
+											禁用
+										</button>
+									} @else if (item.status === 'disabled') {
+										<button
+											class="btn-secondary btn-sm"
+											type="button"
+											title="恢复使用原链接"
+											(click)="enable(item)"
+										>
+											启用
+										</button>
+									}
+									<button
+										class="btn-secondary btn-sm"
+										type="button"
+										title="生成新 token，旧链接立即失效"
+										(click)="regenerate(item)"
+									>
+										重生
+									</button>
+									<button
+										class="btn-secondary btn-sm"
+										type="button"
+										title="作废令牌，旧链接失效；记录与访问次数保留"
+										(click)="revoke(item)"
+									>
+										撤销
+									</button>
+									<button
+										class="btn-danger btn-sm"
+										type="button"
+										title="永久删除记录，不可恢复"
+										(click)="remove(item)"
+									>
+										删除
+									</button>
+								</div>
+							</td>
+						</tr>
+					} @empty {
+						<tr>
+							<td colspan="7" class="py-10 text-center text-muted">暂无令牌，上方填写备注后创建</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	@if (editingId() !== null) {
+		<div class="dialog-overlay" (click)="closeEditSources()">
+			<div
+				class="dialog-panel dialog-panel-md token-source-dialog"
+				role="dialog"
+				aria-modal="true"
+				(click)="$event.stopPropagation()"
+			>
+				<div class="dialog-header">
+					<button class="dialog-close" type="button" (click)="closeEditSources()" title="关闭" aria-label="关闭">
+						<span class="dialog-close-x" aria-hidden="true">×</span>
+					</button>
+					<div class="dialog-header-text">
+						<h3 class="dialog-title">编辑链接范围</h3>
+						<p class="dialog-header-sub">订阅源决定节点；策略组决定配置里出现哪些组</p>
+					</div>
+				</div>
+				<div class="dialog-body space-y-4">
+					<div>
+						<label class="token-source-all">
+							<input
+								type="checkbox"
+								[checked]="editAllSources()"
+								(change)="setEditAll($any($event.target).checked)"
+							/>
+							<span>全部源</span>
+						</label>
+						@if (sourceList().length === 0) {
+							<p class="text-sm text-muted mt-2">暂无订阅源</p>
+						} @else {
+							<div class="token-source-grid mt-2">
+								@for (src of sourceList(); track src.id) {
+									<label class="token-source-item" [class.is-disabled]="!src.enabled">
+										<input
+											type="checkbox"
+											[checked]="isEditSourceChecked(src.id)"
+											(change)="toggleEditSource(src.id, $any($event.target).checked)"
+										/>
+										<span class="token-source-name">{{ src.name }}</span>
+										@if (!src.enabled) {
+											<span class="badge-warn">已禁用</span>
+										}
+										<span class="text-xs text-muted-2">{{ src.proxyCount }} 节点</span>
+									</label>
+								}
+							</div>
+							@if (editAllSources()) {
+								<p class="text-xs text-muted mt-2">
+									已全选：包含当前全部源，之后新增的启用源也会自动纳入该链接。
+								</p>
+							} @else {
+								<p class="text-xs text-muted mt-2">仅勾选的源会出现在该订阅链接中。</p>
+							}
+						}
+					</div>
+
+					<div>
+						<label class="field-label">策略组</label>
+						<div class="flex flex-wrap gap-x-4 gap-y-2 mt-1">
+							@for (opt of groupModeOptions; track opt.value) {
+								<label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted">
+									<input
+										type="radio"
+										name="editGroupMode"
+										[checked]="editGroupMode() === opt.value"
+										(change)="setEditGroupMode(opt.value)"
+									/>
+									{{ opt.text }}
+								</label>
+							}
+						</div>
+						@if (editGroupMode() === 'auto') {
+							<p class="text-xs text-muted mt-2">
+								自动：按该链接节点去掉空地区组；规则指向被去掉的组时回退直连（推荐）。
+							</p>
+						} @else if (editGroupMode() === 'all') {
+							<p class="text-xs text-muted mt-2">全部：保留模板里的策略组；没有节点的组会占位为直连。</p>
+						} @else {
+							<p class="text-xs text-muted mt-2">自定义：只下发勾选的策略组；空组仍会跳过。</p>
+							@if (groupList().length === 0) {
+								<p class="text-xs text-muted mt-1">暂无策略组</p>
+							} @else {
+								<div class="token-source-grid mt-2">
+									@for (g of groupList(); track g.id) {
+										<label class="token-source-item" [class.is-disabled]="!g.enabled">
+											<input
+												type="checkbox"
+												[checked]="isEditGroupChecked(g.name)"
+												(change)="toggleEditGroup(g.name, $any($event.target).checked)"
+											/>
+											<span class="token-source-name">{{ g.name }}</span>
+											@if (!g.enabled) {
+												<span class="badge-warn">已禁用</span>
+											}
+										</label>
+									}
+								</div>
+							}
+						}
+					</div>
+
+					<p class="text-xs text-muted">
+						「全部源 + 自动」使用已发布配置快照；指定源或其它策略组模式会按当前规则即时生成。
+					</p>
+				</div>
+				<div class="dialog-actions">
+					<button class="btn-secondary" type="button" (click)="closeEditSources()">取消</button>
+					<button class="btn-primary" type="button" (click)="saveEditSources()">保存</button>
+				</div>
+			</div>
+		</div>
+	}
+</div>

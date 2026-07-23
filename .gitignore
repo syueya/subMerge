@@ -1,0 +1,18 @@
+.env
+# 运行时数据（SQLite 等），与 backend/defaults/ 内置配置无关
+/backend/data/
+/backend/log/
+bin/
+# 预编译产物仅供 docker build，勿提交
+frontend/dist/
+frontend/.angular/
+*.db
+*.db-*
+node_modules/
+backend/vendor/
+.DS_Store
+*.log
+.idea/
+.vscode/
+__pycache__/
+.zcode/

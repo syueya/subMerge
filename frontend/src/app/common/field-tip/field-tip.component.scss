@@ -1,0 +1,8 @@
+/* 按钮外观在全局 styles.css（.field-tip 跟随主题） */
+:host {
+	display: inline-flex;
+	align-items: center;
+	vertical-align: middle;
+	margin: 0;
+	line-height: 1;
+}

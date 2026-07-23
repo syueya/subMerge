@@ -1,0 +1,200 @@
+<div class="space-y-4">
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<div>
+			<h2 class="text-xl font-semibold">发布</h2>
+			<p class="text-sm text-muted">
+				查看历史配置与回滚；「全部源 + 自动」订阅使用当前生效版本。
+				<a class="text-link" routerLink="/rules">去规则页</a>
+			</p>
+			@if (draftNote()) {
+				<p
+					class="mt-1 text-xs"
+					[class.text-amber-600]="draftDirty()"
+					[class.text-muted-2]="!draftDirty()"
+				>
+					{{ draftNote() }}
+				</p>
+			}
+		</div>
+		<div class="flex flex-wrap gap-2">
+			<button class="btn-secondary" type="button" [disabled]="loading()" (click)="reload(); refreshDraft()">
+				刷新
+			</button>
+			<button class="btn-primary" type="button" [disabled]="publishing()" (click)="publishNow()">
+				@if (publishing()) {
+					发布中…
+				} @else if (draftDirty()) {
+					发布当前草稿 *
+				} @else {
+					发布当前草稿
+				}
+			</button>
+		</div>
+	</div>
+
+	<div class="card overflow-x-auto">
+		<table class="table">
+			<thead>
+				<tr>
+					<th>版本</th>
+					<th>状态</th>
+					<th>节点/规则</th>
+					<th>备注</th>
+					<th>Hash</th>
+					<th>发布者</th>
+					<th>时间</th>
+					<th class="text-right">操作</th>
+				</tr>
+			</thead>
+			<tbody>
+				@if (loading()) {
+					<tr>
+						<td colspan="8" class="text-muted">加载中…</td>
+					</tr>
+				} @else {
+					@for (item of items(); track item.id) {
+						<tr>
+							<td class="font-medium">v{{ item.version }}</td>
+							<td>
+								<span [class]="statusClass(item.status)">{{ statusText(item.status) }}</span>
+							</td>
+							<td class="text-sm">{{ item.proxyCount }} / {{ item.ruleCount }}</td>
+							<td class="max-w-[12rem] truncate text-sm text-muted" [title]="item.note || ''">
+								{{ item.note || '—' }}
+							</td>
+							<td class="font-mono text-xs text-muted-2">{{ item.configHash.slice(0, 12) }}…</td>
+							<td>{{ item.createdBy }}</td>
+							<td class="text-xs text-muted">{{ item.publishedAt || item.createdAt }}</td>
+							<td class="text-right">
+								<div class="inline-flex flex-wrap justify-end gap-2">
+									<button class="btn-secondary btn-sm" type="button" (click)="openView(item)">
+										查看
+									</button>
+									<button class="btn-secondary btn-sm" type="button" (click)="openTest(item)">
+										测试
+									</button>
+									@if (item.status !== 'published') {
+										<button class="btn-secondary btn-sm" type="button" (click)="rollback(item)">
+											回滚到此版
+										</button>
+									}
+								</div>
+							</td>
+						</tr>
+					} @empty {
+						<tr>
+							<td colspan="8" class="text-muted">
+								尚无发布记录，请先在
+								<a class="text-link" routerLink="/rules">规则</a>
+								页发布
+							</td>
+						</tr>
+					}
+				}
+			</tbody>
+		</table>
+	</div>
+
+	@if (viewLoading() || viewing()) {
+		<div class="dialog-overlay" (click)="closeView()">
+			<div
+				class="dialog-panel dialog-panel-lg"
+				role="dialog"
+				aria-modal="true"
+				(click)="$event.stopPropagation()"
+			>
+				<div class="dialog-header">
+					<button class="dialog-close" type="button" (click)="closeView()" title="关闭" aria-label="关闭">
+						<span class="dialog-close-x" aria-hidden="true">×</span>
+					</button>
+					<div class="dialog-header-text">
+						@if (viewing(); as v) {
+							<h3 class="dialog-title">v{{ v.version }} 配置</h3>
+							<p class="dialog-header-sub">
+								{{ statusText(v.status) }} · {{ v.proxyCount }} 节点 · {{ v.ruleCount }} 规则
+								@if (v.note) {
+									· {{ v.note }}
+								}
+							</p>
+						} @else {
+							<h3 class="dialog-title">加载中…</h3>
+						}
+					</div>
+				</div>
+				<div class="dialog-body space-y-3">
+					@if (viewLoading()) {
+						<p class="text-sm text-muted">正在加载配置…</p>
+					} @else if (viewing(); as v) {
+						<div class="flex flex-wrap gap-2">
+							<button
+								type="button"
+								class="btn-sm"
+								[class.btn-primary]="viewTab() === 'rules'"
+								[class.btn-secondary]="viewTab() !== 'rules'"
+								(click)="viewTab.set('rules')"
+							>
+规则 ({{ v.rules.length || 0 }})
+								</button>
+								<button
+									type="button"
+									class="btn-sm"
+									[class.btn-primary]="viewTab() === 'yaml'"
+									[class.btn-secondary]="viewTab() !== 'yaml'"
+									(click)="viewTab.set('yaml')"
+								>
+									完整 YAML
+								</button>
+							</div>
+							@if (viewTab() === 'rules') {
+								@if (v.groups.length) {
+								<p class="text-xs text-muted">策略组：{{ v.groups.join('、') }}</p>
+							}
+							<div class="overflow-x-auto panel-box max-h-[min(60vh,28rem)] overflow-y-auto">
+								<table class="table text-sm">
+									<thead>
+										<tr>
+											<th class="w-10">#</th>
+											<th>类型</th>
+											<th>匹配</th>
+											<th>出口</th>
+										</tr>
+									</thead>
+									<tbody>
+										@for (r of v.rules; track $index; let i = $index) {
+											<tr>
+												<td class="text-muted-2">{{ i + 1 }}</td>
+												<td class="font-mono text-xs">{{ r.type }}</td>
+												<td class="font-mono text-xs break-all">{{ r.payload || '—' }}</td>
+												<td class="font-medium">{{ r.target }}</td>
+											</tr>
+										} @empty {
+											<tr>
+												<td colspan="4" class="text-muted">未解析到规则</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
+						} @else {
+							<pre class="pre-box max-h-[min(60vh,28rem)] overflow-auto">{{ v.configYaml }}</pre>
+						}
+					}
+				</div>
+				<div class="dialog-actions">
+					<button class="btn-secondary" type="button" (click)="closeView()">关闭</button>
+				</div>
+			</div>
+		</div>
+	}
+
+	<app-rule-match-dialog
+		[open]="testOpen()"
+		[title]="testTitle()"
+		[subtitle]="testSubtitle()"
+		[rules]="testRules()"
+		[loading]="testLoading()"
+		[typeText]="matchTypeText"
+		[targetText]="matchTargetText"
+		(closed)="closeTest()"
+	/>
+</div>

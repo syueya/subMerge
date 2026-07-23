@@ -1,0 +1,407 @@
+<div class="space-y-4">
+		<div class="flex flex-wrap items-start justify-between gap-3">
+<div class="min-w-0">
+					<h2 class="text-xl font-semibold">订阅源</h2>
+					<p class="mt-0.5 text-sm text-muted">
+						添加机场 Clash 订阅，加密保存；拉取后按地区前缀合并节点。URL 仅脱敏展示。
+					</p>
+				</div>
+			<div class="flex flex-wrap gap-2">
+				@if (selectedCount() > 0) {
+					<button class="btn-danger" type="button" [disabled]="busy()" (click)="batchRemove()">
+						删除所选 ({{ selectedCount() }})
+					</button>
+					<button class="btn-secondary" type="button" [disabled]="busy()" (click)="clearSelection()">取消选择</button>
+				}
+				<button class="btn-secondary" type="button" [disabled]="loading()" (click)="reload()">刷新</button>
+				<button class="btn-secondary" type="button" [disabled]="busy() || items().length === 0" (click)="refreshAll()">
+					拉取全部
+				</button>
+				<button class="btn-primary" type="button" [disabled]="busy()" (click)="openCreate()">新增源</button>
+			</div>
+		</div>
+
+		<div class="card p-0! overflow-hidden">
+			<div class="overflow-x-auto">
+				<table class="table source-table">
+					<thead>
+						<tr>
+							<th class="source-col-check">
+								<input
+									type="checkbox"
+									[checked]="allSelected()"
+									[indeterminate]="someSelected()"
+									(change)="toggleSelectAll(($any($event.target).checked))"
+									[disabled]="items().length === 0 || busy()"
+									title="全选"
+								/>
+							</th>
+<th class="source-col-name">订阅源</th>
+								<th class="source-col-nodes">节点</th>
+								<th class="source-col-traffic">流量</th>
+								<th class="source-col-status">状态</th>
+								<th class="source-col-actions">操作</th>
+						</tr>
+					</thead>
+					<tbody>
+@if (loading()) {
+								<tr>
+									<td colspan="6" class="py-10 text-center text-muted">加载中…</td>
+								</tr>
+							} @else if (items().length === 0) {
+								<tr>
+									<td colspan="6" class="py-10 text-center text-muted">暂无订阅源，点击右上角「新增源」开始</td>
+								</tr>
+							} @else {
+								@for (item of items(); track item.id) {
+									<tr class="source-row" [class.is-selected]="isSelected(item.id)" [class.is-disabled]="!item.enabled">
+										<td class="source-col-check">
+											<input
+												type="checkbox"
+												[checked]="isSelected(item.id)"
+												(change)="toggleSelect(item.id, $any($event.target).checked)"
+												[disabled]="busy()"
+											/>
+										</td>
+										<td class="source-col-name">
+											<div class="source-main">
+	<div class="source-title-row">
+														<span class="source-name">{{ item.name }}</span>
+														@if (!item.enabled) {
+															<span class="badge-warn">已禁用</span>
+														}
+														<span class="badge-muted">{{ regionModeText(item.regionMode) }}</span>
+														<span class="badge-muted" [title]="regionText(item.region)">{{ regionCode(item.region) }}</span>
+													</div>
+												<div class="source-url" [title]="item.urlMasked">{{ item.urlMasked }}</div>
+											</div>
+										</td>
+										<td class="source-col-nodes">
+											<button
+												class="source-count"
+												type="button"
+												title="查看节点"
+												(click)="openProxies(item)"
+											>
+												{{ item.proxyCount }}
+											</button>
+										</td>
+										<td class="source-col-traffic">
+											@if (hasTraffic(item)) {
+												<div class="source-traffic" [title]="trafficTitle(item)">
+													<div class="source-traffic-text">{{ trafficText(item) }}</div>
+													@if (trafficPercent(item) !== null) {
+														<div class="source-traffic-bar" aria-hidden="true">
+															<span
+																class="source-traffic-bar-fill"
+																[style.width.%]="trafficPercent(item)"
+																[class.is-warn]="(trafficPercent(item) ?? 0) >= 80"
+																[class.is-danger]="(trafficPercent(item) ?? 0) >= 95"
+															></span>
+														</div>
+													}
+													@if (trafficExpireText(item)) {
+														<div class="source-traffic-expire">{{ trafficExpireText(item) }}</div>
+													}
+												</div>
+											} @else {
+												<span class="source-traffic-empty" title="上游未返回 Subscription-Userinfo">—</span>
+											}
+										</td>
+										<td class="source-col-status">
+											<div class="source-status">
+												<span [class]="statusClass(item.refreshStatus)">{{ statusText(item.refreshStatus) }}</span>
+												<span class="source-time" [title]="item.lastRefreshAt || ''">
+													{{ formatTime(item.lastRefreshAt) }}
+												</span>
+												@if (item.lastError) {
+													<div class="source-error" [title]="item.lastError">{{ item.lastError }}</div>
+												}
+											</div>
+										</td>
+									<td class="source-col-actions">
+										<div class="source-actions">
+											<button class="btn-secondary btn-sm" type="button" [disabled]="busy()" (click)="refresh(item)">
+												拉取
+											</button>
+											<button class="btn-secondary btn-sm" type="button" (click)="openProxies(item)">节点</button>
+											<button class="btn-secondary btn-sm" type="button" (click)="openEdit(item)">编辑</button>
+											<button class="btn-secondary btn-sm" type="button" (click)="toggle(item)">
+												{{ item.enabled ? '禁用' : '启用' }}
+											</button>
+											<button class="btn-danger btn-sm" type="button" (click)="remove(item)">删除</button>
+										</div>
+									</td>
+								</tr>
+							}
+						}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+@if (showForm()) {
+		<div class="dialog-overlay" (click)="closeForm()">
+			<div class="dialog-panel dialog-panel-md" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+				<div class="dialog-header">
+					<button class="dialog-close" type="button" [disabled]="busy()" (click)="closeForm()" title="关闭" aria-label="关闭">
+						<span class="dialog-close-x" aria-hidden="true">×</span>
+					</button>
+					<div class="dialog-header-text">
+						<h3 class="dialog-title">{{ editingId ? '编辑订阅源' : '新增订阅源' }}</h3>
+						<p class="dialog-header-sub">
+							{{ editingId ? '保存后不会自动拉取；改过滤/地区后建议手动拉取' : '保存后会自动拉取一次上游节点' }}
+						</p>
+					</div>
+				</div>
+				<div class="dialog-body">
+
+					<div class="grid gap-3 sm:grid-cols-2">
+						<!-- 一行：名称 + 地区模式 -->
+						<div>
+							<label class="field-label">
+								名称
+								<app-field-tip [text]="tip.name" />
+							</label>
+							<input class="w-full" [(ngModel)]="formName" placeholder="例如：良心机场" />
+						</div>
+						<div>
+							<label class="field-label">
+								地区模式
+								<app-field-tip [text]="tip.regionMode" />
+							</label>
+							<div class="flex h-10 flex-wrap items-center gap-4 text-sm">
+								<label class="inline-flex items-center gap-2">
+									<input
+										type="radio"
+										name="regionMode"
+										value="auto"
+										[ngModel]="formRegionMode"
+										(ngModelChange)="onRegionModeChange($event)"
+									/>
+									自动识别
+								</label>
+								<label class="inline-flex items-center gap-2">
+									<input
+										type="radio"
+										name="regionMode"
+										value="fixed"
+										[ngModel]="formRegionMode"
+										(ngModelChange)="onRegionModeChange($event)"
+									/>
+									固定地区
+								</label>
+							</div>
+						</div>
+
+						<!-- 整行：回退地区 / 地区 -->
+						<div class="sm:col-span-2">
+							<label class="field-label">
+								@if (formRegionMode === 'auto') {
+									回退地区
+								} @else {
+									地区
+								}
+								<app-field-tip [text]="tip.region" />
+							</label>
+							<select class="w-full" [(ngModel)]="formRegion">
+								@if (formRegionMode === 'auto') {
+									@for (r of autoRegionOptions(); track r.code) {
+										<option [ngValue]="r.code">{{ regionOptionLabel(r) }}</option>
+									}
+								} @else {
+									@for (r of fixedRegionOptions(); track r.code) {
+										<option [ngValue]="r.code">{{ regionOptionLabel(r) }}</option>
+									}
+								}
+							</select>
+							@if (formRegionMode === 'auto') {
+								<p class="mt-1 text-xs text-muted-2">
+									默认「未知 (UNKNOWN)」。能认出 🇯🇵/香港 等时用识别结果；认不出才加此前缀。
+								</p>
+							} @else {
+								<p class="mt-1 text-xs text-muted-2">该源全部节点都会加此前缀（如 HK-xxx）。</p>
+							}
+						</div>
+
+						<!-- 整行：订阅链接 -->
+						<div class="sm:col-span-2">
+							<label class="field-label">
+								订阅 URL
+								<app-field-tip [text]="tip.url" />
+							</label>
+							<input
+								class="w-full"
+								[(ngModel)]="formUrl"
+								[placeholder]="editingId ? '留空表示不修改 URL' : 'https://...'"
+							/>
+						</div>
+					</div>
+
+					<div class="expand-panel mt-4" [class.is-open]="showAdvanced()">
+						<button
+							type="button"
+							class="expand-panel-trigger"
+							[attr.aria-expanded]="showAdvanced()"
+							(click)="showAdvanced.set(!showAdvanced())"
+						>
+							<span class="expand-panel-chevron" aria-hidden="true"></span>
+							<span class="expand-panel-title">过滤规则</span>
+							<span class="expand-panel-hint">名称 / 服务器排除 · 可选白名单</span>
+							<span class="expand-panel-state">{{ showAdvanced() ? '收起' : '展开' }}</span>
+						</button>
+						@if (showAdvanced()) {
+							<div class="expand-panel-body">
+								<div class="grid gap-3">
+									<div>
+										<label class="field-label">
+											排除名称（正则）
+											<app-field-tip [text]="tip.excludeName" />
+										</label>
+										<textarea class="w-full min-h-16 font-mono text-xs" [(ngModel)]="formExcludeName"></textarea>
+									</div>
+									<div>
+										<label class="field-label">
+											排除服务器
+											<app-field-tip [text]="tip.excludeServers" />
+										</label>
+										<input class="w-full font-mono text-xs" [(ngModel)]="formExcludeServers" />
+									</div>
+									<div>
+										<label class="field-label">
+											仅包含名称（可选白名单正则）
+											<app-field-tip [text]="tip.includeName" />
+										</label>
+										<input
+											class="w-full font-mono text-xs"
+											[(ngModel)]="formIncludeName"
+											placeholder="例如：日本|香港|JP|HK"
+										/>
+									</div>
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+				<div class="dialog-actions">
+					<button class="btn-secondary" type="button" [disabled]="busy()" (click)="closeForm()">取消</button>
+					<button class="btn-primary" type="button" [disabled]="busy()" (click)="save()">
+						@if (busy()) {
+							处理中…
+						} @else if (editingId) {
+							保存
+						} @else {
+							保存并拉取
+						}
+					</button>
+				</div>
+			</div>
+		</div>
+	}
+
+@if (showProxies()) {
+		<div class="dialog-overlay" (click)="closeProxies()">
+			<div
+				class="dialog-panel dialog-panel-lg proxy-dialog"
+				role="dialog"
+				aria-modal="true"
+				(click)="$event.stopPropagation()"
+			>
+<div class="dialog-header">
+					<button class="dialog-close" type="button" (click)="closeProxies()" title="关闭" aria-label="关闭">
+						<span class="dialog-close-x" aria-hidden="true">×</span>
+					</button>
+					<div class="dialog-header-text">
+						<h3 class="dialog-title">节点 · {{ proxySource()?.name }}</h3>
+						<p class="dialog-header-sub">
+							共 {{ proxies().length }} 个
+							@if (filteredProxies().length !== proxies().length) {
+								· 筛选 {{ filteredProxies().length }}
+							}
+							@if (lastRefreshSummary()) {
+								· 地区 {{ lastRefreshSummary() }}
+							}
+						</p>
+					</div>
+					<div class="proxy-dialog-toolbar">
+						<input
+							[ngModel]="proxySearch()"
+							(ngModelChange)="proxySearch.set($event)"
+							placeholder="搜索名称 / 服务器…"
+						/>
+						<select
+							[ngModel]="proxyRegionFilter()"
+							(ngModelChange)="proxyRegionFilter.set($event)"
+						>
+							<option value="">全部地区</option>
+							@for (r of proxyRegions(); track r) {
+								<option [value]="r">{{ r }}</option>
+							}
+						</select>
+						<select
+							[ngModel]="proxyQualityFilter()"
+							(ngModelChange)="proxyQualityFilter.set($event)"
+						>
+							<option value="">全部识别</option>
+							<option value="ok">仅正常</option>
+							<option value="bad">仅异常</option>
+						</select>
+						<button class="btn-secondary btn-sm" type="button" (click)="batchSetFiltered(true)">启用筛选</button>
+						<button class="btn-secondary btn-sm" type="button" (click)="batchSetFiltered(false)">禁用筛选</button>
+						@if (proxySource(); as src) {
+							<button class="btn-secondary btn-sm" type="button" [disabled]="busy()" (click)="refresh(src)">
+								重新拉取
+							</button>
+						}
+					</div>
+				</div>
+
+				<div class="dialog-body proxy-dialog-table">
+							<table class="table">
+							<thead>
+								<tr>
+									<th class="w-14">启用</th>
+									<th>名称</th>
+									<th>地区</th>
+									<th>类型</th>
+									<th>服务器</th>
+									<th>识别</th>
+								</tr>
+							</thead>
+							<tbody>
+								@if (proxyLoading()) {
+									<tr>
+										<td colspan="6" class="text-muted">加载中…</td>
+									</tr>
+								} @else if (filteredProxies().length === 0) {
+									<tr>
+										<td colspan="6" class="text-muted">无节点</td>
+									</tr>
+								} @else {
+									@for (p of filteredProxies(); track p.id) {
+										<tr [class.opacity-50]="!p.enabled" [class.proxy-row-warn]="p.ok === false">
+											<td>
+												<input type="checkbox" [checked]="p.enabled" (change)="toggleProxy(p)" />
+											</td>
+											<td class="max-w-xs truncate font-medium" [title]="p.name">{{ p.name }}</td>
+											<td><span class="badge-muted">{{ p.region }}</span></td>
+											<td class="text-xs text-muted">{{ p.type }}</td>
+											<td class="font-mono text-xs text-muted">{{ p.server }}:{{ p.port }}</td>
+											<td class="proxy-quality">
+												@if (p.ok === false) {
+													<span class="badge-warn" [title]="p.issue || '异常'">异常</span>
+													<div class="proxy-issue" [title]="p.issue || ''">{{ p.issue || '未正常识别' }}</div>
+												} @else {
+													<span class="badge-ok">正常</span>
+												}
+											</td>
+										</tr>
+									}
+								}
+							</tbody>
+						</table>
+					</div>
+			</div>
+		</div>
+	}

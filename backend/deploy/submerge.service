@@ -1,0 +1,24 @@
+[Unit]
+Description=SubMerge Clash subscription panel
+After=network.target
+
+[Service]
+Type=simple
+# 工作目录为安装根，路径走程序默认（勿再设 DATA_DIR/DB_PATH/STATIC_DIR）：
+#   ./data  ./log  ./frontend/dist/submerge/browser
+# 二进制可放 bin/submerge，或直接 /opt/submerge/submerge（改 ExecStart 即可）
+WorkingDirectory=/opt/submerge
+ExecStart=/opt/submerge/bin/submerge
+EnvironmentFile=/opt/submerge/.env
+# .env 只需业务项，例如：
+#   APP_ENV=production
+#   ENCRYPTION_KEY=...（≥32 字符）
+#   PUBLIC_BASE_URL=https://你的域名
+#   LOG_OUTPUT=both
+#   LOG_RETENTION_DAYS=7
+# 默认规则与版本号已编译进二进制
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

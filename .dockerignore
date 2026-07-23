@@ -1,0 +1,36 @@
+# 不把源码/依赖打进构建上下文；镜像只 COPY 预编译产物
+.env
+.env.*
+!.env.example
+.git/
+.zcode/
+**/.DS_Store
+
+# 源码与开发依赖（运行镜像不需要）
+backend/
+frontend/src/
+frontend/public/
+frontend/node_modules/
+frontend/.angular/
+frontend/*.json
+frontend/*.md
+frontend/.editorconfig
+frontend/.prettierrc
+frontend/.postcssrc.json
+frontend/.vscode/
+
+# 运行时与杂项
+data/
+log/
+*.db
+*.db-*
+*.log
+backend/data/
+backend/log/
+*.md
+docker-compose.yml
+docker-compose*.yml
+
+# 允许进上下文（供 COPY）：
+#   bin/submerge-linux
+#   frontend/dist/submerge/browser/

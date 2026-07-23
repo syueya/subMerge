@@ -1,0 +1,54 @@
+@if (dialog.state(); as s) {
+	@if (s.open) {
+		<div class="dialog-overlay" (click)="onBackdrop()">
+			<div
+				class="dialog-panel dialog-panel-sm"
+				role="dialog"
+				aria-modal="true"
+				[attr.aria-labelledby]="'app-dialog-title'"
+				(click)="$event.stopPropagation()"
+			>
+				<div class="dialog-header">
+					<div class="dialog-toast-row">
+						<div class="dialog-icon" [ngClass]="iconClass(s.kind)">
+							@switch (s.kind) {
+								@case ('success') {
+									<span>✓</span>
+								}
+								@case ('error') {
+									<span>!</span>
+								}
+								@case ('confirm') {
+									<span>?</span>
+								}
+								@default {
+									<span>i</span>
+								}
+							}
+						</div>
+						<div class="dialog-header-text min-w-0 flex-1">
+							<h3 id="app-dialog-title" class="dialog-title">{{ s.title }}</h3>
+						</div>
+					</div>
+				</div>
+				<div class="dialog-body">
+					<p class="dialog-message" style="margin-top: 0">{{ s.message }}</p>
+				</div>
+				<div class="dialog-actions">
+					@if (s.showCancel) {
+						<button class="btn-secondary" type="button" (click)="dialog.resolve(false)">
+							{{ s.cancelText }}
+						</button>
+					}
+					<button
+						type="button"
+						[class]="s.kind === 'error' ? 'btn-danger' : 'btn-primary'"
+						(click)="dialog.resolve(true)"
+					>
+						{{ s.confirmText }}
+					</button>
+				</div>
+			</div>
+		</div>
+	}
+}

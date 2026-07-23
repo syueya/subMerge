@@ -1,0 +1,34 @@
+# 空库默认策略组（backend/defaults/）。
+# 已有数据不会自动覆盖；修改后需重新编译且空库/无规则时才会写入。
+#
+# 精简约定：
+#   - 策略组：直连 / 拒绝 / 常用国家 / 其他国家
+#   - 业务分流（AI、流媒体、电报等）写在 rules 里，target 直接指向策略组名（如 美国US）
+#
+# 成员说明（发布时展开）：
+#   ALL / *              → 全部节点
+#   REGION:US            → 美国前缀节点（US-xxx）
+#   REGION:OTHER         → 非常用国家节点（primary=false 的地区）
+#   DIRECT / REJECT      → Clash 引擎关键字
+#   其它字符串           → 其它策略组名或具体节点名
+#
+# 组类型：select | url-test | fallback | load-balance
+# 国家组命名：{中文名}{code}，如 美国US、日本JP
+# 面板排列顺序 = 本文件列表顺序，seed 时自动编号，无需写 sortOrder
+
+groups:
+  - { name: 直连, type: select, proxies: [DIRECT], enabled: true }
+  - { name: 拒绝, type: select, proxies: [REJECT], enabled: true }
+
+  # 常用国家（与 regions.yaml primary: true 对齐）
+  - { name: 美国US, type: url-test, proxies: [REGION:US], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+  - { name: 日本JP, type: url-test, proxies: [REGION:JP], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+  - { name: 英国GB, type: url-test, proxies: [REGION:GB], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+  - { name: 香港HK, type: url-test, proxies: [REGION:HK], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+  - { name: 台湾TW, type: url-test, proxies: [REGION:TW], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+  - { name: 新加坡SG, type: url-test, proxies: [REGION:SG], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+  - { name: 菲律宾PH, type: url-test, proxies: [REGION:PH], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+  - { name: 土耳其TR, type: url-test, proxies: [REGION:TR], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+
+  # 其余识别到的地区节点（DE/FR/CA/NG…）
+  - { name: 其他国家, type: url-test, proxies: [REGION:OTHER], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }

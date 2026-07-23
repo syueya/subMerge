@@ -1,0 +1,235 @@
+# 统一地区配置（目录 + 节点名识别）
+# 改后需重新编译。UI 下拉、回退码、国旗/关键词识别都读本文件。
+#
+# 字段：
+#   code      地区码（节点名前缀，如 US-xxx）
+#   name      中文名（UI / 策略组展示）
+#   primary   true=常用国家，空库会单独建策略组「{name}{code}」；其余进「其他国家」
+#   flag      国旗 emoji（节点名识别，可选）
+#   keywords  关键词列表（节点名识别，可选；长词优先由代码排序）
+#
+# UNKNOWN 仅作自动模式回退，不参与识别规则、不进策略组。
+
+regions:
+  - { code: UNKNOWN, name: 未知 }
+
+  # —— 常用国家（默认独立策略组）——
+  - code: US
+    name: 美国
+    primary: true
+    flag: 🇺🇸
+    keywords: [美国, "united states", america, us, lax, sfo, nyc, sjc]
+  - code: JP
+    name: 日本
+    primary: true
+    flag: 🇯🇵
+    keywords: [日本, japan, nrt, hnd, tyo, jp]
+  - code: GB
+    name: 英国
+    primary: true
+    flag: 🇬🇧
+    keywords: [英国, 英國, "united kingdom", britain, england, lhr, gb, uk]    
+  - code: HK
+    name: 香港
+    primary: true
+    flag: 🇭🇰
+    keywords: [香港, "hong kong", hongkong, hkg, hk]
+  - code: TW
+    name: 台湾
+    primary: true
+    flag: 🇹🇼
+    keywords: [台湾, taiwan, tpe, tw]
+  - code: SG
+    name: 新加坡
+    primary: true
+    flag: 🇸🇬
+    keywords: [新加坡, singapore, sin, sg]
+  - code: PH
+    name: 菲律宾
+    primary: true
+    flag: 🇵🇭
+    keywords: [菲律宾, philippines, mnl, ph]
+  - code: TR
+    name: 土耳其
+    primary: true
+    flag: 🇹🇷
+    keywords: [土耳其, turkey, ist, tr]
+
+  # —— 其它地区（识别得到，默认归入「其他国家」策略组）——
+  - code: DE
+    name: 德国
+    flag: 🇩🇪
+    keywords: [德国, germany, fra, de]
+  - code: FR
+    name: 法国
+    flag: 🇫🇷
+    keywords: [法国, france, cdg, fr]
+  - code: CA
+    name: 加拿大
+    flag: 🇨🇦
+    keywords: [加拿大, canada, yyz, ca]
+  - code: AU
+    name: 澳洲
+    flag: 🇦🇺
+    keywords: [澳洲, 澳大利亚, australia, syd, au]
+  - code: NL
+    name: 荷兰
+    flag: 🇳🇱
+    keywords: [荷兰, netherlands, holland, ams, nl]
+  - code: IN
+    name: 印度
+    flag: 🇮🇳
+    keywords: [印度, india, bom, in]
+  - code: MY
+    name: 马来西亚
+    flag: 🇲🇾
+    keywords: [马来西亚, malaysia, kul, my]
+  - code: TH
+    name: 泰国
+    flag: 🇹🇭
+    keywords: [泰国, thailand, bkk, th]
+  - code: VN
+    name: 越南
+    flag: 🇻🇳
+    keywords: [越南, vietnam, sgn, vn]
+  - code: RU
+    name: 俄罗斯
+    flag: 🇷🇺
+    keywords: [俄罗斯, russia, svo, ru]
+  - code: IT
+    name: 意大利
+    flag: 🇮🇹
+    keywords: [意大利, italy, mxp, it]
+  - code: BR
+    name: 巴西
+    flag: 🇧🇷
+    keywords: [巴西, brazil, gru, br]
+  - code: MO
+    name: 澳门
+    flag: 🇲🇴
+    keywords: [澳门, macau, macao, mo]
+  - code: CN
+    name: 中国
+    flag: 🇨🇳
+    keywords: [中国, cn]
+  - code: KR
+    name: 韩国
+    flag: 🇰🇷
+    keywords: [韩国, 韓國, korea, icn, kr]
+  - code: NG
+    name: 尼日利亚
+    flag: 🇳🇬
+    keywords: [尼日利亚, 奈及利亚, nigeria, los, ng]
+  - code: UA
+    name: 乌克兰
+    flag: 🇺🇦
+    keywords: [乌克兰, ukraine, ua]
+  - code: AR
+    name: 阿根廷
+    flag: 🇦🇷
+    keywords: [阿根廷, argentina]
+  - code: MX
+    name: 墨西哥
+    flag: 🇲🇽
+    keywords: [墨西哥, mexico]
+  - code: CL
+    name: 智利
+    flag: 🇨🇱
+  - code: ES
+    name: 西班牙
+    flag: 🇪🇸
+    keywords: [西班牙, spain]
+  - code: PT
+    name: 葡萄牙
+    flag: 🇵🇹
+    keywords: [葡萄牙, portugal]
+  - code: CH
+    name: 瑞士
+    flag: 🇨🇭
+    keywords: [瑞士, switzerland]
+  - code: SE
+    name: 瑞典
+    flag: 🇸🇪
+    keywords: [瑞典, sweden]
+  - code: NO
+    name: 挪威
+    flag: 🇳🇴
+    keywords: [挪威, norway]
+  - code: FI
+    name: 芬兰
+    flag: 🇫🇮
+    keywords: [芬兰, finland]
+  - code: DK
+    name: 丹麦
+    flag: 🇩🇰
+    keywords: [丹麦, denmark]
+  - code: PL
+    name: 波兰
+    flag: 🇵🇱
+    keywords: [波兰, poland]
+  - code: IL
+    name: 以色列
+    flag: 🇮🇱
+    keywords: [以色列, israel]
+  - code: AE
+    name: 阿联酋
+    flag: 🇦🇪
+    keywords: [阿联酋]
+  - code: SA
+    name: 沙特
+    flag: 🇸🇦
+    keywords: [沙特]
+  - code: ID
+    name: 印尼
+    flag: 🇮🇩
+    keywords: [印尼, 印度尼西亚, indonesia]
+  - code: KH
+    name: 柬埔寨
+    flag: 🇰🇭
+    keywords: [柬埔寨, cambodia]
+  - code: LA
+    name: 老挝
+    flag: 🇱🇦
+  - code: MM
+    name: 缅甸
+    flag: 🇲🇲
+  - code: ZA
+    name: 南非
+    flag: 🇿🇦
+  - code: EG
+    name: 埃及
+    flag: 🇪🇬
+  - code: IE
+    name: 爱尔兰
+    flag: 🇮🇪
+    keywords: [爱尔兰, ireland]
+  - code: AT
+    name: 奥地利
+    flag: 🇦🇹
+    keywords: [奥地利, austria]
+  - code: BE
+    name: 比利时
+    flag: 🇧🇪
+    keywords: [比利时, belgium]
+  - code: CZ
+    name: 捷克
+    flag: 🇨🇿
+  - code: RO
+    name: 罗马尼亚
+    flag: 🇷🇴
+  - code: HU
+    name: 匈牙利
+    flag: 🇭🇺
+  - code: GR
+    name: 希腊
+    flag: 🇬🇷
+  - code: NZ
+    name: 新西兰
+    flag: 🇳🇿
+    keywords: [新西兰, "new zealand"]
+  - code: PK
+    name: 巴基斯坦
+    flag: 🇵🇰
+  - code: BD
+    name: 孟加拉
+    flag: 🇧🇩
