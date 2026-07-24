@@ -31,6 +31,9 @@ backend/log/
 docker-compose.yml
 docker-compose*.yml
 
+# 生产镜像不需要 source map（调试用，体积大）
+frontend/dist/**/*.map
+
 # 允许进上下文（供 COPY）：
 #   bin/submerge-linux
 #   frontend/dist/submerge/browser/
