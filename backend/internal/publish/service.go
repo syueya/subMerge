@@ -157,34 +157,7 @@ func (s *Service) createPublishedRelease(res *BuildResult, note, actor string) (
 	return release, err
 }
 
-// EnsureDefaultPublished 若尚无已发布版本，尝试用当前草稿自动发布 v1。
-// 无节点/规则等无法构建时仅跳过并返回 false，不报错中断启动。
-func (s *Service) EnsureDefaultPublished() (published bool, err error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	var pub database.Release
-	err = s.db.Where("status = ?", string(common.ReleaseStatusPublished)).
-		Order("version desc").First(&pub).Error
-	if err == nil {
-		return false, nil
-	}
-	if err != gorm.ErrRecordNotFound {
-		return false, err
-	}
-
-	res, buildErr := s.build()
-	if buildErr != nil {
-		// 常见：刚装好还没拉源，此时不强制失败
-		return false, nil
-	}
-	if _, err := s.createPublishedRelease(res, "auto v1 (default publish)", "system"); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// CurrentYAML 当前已发布配置（全部启用源）
+	// CurrentYAML 当前已发布配置（全部启用源）
 	func (s *Service) CurrentYAML() (string, error) {
 		return s.CurrentYAMLForToken(nil, string(common.TokenGroupModeAuto), nil)
 	}

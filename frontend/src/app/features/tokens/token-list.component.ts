@@ -112,7 +112,7 @@ export class TokenListComponent implements OnInit {
 
 	groupScopeTitle(item: ShareToken): string {
 		const mode = item.groupMode || 'auto';
-		if (mode === 'auto') return '自动：按该链接节点去掉空策略组；规则目标缺失回退直连';
+		if (mode === 'auto') return '自动：按该链接节点去掉空策略组；规则目标缺失优先回退「节点选择」';
 		if (mode === 'all') return '全部：保留模板中的策略组（空组占位 DIRECT）';
 		const names = item.groupNames || [];
 		return names.length ? names.join('\n') : '自定义（未选组）';

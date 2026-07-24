@@ -113,12 +113,13 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 				}
 			}
 		}
-		// 全量发布（auto 且无源过滤语义）时，规则目标缺失应硬失败；
-		// 投影场景（auto 剪组 / all 占位 / custom）规则目标缺失回退 DIRECT。
-		// 约定：Publish 全量 build 用 GroupMode="" → auto，且期望严格规则校验。
-		// 订阅投影显式传 auto/all/custom。为区分「全量严格」与「投影 auto」，
-		// 用 Projected 标志… 简化：仅当 GroupMode 为空且 !Lenient 时严格；
-		// 显式 auto/all/custom 均允许规则回退。
+			// 全量发布（auto 且无源过滤语义）时，规则目标缺失应硬失败；
+			// 投影场景（auto 剪组 / all 占位 / custom）规则目标缺失：
+			//   优先回退「节点选择」，否则 DIRECT。
+			// 约定：Publish 全量 build 用 GroupMode="" → auto，且期望严格规则校验。
+			// 订阅投影显式传 auto/all/custom。为区分「全量严格」与「投影 auto」，
+			// 用 Projected 标志… 简化：仅当 GroupMode 为空且 !Lenient 时严格；
+			// 显式 auto/all/custom 均允许规则回退。
 		strictRules := strings.TrimSpace(in.GroupMode) == "" && !in.Lenient
 
 		groupNames := make([]string, 0, len(in.Groups))
@@ -173,28 +174,34 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 			return nil, fmt.Errorf("no usable proxy groups after expansion; add nodes or fix REGION:xx refs")
 		}
 
-		// 规则
-		ruleLines := make([]string, 0, len(in.Rules))
-		hasMatch := false
-		for _, r := range in.Rules {
-			target := strings.TrimSpace(r.Target)
-			if _, ok := groupSet[target]; !ok {
-				if strictRules {
-					return nil, fmt.Errorf("rule target %q not found in proxy-groups/DIRECT/REJECT", target)
+			// 规则
+			ruleLines := make([]string, 0, len(in.Rules))
+			hasMatch := false
+			// 投影场景下缺失目标的优先回退：节点选择 → DIRECT
+			const fallbackProxyGroup = "节点选择"
+			for _, r := range in.Rules {
+				target := strings.TrimSpace(r.Target)
+				if _, ok := groupSet[target]; !ok {
+					if strictRules {
+						return nil, fmt.Errorf("rule target %q not found in proxy-groups/DIRECT/REJECT", target)
+					}
+					fallback := "DIRECT"
+					if _, ok := groupSet[fallbackProxyGroup]; ok {
+						fallback = fallbackProxyGroup
+					}
+					warnings = append(warnings,
+						fmt.Sprintf("rule target %q missing after filter; fallback to %s", target, fallback))
+					r.Target = fallback
 				}
-				warnings = append(warnings,
-					fmt.Sprintf("rule target %q missing after filter; fallback to DIRECT", target))
-				r.Target = "DIRECT"
+				line := formatRule(r)
+				if line == "" {
+					continue
+				}
+				if r.Type == "MATCH" {
+					hasMatch = true
+				}
+				ruleLines = append(ruleLines, line)
 			}
-			line := formatRule(r)
-			if line == "" {
-				continue
-			}
-			if r.Type == "MATCH" {
-				hasMatch = true
-			}
-			ruleLines = append(ruleLines, line)
-		}
 	if len(ruleLines) == 0 {
 		return nil, fmt.Errorf("no enabled rules")
 	}

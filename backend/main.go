@@ -62,31 +62,20 @@ func main() {
 	if err := ruleSvc.SeedDefaults(); err != nil {
 		applog.Fatalf("seed rules: %v", err)
 	}
-	publishSvc := publish.NewService(db, sourceSvc, ruleSvc)
-	// 已有节点时自动发布默认 v1，避免订阅接口因「未发布」一直 403
-	if ok, err := publishSvc.EnsureDefaultPublished(); err != nil {
-		applog.Warn("default publish: %v", err)
-	} else if ok {
-		applog.Info("default publish: created v1 from current draft")
-	}
-	subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
+		publishSvc := publish.NewService(db, sourceSvc, ruleSvc)
+		subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
 
-	// 启动后异步拉一次全部启用源，再按间隔定时刷新；首次拉取后若仍无发布版再尝试 v1
-	go func() {
-		// 略延迟，避免与 HTTP 启动争抢
-		time.Sleep(3 * time.Second)
-		sourceSvc.RefreshAll()
-		if ok, err := publishSvc.EnsureDefaultPublished(); err != nil {
-			applog.Warn("default publish after refresh: %v", err)
-		} else if ok {
-			applog.Info("default publish: created v1 after first source refresh")
-		}
-		ticker := time.NewTicker(cfg.RefreshInterval)
-		defer ticker.Stop()
-		for range ticker.C {
+		// 启动后异步拉一次全部启用源，再按间隔定时刷新；首次发布由用户在面板完成
+		go func() {
+			// 略延迟，避免与 HTTP 启动争抢
+			time.Sleep(3 * time.Second)
 			sourceSvc.RefreshAll()
-		}
-	}()
+			ticker := time.NewTicker(cfg.RefreshInterval)
+			defer ticker.Stop()
+			for range ticker.C {
+				sourceSvc.RefreshAll()
+			}
+		}()
 
 	r := server.NewRouter(server.Deps{
 		Cfg:     cfg,

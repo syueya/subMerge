@@ -46,26 +46,31 @@ func TestLoadSeedDefaults(t *testing.T) {
 			}
 		}
 	}
-for _, want := range []string{
-				"直连", "拒绝",
-				"美国US", "日本JP", "香港HK", "台湾TW", "新加坡SG", "英国GB", "菲律宾PH", "土耳其TR",
-				"其他国家",
-			} {
-				if !names[want] {
-					t.Fatalf("missing group %s", want)
+	for _, want := range []string{
+					"直连", "拒绝", "节点选择",
+					"美国US", "日本JP", "香港HK", "台湾TW", "新加坡SG", "英国GB", "菲律宾PH", "土耳其TR",
+					"其他国家",
+				} {
+					if !names[want] {
+						t.Fatalf("missing group %s", want)
+					}
 				}
+	// 常用国家 url-test + 「其他国家」；当前默认约 9 组（无韩国独立组）
+			if urlTestCount < 9 {
+				t.Fatalf("expected >=9 url-test region groups, got %d", urlTestCount)
 			}
-			// 不应再有「节点选择」总选组
-			if names["节点选择"] {
-				t.Fatal("节点选择 group should not exist; rules target 直连/拒绝/各国 only")
-			}
-// 常用国家 url-test + 「其他国家」；当前默认约 9 组（无韩国独立组）
-		if urlTestCount < 9 {
-			t.Fatalf("expected >=9 url-test region groups, got %d", urlTestCount)
+		if groups[0].Name != "直连" || groups[1].Name != "拒绝" {
+			t.Fatalf("first groups should be 直连, 拒绝; got %s, %s", groups[0].Name, groups[1].Name)
 		}
-	if groups[0].Name != "直连" || groups[1].Name != "拒绝" {
-		t.Fatalf("first groups should be 直连, 拒绝; got %s, %s", groups[0].Name, groups[1].Name)
-	}
+		lastGroup := groups[len(groups)-1]
+		if lastGroup.Name != "节点选择" {
+			t.Fatalf("last group should be 节点选择, got %s", lastGroup.Name)
+		}
+		var selectMembers []string
+		_ = json.Unmarshal([]byte(lastGroup.Proxies), &selectMembers)
+		if len(selectMembers) != 1 || selectMembers[0] != "ALL" {
+			t.Fatalf("节点选择 should be [ALL], got %v", selectMembers)
+		}
 
 	// 其他国家成员应为 REGION:OTHER
 	var otherMembers []string

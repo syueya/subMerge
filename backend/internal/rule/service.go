@@ -47,13 +47,23 @@ func (s *Service) SeedDefaults() error {
 			}
 			return nil
 		}
-		// 已有库轻量迁移：直连/拒绝 + 国家组改名 + 规则挂组名 + 广告规则
-		if err := ensureNamedGroup(tx, "直连", "select", []string{"DIRECT"}, 0); err != nil {
-			return err
-		}
-		if err := ensureNamedGroup(tx, "拒绝", "select", []string{"REJECT"}, 1); err != nil {
-			return err
-		}
+			// 已有库轻量迁移：直连/拒绝/节点选择 + 国家组改名 + 规则挂组名 + 广告规则
+			if err := ensureNamedGroup(tx, "直连", "select", []string{"DIRECT"}, 0); err != nil {
+				return err
+			}
+			if err := ensureNamedGroup(tx, "拒绝", "select", []string{"REJECT"}, 1); err != nil {
+				return err
+			}
+			// 总选组（排在列表末尾）：订阅投影时规则目标组被剪掉后优先回退到此
+			if err := ensureNamedGroup(tx, "节点选择", "select", []string{"ALL"}, 100); err != nil {
+				return err
+			}
+			// 已有库若先前插在靠前位置，启动时挪到末尾
+			if err := tx.Model(&database.ProxyGroup{}).
+				Where("name = ?", "节点选择").
+				Update("sort_order", 100).Error; err != nil {
+				return err
+			}
 		// 规则 target：引擎关键字 → 策略组名
 		if err := tx.Model(&database.Rule{}).Where("target = ?", "DIRECT").
 			Update("target", "直连").Error; err != nil {

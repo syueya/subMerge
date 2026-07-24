@@ -2,8 +2,9 @@
 # 已有数据不会自动覆盖；修改后需重新编译且空库/无规则时才会写入。
 #
 # 精简约定：
-#   - 策略组：直连 / 拒绝 / 常用国家 / 其他国家
+#   - 策略组：直连 / 拒绝 / 常用国家 / 其他国家 / 节点选择（末尾）
 #   - 业务分流（AI、流媒体、电报等）写在 rules 里，target 直接指向策略组名（如 美国US）
+#   - 「节点选择」= 全部节点总选组；订阅投影时空地区组被剪掉时，规则目标优先回退到这里
 #
 # 成员说明（发布时展开）：
 #   ALL / *              → 全部节点
@@ -32,3 +33,6 @@ groups:
 
   # 其余识别到的地区节点（DE/FR/CA/NG…）
   - { name: 其他国家, type: url-test, proxies: [REGION:OTHER], url: https://www.gstatic.com/generate_204, interval: 300, enabled: true }
+
+  # 全部节点总选（列表末尾）：客户端手动挑节点；也作缺失地区组规则的回退目标
+  - { name: 节点选择, type: select, proxies: [ALL], enabled: true }

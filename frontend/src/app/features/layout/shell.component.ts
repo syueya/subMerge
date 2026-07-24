@@ -1,36 +1,40 @@
 import { Component, ElementRef, HostListener, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { DialogService } from '../../common/dialog/dialog.service';
-import { ThemeMode, ThemeService } from '../../core/theme.service';
-import { AuthService } from '../auth/auth.service';
-
-@Component({
-	selector: 'app-shell',
-	standalone: true,
-	imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule],
-	templateUrl: './shell.component.html',
-	styleUrl: './shell.component.scss',
-})
-export class ShellComponent implements OnInit, OnDestroy {
-	readonly auth = inject(AuthService);
-	readonly theme = inject(ThemeService);
-	private readonly dialog = inject(DialogService);
-	private readonly router = inject(Router);
-
-	private readonly menuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
-
-	// 与后端 isAllowedAvatarDataURL 对齐：仅位图，拒绝 svg（防 XSS）
-	private static readonly avatarMime = new Set([
-		'image/png',
-		'image/jpeg',
-		'image/webp',
-		'image/gif',
-	]);
-
-	menuOpen = signal(false);
-	profileOpen = signal(false);
-	busy = signal(false);
+	import { FormsModule } from '@angular/forms';
+	import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+	import { DialogService } from '../../common/dialog/dialog.service';
+	import { HealthResponse } from '../../common/types';
+	import { ApiService } from '../../core/api.service';
+	import { ThemeMode, ThemeService } from '../../core/theme.service';
+	import { AuthService } from '../auth/auth.service';
+	
+	@Component({
+		selector: 'app-shell',
+		standalone: true,
+		imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule],
+		templateUrl: './shell.component.html',
+		styleUrl: './shell.component.scss',
+	})
+	export class ShellComponent implements OnInit, OnDestroy {
+		readonly auth = inject(AuthService);
+		readonly theme = inject(ThemeService);
+		private readonly api = inject(ApiService);
+		private readonly dialog = inject(DialogService);
+		private readonly router = inject(Router);
+	
+		private readonly menuRoot = viewChild<ElementRef<HTMLElement>>('userMenuRoot');
+	
+		// 与后端 isAllowedAvatarDataURL 对齐：仅位图，拒绝 svg（防 XSS）
+		private static readonly avatarMime = new Set([
+			'image/png',
+			'image/jpeg',
+			'image/webp',
+			'image/gif',
+		]);
+	
+		menuOpen = signal(false);
+		profileOpen = signal(false);
+		busy = signal(false);
+		appVersion = signal('');
 
 	// profile form
 	formUsername = '';
@@ -49,12 +53,20 @@ export class ShellComponent implements OnInit, OnDestroy {
 		{ path: '/tokens', label: '令牌' },
 	];
 
-	ngOnInit(): void {
-		// 刷新后用服务端资料覆盖 localStorage；401 由 interceptor 处理，其它错误忽略
-		if (this.auth.isLoggedIn()) {
-			this.auth.me().subscribe({ error: () => undefined });
+		ngOnInit(): void {
+			// 刷新后用服务端资料覆盖 localStorage；401 由 interceptor 处理，其它错误忽略
+			if (this.auth.isLoggedIn()) {
+				this.auth.me().subscribe({ error: () => undefined });
+			}
+			// 顶部 logo 旁展示应用版本（失败则不显示）
+			this.api.get<HealthResponse>('/health').subscribe({
+				next: (h) => {
+					const v = (h.version || '').trim();
+					if (v) this.appVersion.set(v);
+				},
+				error: () => undefined,
+			});
 		}
-	}
 
 	ngOnDestroy(): void {
 		// 弹窗开启时若路由离开，避免 body 残留 overflow:hidden

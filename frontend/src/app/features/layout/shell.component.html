@@ -5,10 +5,12 @@
 				<div class="flex items-center gap-2.5">
 					<img src="logo.svg" alt="SubMerge" class="h-8 w-8" />
 					<div class="leading-tight">
-						<div class="text-lg font-semibold tracking-tight">
-							SubMerge
-							<span class="ml-1.5 text-xs font-normal text-muted-2">panel</span>
-						</div>
+							<div class="text-lg font-semibold tracking-tight">
+								SubMerge
+								@if (appVersion()) {
+									<span class="ml-1.5 text-xs font-normal text-muted-2">v{{ appVersion() }}</span>
+								}
+							</div>
 					</div>
 				</div>
 				<nav class="flex flex-wrap gap-1">

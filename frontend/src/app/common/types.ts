@@ -272,3 +272,10 @@ export interface PublishResponse {
  release: Release;
  preview: ReleasePreview;
 }
+
+/** 健康检查 / 应用版本 */
+export interface HealthResponse {
+	status: string;
+	version: string;
+	time: string;
+}

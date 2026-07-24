@@ -75,12 +75,12 @@
 			</div>
 			@if (createGroupMode() === 'auto') {
 				<p class="text-xs text-muted mt-2">
-					自动：按该链接实际节点去掉空地区组；规则指向被去掉的组时回退直连（推荐）。
+					自动：按该链接实际节点去掉空地区组；规则指向被去掉的组时优先回退「节点选择」，否则直连（推荐）。
 				</p>
 			} @else if (createGroupMode() === 'all') {
 				<p class="text-xs text-muted mt-2">全部：保留模板里的策略组；没有节点的组会占位为直连。</p>
 			} @else {
-				<p class="text-xs text-muted mt-2">自定义：只下发勾选的策略组；空组仍会跳过。</p>
+				<p class="text-xs text-muted mt-2">自定义：只下发勾选的策略组；空组仍会跳过，规则目标缺失同样优先回退「节点选择」。</p>
 				@if (groupList().length === 0) {
 					<p class="text-xs text-muted mt-1">暂无策略组，请先在规则页创建。</p>
 				} @else {
@@ -304,12 +304,12 @@
 						</div>
 						@if (editGroupMode() === 'auto') {
 							<p class="text-xs text-muted mt-2">
-								自动：按该链接节点去掉空地区组；规则指向被去掉的组时回退直连（推荐）。
+								自动：按该链接节点去掉空地区组；规则指向被去掉的组时优先回退「节点选择」，否则直连（推荐）。
 							</p>
 						} @else if (editGroupMode() === 'all') {
 							<p class="text-xs text-muted mt-2">全部：保留模板里的策略组；没有节点的组会占位为直连。</p>
 						} @else {
-							<p class="text-xs text-muted mt-2">自定义：只下发勾选的策略组；空组仍会跳过。</p>
+							<p class="text-xs text-muted mt-2">自定义：只下发勾选的策略组；空组仍会跳过，规则目标缺失同样优先回退「节点选择」。</p>
 							@if (groupList().length === 0) {
 								<p class="text-xs text-muted mt-1">暂无策略组</p>
 							} @else {
