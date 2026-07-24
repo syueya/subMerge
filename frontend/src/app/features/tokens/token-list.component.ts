@@ -429,10 +429,36 @@ export class TokenListComponent implements OnInit {
 		});
 	}
 
-	copy(text: string): void {
-		void navigator.clipboard.writeText(text).then(
-			() => void this.dialog.success('已复制到剪贴板'),
-			() => void this.dialog.error('复制失败，请手动选择文本'),
-		);
+	async copy(text: string): Promise<void> {
+		try {
+			await this.writeClipboard(text);
+			void this.dialog.success('已复制到剪贴板');
+		} catch {
+			void this.dialog.error('复制失败，请手动选择文本');
+		}
+	}
+
+	/** Clipboard API 仅在 HTTPS / localhost 可用；HTTP 局域网访问时回退到 execCommand。 */
+	private async writeClipboard(text: string): Promise<void> {
+		if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText && window.isSecureContext) {
+			await navigator.clipboard.writeText(text);
+			return;
+		}
+		const ta = document.createElement('textarea');
+		ta.value = text;
+		ta.setAttribute('readonly', '');
+		ta.style.position = 'fixed';
+		ta.style.left = '-9999px';
+		ta.style.top = '0';
+		document.body.appendChild(ta);
+		ta.select();
+		ta.setSelectionRange(0, text.length);
+		try {
+			if (!document.execCommand('copy')) {
+				throw new Error('execCommand copy failed');
+			}
+		} finally {
+			document.body.removeChild(ta);
+		}
 	}
 }

@@ -35,6 +35,7 @@ rules:
 
   # ========== 国内 AI ==========
   - { type: DOMAIN-SUFFIX, payload: zhipuai.cn, target: 直连, enabled: true, note: AI-智谱 }
+  - { type: DOMAIN, payload: zcode.z.ai, target: 直连, enabled: true, note: AI-智谱 }
   - { type: DOMAIN-SUFFIX, payload: bigmodel.cn, target: 直连, enabled: true, note: AI-智谱开放平台 }
   - { type: DOMAIN-SUFFIX, payload: chatglm.cn, target: 直连, enabled: true, note: AI-ChatGLM }
   - { type: DOMAIN-SUFFIX, payload: deepseek.com, target: 直连, enabled: true, note: AI-DeepSeek }
@@ -62,6 +63,19 @@ rules:
   - { type: DOMAIN-SUFFIX, payload: ytimg.com, target: 日本JP, enabled: true, note: 流媒体 }
   - { type: DOMAIN-SUFFIX, payload: googlevideo.com, target: 日本JP, enabled: true, note: 流媒体 }
   - { type: DOMAIN-SUFFIX, payload: youtu.be, target: 日本JP, enabled: true, note: 流媒体 }
+
+  # ========== 影视元数据 ==========
+  - { type: DOMAIN-SUFFIX, payload: themoviedb.org, target: 日本JP, enabled: true, note: TMDB }
+  - { type: DOMAIN-SUFFIX, payload: tmdb.org, target: 日本JP, enabled: true, note: TMDB }
+  - { type: DOMAIN-SUFFIX, payload: tmdb-image-prod.freetls.fastly.net, target: 日本JP, enabled: true, note: TMDB图片CDN }
+  - { type: DOMAIN-SUFFIX, payload: fanart.tv, target: 日本JP, enabled: true, note: Fanart }
+  - { type: DOMAIN-SUFFIX, payload: thetvdb.com, target: 日本JP, enabled: true, note: TVDB }
+  - { type: DOMAIN-SUFFIX, payload: tvdb.com, target: 日本JP, enabled: true, note: TVDB }
+  - { type: DOMAIN-SUFFIX, payload: imdb.com, target: 日本JP, enabled: true, note: IMDb }
+  - { type: DOMAIN-SUFFIX, payload: media-amazon.com, target: 日本JP, enabled: true, note: IMDb图片 }
+  - { type: DOMAIN-SUFFIX, payload: omdbapi.com, target: 日本JP, enabled: true, note: OMDb }
+  - { type: DOMAIN-SUFFIX, payload: musicbrainz.org, target: 日本JP, enabled: true, note: MusicBrainz }
+  - { type: DOMAIN-SUFFIX, payload: coverartarchive.org, target: 日本JP, enabled: true, note: CoverArt }
 
   # ========== 电报 ==========
   - { type: DOMAIN-SUFFIX, payload: telegram.org, target: 香港HK, enabled: true, note: 电报 }
