@@ -137,6 +137,46 @@ export function buildCategorySections(
 }
 
 /**
+ * 面板分组：按出口（策略组）聚合，组内保持全局匹配顺序。
+ * groupNames：已有策略组名（用于固定顺序与空组不展示——仅展示有规则的出口；
+ * 失效出口也会单独成组排在最后）。
+ */
+export function buildTargetSections(rules: Rule[], groupNames: string[] = []): CategorySection[] {
+	const sorted = sortRules(rules);
+	const buckets = new Map<string, Rule[]>();
+	for (const r of sorted) {
+		const key = (r.target || '').trim() || '';
+		const list = buckets.get(key) || [];
+		list.push(r);
+		buckets.set(key, list);
+	}
+	const sections: CategorySection[] = [];
+	const seen = new Set<string>();
+	for (const name of groupNames) {
+		const n = (name || '').trim();
+		if (!n) continue;
+		const list = buckets.get(n);
+		if (!list?.length) continue;
+		sections.push({ key: n, label: n, rules: list });
+		buckets.delete(n);
+		seen.add(n);
+	}
+	// 未指定出口（理论上不应出现）
+	const empty = buckets.get('');
+	if (empty?.length) {
+		sections.push({ key: '', label: '未指定出口', rules: empty });
+		buckets.delete('');
+	}
+	// 失效出口 / 不在策略组列表中的
+	for (const key of [...buckets.keys()].sort((a, b) => a.localeCompare(b, 'zh'))) {
+		const list = buckets.get(key) || [];
+		if (!list.length) continue;
+		sections.push({ key, label: key || '未指定出口', rules: list });
+	}
+	return sections;
+}
+
+/**
  * 分类下拉：预设 + 规则中出现过的 + 空新建分类 + 未分类 + 可选「新建」。
  * current：编辑时若当前值不在列表，仍保留。
  */

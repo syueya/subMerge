@@ -11,12 +11,13 @@ WorkingDirectory=/opt/submerge
 ExecStart=/opt/submerge/bin/submerge
 EnvironmentFile=/opt/submerge/.env
 # .env 只需业务项，例如：
-#   APP_ENV=production
-#   ENCRYPTION_KEY=...（≥32 字符）
-#   PUBLIC_BASE_URL=https://你的域名
-#   LOG_OUTPUT=both
-#   LOG_RETENTION_DAYS=7
-# 默认规则与版本号已编译进二进制
+	#   APP_ENV=production
+	#   ENCRYPTION_KEY=...（≥32 字符）
+	#   PUBLIC_BASE_URL=https://你的域名
+	#   SOURCE_REFRESH_INTERVAL=24
+	#   LOG_OUTPUT=both
+	#   LOG_RETENTION_DAYS=7
+	# 默认规则与版本号已编译进二进制
 Restart=on-failure
 RestartSec=3
 

@@ -56,7 +56,8 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	refreshInterval, err := getDuration("SOURCE_REFRESH_INTERVAL", 6*time.Hour)
+	// 单位固定为小时，环境变量只写数字，如 24
+	refreshInterval, err := getHoursDuration("SOURCE_REFRESH_INTERVAL", 24*time.Hour)
 	if err != nil {
 		return nil, err
 	}
@@ -224,6 +225,23 @@ func getDuration(key string, def time.Duration) (time.Duration, error) {
 		return 0, fmt.Errorf("%s must be greater than zero", key)
 	}
 	return d, nil
+}
+
+// getHoursDuration 解析「小时数」环境变量：只写整数，单位固定为小时。
+// 例如 SOURCE_REFRESH_INTERVAL=24 → 24h。
+func getHoursDuration(key string, def time.Duration) (time.Duration, error) {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return def, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be an integer number of hours: %w", key, err)
+	}
+	if n <= 0 {
+		return 0, fmt.Errorf("%s must be greater than zero", key)
+	}
+	return time.Duration(n) * time.Hour, nil
 }
 
 func splitCSV(s string) []string {

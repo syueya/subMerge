@@ -2,11 +2,11 @@
 	<div class="flex flex-wrap items-start justify-between gap-3">
 		<div>
 			<h2 class="text-xl font-semibold">分流规则</h2>
-			<p class="text-sm text-muted">
-				按业务分类维护分流规则；出口请到
-				<a routerLink="/groups" class="text-link">策略组</a>
-				页配置。改完后需发布，订阅才会更新。
-			</p>
+<p class="text-sm text-muted">
+					可按业务分类或出口策略组查看；出口请到
+					<a routerLink="/groups" class="text-link">策略组</a>
+					页配置。改完后需发布，订阅才会更新。
+				</p>
 			@if (draftStatusNote()) {
 				<p
 					class="mt-1 text-xs"
@@ -35,66 +35,144 @@
 			</div>
 	</div>
 
-	<section class="card group-list-well space-y-4">
-		<div class="flex flex-wrap items-center justify-between gap-2">
-			<p class="text-sm text-muted-2">
-				共 {{ rules().length }} 条规则 · {{ groups().length }} 个可用出口
-				@if (orphanRuleCount()) {
-					· <span class="text-muted">{{ orphanRuleCount() }} 条出口失效</span>
-				}
-			</p>
-			<a class="btn-secondary btn-sm" routerLink="/groups">管理策略组</a>
-		</div>
-
-		@if (categorySections().length === 0) {
-			<p class="py-8 text-center text-sm text-muted">暂无规则，点击「添加规则」或「批量导入」</p>
-		}
-
-		@for (sec of categorySections(); track sec.key) {
-			<div class="group-card">
-				<div class="group-card-head flex flex-wrap items-start justify-between gap-3 p-4">
-					<button type="button" class="min-w-0 flex-1 text-left" (click)="toggleCategory(sec.key)">
-						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-muted-2">{{ isCategoryCollapsed(sec.key) ? '▶' : '▼' }}</span>
-							<span class="font-medium text-fg">{{ sec.label }}</span>
-							<span class="badge-ok">{{ sec.rules.length }} 条</span>
-						</div>
-						<div class="mt-1 pl-5 text-xs text-muted-2">
-							业务分类仅面板展示；匹配顺序以 # 列全局序号为准（Clash 自上而下）
-						</div>
+<section class="card group-list-well space-y-4">
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<p class="text-sm text-muted-2">
+					共 {{ rules().length }} 条规则 · {{ groups().length }} 个可用出口
+					@if (orphanRuleCount()) {
+						· <span class="text-muted">{{ orphanRuleCount() }} 条出口失效</span>
+					}
+				</p>
+				<div class="inline-flex flex-wrap gap-1">
+					<button
+						type="button"
+						class="btn-sm"
+						[class.btn-primary]="viewMode() === 'category'"
+						[class.btn-secondary]="viewMode() !== 'category'"
+						(click)="setViewMode('category')"
+					>
+						按分类
 					</button>
-<button class="btn-secondary" type="button" (click)="openCreateRule(sec.key)">添加规则</button>
+					<button
+						type="button"
+						class="btn-sm"
+						[class.btn-primary]="viewMode() === 'target'"
+						[class.btn-secondary]="viewMode() !== 'target'"
+						(click)="setViewMode('target')"
+					>
+						按策略组
+					</button>
+				</div>
+			</div>
+
+			@if (selectedCount() > 0) {
+				<div class="flex flex-wrap items-center gap-2 panel-box">
+					<span class="text-sm text-muted">已选 {{ selectedCount() }} 条</span>
+					<button class="btn-secondary btn-sm" type="button" [disabled]="batchBusy()" (click)="clearSelection()">
+						取消选择
+					</button>
+					<span class="ml-auto flex flex-wrap items-center gap-2">
+						<select class="min-w-28" [(ngModel)]="batchTarget" [disabled]="batchBusy()">
+							@for (g of groups(); track g.id) {
+								<option [ngValue]="g.name">{{ g.name }}</option>
+							}
+						</select>
+						<button class="btn-primary btn-sm" type="button" [disabled]="batchBusy()" (click)="applyBatchTarget()">
+							{{ batchBusy() ? '处理中…' : '改出口' }}
+						</button>
+					</span>
+				</div>
+			}
+
+			@if (ruleSections().length === 0) {
+				<p class="py-8 text-center text-sm text-muted">暂无规则，点击「添加规则」或「批量导入」</p>
+			}
+
+			@for (sec of ruleSections(); track viewMode() + ':' + sec.key) {
+				<div class="group-card">
+					<div class="group-card-head flex flex-wrap items-start justify-between gap-3 p-4">
+						<button type="button" class="min-w-0 flex-1 text-left" (click)="toggleSection(sec.key)">
+							<div class="flex flex-wrap items-center gap-2">
+								<span class="text-muted-2">{{ isSectionCollapsed(sec.key) ? '▶' : '▼' }}</span>
+								<span class="font-medium text-fg">{{ sec.label }}</span>
+								<span class="badge-ok">{{ sec.rules.length }} 条</span>
+								@if (viewMode() === 'target' && sec.key && isOrphanTarget(sec.key)) {
+									<span class="badge-warn">失效</span>
+								}
+							</div>
+							<div class="mt-1 pl-5 text-xs text-muted-2">
+								@if (viewMode() === 'category') {
+									业务分类仅面板展示；匹配顺序以 # 列全局序号为准（Clash 自上而下）
+								} @else {
+									按出口聚合；匹配顺序以 # 列全局序号为准（Clash 自上而下）
+								}
+							</div>
+						</button>
+@if (viewMode() === 'category') {
+								<button class="btn-secondary" type="button" (click)="openCreateRule({ category: sec.key })">
+									添加规则
+								</button>
+							} @else if (sec.key && !isOrphanTarget(sec.key)) {
+								<button class="btn-secondary" type="button" (click)="openCreateRule({ target: sec.key })">
+									添加规则
+								</button>
+							}
 					</div>
 
-@if (!isCategoryCollapsed(sec.key)) {
+					@if (!isSectionCollapsed(sec.key)) {
 						<div class="group-card-rules">
 							@if (sec.rules.length === 0) {
 								<p class="px-4 py-6 text-center text-sm text-muted-2">
-									暂无规则，点击右上角「添加规则」写入本分类
+									@if (viewMode() === 'category') {
+										暂无规则，点击右上角「添加规则」写入本分类
+									} @else {
+										暂无规则，点击右上角「添加规则」写入本出口
+									}
 								</p>
 							} @else {
 							<div class="overflow-x-auto">
-								<table class="table rule-table">
-									<thead>
-										<tr>
-											<th class="rule-col-order" title="全局匹配顺序（Clash 自上而下）">#</th>
-											<th class="rule-col-status">启用</th>
-											<th class="rule-col-type">类型</th>
-											<th class="rule-col-payload">匹配</th>
-											<th class="rule-col-target">出口</th>
-											<th class="rule-col-note">备注</th>
-											<th class="text-right">操作</th>
-										</tr>
-									</thead>
-									<tbody>
-										@for (rule of sec.rules; track rule.id) {
-										<tr [class.is-disabled]="!rule.enabled">
-											<td
-												class="rule-col-order text-xs text-muted-2"
-												[title]="'全局第 ' + globalOrderNo(rule) + ' 条'"
+<table class="table rule-table">
+										<thead>
+											<tr>
+												<th class="rule-col-check">
+													<input
+														type="checkbox"
+														[checked]="isSectionAllSelected(sec)"
+														[indeterminate]="isSectionSomeSelected(sec)"
+														(change)="toggleSectionSelect(sec, $any($event.target).checked)"
+														[disabled]="batchBusy() || sec.rules.length === 0"
+														title="全选本组"
+													/>
+												</th>
+												<th class="rule-col-order" title="全局匹配顺序（Clash 自上而下）">#</th>
+												<th class="rule-col-status">启用</th>
+												<th class="rule-col-type">类型</th>
+												<th class="rule-col-payload">匹配</th>
+												<th class="rule-col-target">出口</th>
+												<th class="rule-col-note">备注</th>
+												<th class="text-right">操作</th>
+											</tr>
+										</thead>
+										<tbody>
+											@for (rule of sec.rules; track rule.id) {
+											<tr
+												[class.is-disabled]="!rule.enabled"
+												[class.is-selected]="isSelected(rule.id)"
 											>
-												{{ globalOrderNo(rule) }}
-											</td>
+												<td class="rule-col-check">
+													<input
+														type="checkbox"
+														[checked]="isSelected(rule.id)"
+														(change)="toggleSelect(rule.id, $any($event.target).checked)"
+														[disabled]="batchBusy()"
+													/>
+												</td>
+												<td
+													class="rule-col-order text-xs text-muted-2"
+													[title]="'全局第 ' + globalOrderNo(rule) + ' 条'"
+												>
+													{{ globalOrderNo(rule) }}
+												</td>
 											<td class="rule-col-status">
 												@if (rule.enabled) {
 													<span class="badge-ok">启用</span>
@@ -133,34 +211,14 @@
 												}
 											</td>
 <td class="text-right">
-													<div class="inline-flex flex-wrap justify-end gap-1">
-														@if (!isSystemRule(rule)) {
+														<div class="inline-flex flex-wrap justify-end gap-1">
 															<button
 																class="btn-icon"
 																type="button"
-																title="全局匹配顺序上移"
-																aria-label="上移"
-																(click)="move(rule, -1)"
+																title="编辑"
+																aria-label="编辑"
+																(click)="openEditRule(rule)"
 															>
-																<svg viewBox="0 0 24 24"><path d="M12 5v14M6 11l6-6 6 6" /></svg>
-															</button>
-															<button
-																class="btn-icon"
-																type="button"
-																title="全局匹配顺序下移"
-																aria-label="下移"
-																(click)="move(rule, 1)"
-															>
-																<svg viewBox="0 0 24 24"><path d="M12 19V5M6 13l6 6 6-6" /></svg>
-															</button>
-														}
-														<button
-															class="btn-icon"
-															type="button"
-															title="编辑"
-															aria-label="编辑"
-															(click)="openEditRule(rule)"
-														>
 															<svg viewBox="0 0 24 24">
 																<path d="M12 20h9" />
 																<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
@@ -253,11 +311,11 @@
 	[groups]="groups()"
 	[rules]="rules()"
 	[extraCategories]="extraCategories()"
-	[defaultCategory]="createDefaultCategory"
-	[defaultTarget]="defaultTarget()"
-	(closed)="closeRuleModal()"
-	(saved)="onRuleSaved($event)"
-/>
+[defaultCategory]="createDefaultCategory"
+		[defaultTarget]="createTargetForModal()"
+		(closed)="closeRuleModal()"
+		(saved)="onRuleSaved($event)"
+	/>
 
 @if (showNewCategoryModal()) {
 	<div class="dialog-overlay" (click)="closeNewCategoryModal()">

@@ -47,7 +47,7 @@ export class BatchImportModalComponent implements OnChanges {
 	readonly categoryNewValue = CATEGORY_NEW_VALUE;
 
 	readonly tipBatchImport =
-		'一行一条，空行与 # 注释忽略。\n完整：TYPE,匹配内容,出口[,备注[,分类]]\n仅域名：example.com（用下方默认类型/出口/备注/分类）\n示例：\nDOMAIN-SUFFIX,xiaxiazi.ccwu.cc,直连,个人-小鸡,其它\ngpt-api.xxww.online\nDOMAIN-KEYWORD,hybgzs,直连,个人-中转,其它\n新规则会插在国内 GEOIP / 兜底 MATCH 之前。';
+		'一行一条，空行与 # 注释忽略。\n完整：分类,类型,匹配内容,出口[,备注]\n仅域名：example.com（用下方默认类型/出口/备注/分类）\n示例：\n个人,DOMAIN-SUFFIX,xiaxiazi.ccwu.cc,直连,域名\n海外AI,DOMAIN-SUFFIX,openai.com,美国US,AI-OpenAI\ngpt-api.xxww.online\n新规则会插在国内 GEOIP / 兜底 MATCH 之前。';
 
 	ngOnChanges(changes: SimpleChanges): void {
 		if (changes['open'] && this.open) {

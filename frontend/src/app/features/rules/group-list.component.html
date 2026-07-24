@@ -25,7 +25,7 @@
 
 	<section class="card group-list-well space-y-3">
 		<div class="flex flex-wrap items-center justify-between gap-2">
-			<p class="text-sm text-muted-2">共 {{ groups().length }} 个策略组 · 被规则引用数见各卡片</p>
+			<p class="text-sm text-muted-2">共 {{ groups().length }} 个策略组</p>
 		</div>
 
 		@for (g of groups(); track g.id) {
@@ -33,14 +33,13 @@
 				<div class="group-card-head flex flex-wrap items-start justify-between gap-3 p-4">
 					<div class="min-w-0 flex-1">
 						<div class="flex flex-wrap items-center gap-2">
-							<span class="font-medium text-fg">{{ g.name }}</span>
-							@if (!g.enabled) {
-								<span class="badge-warn">已禁用</span>
-							}
-							<span class="badge-ok">{{ rulesOfGroup(g.name) }} 条规则引用</span>
-							<span [class]="groupTypeBadgeClass(g.type)" [title]="groupTypeTip(g.type)">{{
-								groupTypeText(g.type)
-							}}</span>
+<span class="font-medium text-fg">{{ g.name }}</span>
+								@if (!g.enabled) {
+									<span class="badge-warn">已禁用</span>
+								}
+								<span [class]="groupTypeBadgeClass(g.type)" [title]="groupTypeTip(g.type)">{{
+									groupTypeText(g.type)
+								}}</span>
 							@if (g.type === 'url-test' || g.type === 'fallback') {
 								<span [class]="groupTypeBadgeClass(g.type)" title="测速间隔"
 									>{{ g.interval ?? defaultTestInterval }}s</span

@@ -9,67 +9,49 @@
 		<button class="btn-secondary" type="button" [disabled]="loading()" (click)="reload()">刷新状态</button>
 	</div>
 
-	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-		<div class="stat-card">
-			<div class="stat-label">订阅源</div>
-			<div class="stat-value">{{ sourceCount() }}</div>
-			<div class="stat-sub">启用 {{ enabledSourceCount() }} · 节点 {{ proxyCount() }}</div>
-			<div class="mt-3">
-				<a class="btn-secondary btn-sm" routerLink="/sources">去管理</a>
+		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+			<div class="stat-card">
+				<div class="stat-label">订阅源</div>
+				<div class="stat-value">{{ sourceCount() }}</div>
+				<div class="stat-sub">启用 {{ enabledSourceCount() }} · 节点 {{ proxyCount() }}</div>
 			</div>
-		</div>
-		<div class="stat-card">
-			<div class="stat-label">策略组</div>
-			<div class="stat-value">{{ groupCount() }}</div>
-			<div class="stat-sub">出口容器 · 成员/测速</div>
-			<div class="mt-3">
-				<a class="btn-secondary btn-sm" routerLink="/groups">去配置</a>
+			<div class="stat-card">
+				<div class="stat-label">策略组</div>
+				<div class="stat-value">{{ groupCount() }}</div>
+				<div class="stat-sub">出口容器 · 成员/测速</div>
 			</div>
-		</div>
-		<div class="stat-card">
-			<div class="stat-label">分流规则</div>
-			<div class="stat-value">{{ ruleCount() }}</div>
-			<div class="stat-sub">业务匹配 · 草稿</div>
-			<div class="mt-3">
-				<a class="btn-secondary btn-sm" routerLink="/rules">去编辑</a>
+			<div class="stat-card">
+				<div class="stat-label">分流规则</div>
+				<div class="stat-value">{{ ruleCount() }}</div>
+				<div class="stat-sub">业务匹配 · 草稿</div>
 			</div>
-		</div>
-		<div class="stat-card">
-			<div class="stat-label">发布</div>
-			<div class="stat-value">
-				@if (latestRelease(); as rel) {
-					v{{ rel.version }}
-				} @else {
-					—
-				}
-			</div>
-			<div class="stat-sub flex flex-wrap items-center gap-2">
-				<span [class]="draftClass()" [title]="buildErrorDetail() || draftLabel()">{{ draftLabel() }}</span>
-				@if (!buildErrorDetail() && (latestRelease()?.publishedAt || latestRelease()?.createdAt)) {
-					<span>{{ formatTime(latestRelease()?.publishedAt || latestRelease()?.createdAt) }}</span>
-				}
-			</div>
-			@if (buildErrorDetail()) {
-				<p class="mt-1 text-xs text-muted" [title]="buildErrorDetail()">
-					{{ buildErrorDetail() }}
-				</p>
-			}
-			<div class="mt-3 flex flex-wrap gap-2">
+			<div class="stat-card">
+				<div class="stat-label">发布</div>
+				<div class="stat-value">
+					@if (latestRelease(); as rel) {
+						v{{ rel.version }}
+					} @else {
+						—
+					}
+				</div>
+				<div class="stat-sub flex flex-wrap items-center gap-2">
+					<span [class]="draftClass()" [title]="buildErrorDetail() || draftLabel()">{{ draftLabel() }}</span>
+					@if (!buildErrorDetail() && (latestRelease()?.publishedAt || latestRelease()?.createdAt)) {
+						<span>{{ formatTime(latestRelease()?.publishedAt || latestRelease()?.createdAt) }}</span>
+					}
+				</div>
 				@if (buildErrorDetail()) {
-					<a class="btn-secondary btn-sm" routerLink="/sources">去订阅源</a>
+					<p class="mt-1 text-xs text-muted" [title]="buildErrorDetail()">
+						{{ buildErrorDetail() }}
+					</p>
 				}
-				<a class="btn-secondary btn-sm" routerLink="/releases">去发布</a>
+			</div>
+			<div class="stat-card">
+				<div class="stat-label">分享令牌</div>
+				<div class="stat-value">{{ tokenCount() }}</div>
+				<div class="stat-sub">有效 {{ activeTokenCount() }}</div>
 			</div>
 		</div>
-		<div class="stat-card">
-			<div class="stat-label">分享令牌</div>
-			<div class="stat-value">{{ tokenCount() }}</div>
-			<div class="stat-sub">有效 {{ activeTokenCount() }}</div>
-			<div class="mt-3">
-				<a class="btn-secondary btn-sm" routerLink="/tokens">去创建</a>
-			</div>
-		</div>
-	</div>
 
 	@if (draft()?.dirty) {
 		<div class="card draft-alert flex flex-wrap items-center justify-between gap-3">

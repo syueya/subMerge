@@ -174,7 +174,7 @@ type RuleListResponse struct {
 
 	// BatchImportRulesRequest 批量导入规则（文本一行一条）
 	// 每行格式：
-	//   TYPE,payload,target[,note[,category]]
+	//   category,TYPE,payload,target[,note]
 	//   或仅 payload（用 defaultType / defaultTarget / defaultNote / defaultCategory）
 	// 空行与 # 注释忽略。新规则插在 GEOIP CN / MATCH 之前。
 	type BatchImportRulesRequest struct {

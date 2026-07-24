@@ -19,13 +19,15 @@ import { RuleService } from './rule.service';
 import { BatchImportModalComponent } from './batch-import-modal.component';
 import { RuleFormModalComponent } from './rule-form-modal.component';
 import {
-	CATEGORY_NEW_VALUE,
-	buildCategorySections,
-	categoryToRemember,
-	defaultRuleTarget,
-	isSystemRule,
-	sortRules,
-} from './rule-ui';
+		CATEGORY_NEW_VALUE,
+		CategorySection,
+		buildCategorySections,
+		buildTargetSections,
+		categoryToRemember,
+		defaultRuleTarget,
+		isSystemRule,
+		sortRules,
+	} from './rule-ui';
 
 @Component({
 	selector: 'app-rule-editor',
@@ -52,6 +54,8 @@ export class RuleEditorComponent implements OnInit {
 	showRuleModal = signal(false);
 	editingRule: Rule | null = null;
 	createDefaultCategory = '';
+	/** 新建时默认出口；空则用 defaultTarget() */
+	createDefaultTarget = '';
 
 	// batch import modal
 	showBatchImportModal = signal(false);
@@ -85,8 +89,18 @@ export class RuleEditorComponent implements OnInit {
 			})),
 	);
 
-	/** 按业务分类折叠；空 = 全部展开首次加载时 */
-	collapsedCategories = signal<Set<string>>(new Set());
+	/** 展示维度：业务分类 / 出口策略组 */
+	viewMode = signal<'category' | 'target'>('category');
+
+	/** 默认全部折叠；仅记录用户展开过的分组（按 viewMode 分开记） */
+	expandedCategoryKeys = signal<Set<string>>(new Set());
+	expandedTargetKeys = signal<Set<string>>(new Set());
+
+	/** 多选：批量改出口等 */
+	selectedIds = signal<Set<number>>(new Set());
+	batchTarget = '';
+	batchBusy = signal(false);
+	selectedCount = computed(() => this.selectedIds().size);
 
 	readonly tip = {
 		publishNote: '可选。只写在发布历史里，方便以后回看这次改了什么。',
@@ -171,8 +185,19 @@ export class RuleEditorComponent implements OnInit {
 		return this.sortedRules().filter((r) => this.isOrphanTarget(r.target)).length;
 	}
 
-	categorySections() {
+	ruleSections(): CategorySection[] {
+		if (this.viewMode() === 'target') {
+			return buildTargetSections(
+				this.rules(),
+				this.groups().map((g) => g.name),
+			);
+		}
 		return buildCategorySections(this.rules(), this.extraCategories());
+	}
+
+	setViewMode(mode: 'category' | 'target'): void {
+		if (this.viewMode() === mode) return;
+		this.viewMode.set(mode);
 	}
 
 	rememberCategory(name: string): void {
@@ -181,15 +206,21 @@ export class RuleEditorComponent implements OnInit {
 		this.extraCategories.update((xs) => [...xs, n]);
 	}
 
-	isCategoryCollapsed(key: string): boolean {
-		return this.collapsedCategories().has(key);
+	private expandedKeys(): Set<string> {
+		return this.viewMode() === 'target' ? this.expandedTargetKeys() : this.expandedCategoryKeys();
 	}
 
-	toggleCategory(key: string): void {
-		const next = new Set(this.collapsedCategories());
+	isSectionCollapsed(key: string): boolean {
+		return !this.expandedKeys().has(key);
+	}
+
+	toggleSection(key: string): void {
+		const cur = this.expandedKeys();
+		const next = new Set(cur);
 		if (next.has(key)) next.delete(key);
 		else next.add(key);
-		this.collapsedCategories.set(next);
+		if (this.viewMode() === 'target') this.expandedTargetKeys.set(next);
+		else this.expandedCategoryKeys.set(next);
 	}
 
 	targetText(v: string): string {
@@ -198,12 +229,105 @@ export class RuleEditorComponent implements OnInit {
 
 	reload(): void {
 		this.svc.listRules().subscribe({
-			next: (r) => this.rules.set(r.items || []),
+			next: (r) => {
+				const list = r.items || [];
+				this.rules.set(list);
+				const valid = new Set(list.map((x) => x.id));
+				this.selectedIds.update((prev) => {
+					const next = new Set<number>();
+					for (const id of prev) {
+						if (valid.has(id)) next.add(id);
+					}
+					return next;
+				});
+			},
 			error: (e: Error) => void this.dialog.error(e.message),
 		});
 		this.svc.listGroups().subscribe({
-			next: (r) => this.groups.set(r.items || []),
+			next: (r) => {
+				this.groups.set(r.items || []);
+				if (!this.batchTarget) {
+					this.batchTarget = this.defaultTarget() || '直连';
+				}
+			},
 			error: (e: Error) => void this.dialog.error(e.message),
+		});
+	}
+
+	isSelected(id: number): boolean {
+		return this.selectedIds().has(id);
+	}
+
+	toggleSelect(id: number, checked: boolean): void {
+		this.selectedIds.update((prev) => {
+			const next = new Set(prev);
+			if (checked) next.add(id);
+			else next.delete(id);
+			return next;
+		});
+	}
+
+	isSectionAllSelected(sec: { rules: Rule[] }): boolean {
+		if (!sec.rules.length) return false;
+		const sel = this.selectedIds();
+		return sec.rules.every((r) => sel.has(r.id));
+	}
+
+	isSectionSomeSelected(sec: { rules: Rule[] }): boolean {
+		if (!sec.rules.length) return false;
+		const sel = this.selectedIds();
+		let n = 0;
+		for (const r of sec.rules) {
+			if (sel.has(r.id)) n++;
+		}
+		return n > 0 && n < sec.rules.length;
+	}
+
+	toggleSectionSelect(sec: { rules: Rule[] }, checked: boolean): void {
+		this.selectedIds.update((prev) => {
+			const next = new Set(prev);
+			for (const r of sec.rules) {
+				if (checked) next.add(r.id);
+				else next.delete(r.id);
+			}
+			return next;
+		});
+	}
+
+	clearSelection(): void {
+		this.selectedIds.set(new Set());
+	}
+
+	async applyBatchTarget(): Promise<void> {
+		const ids = [...this.selectedIds()];
+		const target = this.batchTarget.trim();
+		if (!ids.length) {
+			void this.dialog.error('请先勾选规则');
+			return;
+		}
+		if (!target) {
+			void this.dialog.error('请选择出口');
+			return;
+		}
+		const ok = await this.dialog.confirm(
+			`将已选 ${ids.length} 条规则的出口改为「${target}」？`,
+			'批量改出口',
+			'确认',
+		);
+		if (!ok) return;
+		this.batchBusy.set(true);
+		this.svc.batchUpdateTarget(ids, target).subscribe({
+			next: (res) => {
+				this.batchBusy.set(false);
+				void this.dialog.success(`已更新 ${res.updated} 条出口（草稿，需发布后生效）`);
+				this.clearSelection();
+				this.reload();
+				this.refreshDraftStatus();
+			},
+			error: (e: Error) => {
+				this.batchBusy.set(false);
+				void this.dialog.error(e.message);
+			},
 		});
 	}
 
@@ -211,11 +335,27 @@ export class RuleEditorComponent implements OnInit {
 		return defaultRuleTarget(this.groups().map((g) => g.name));
 	}
 
-	/** 添加规则；从某分类区块进入时默认带上该分类 */
-	openCreateRule(defaultCategory?: string): void {
+	/**
+	 * 添加规则。
+	 * - 按分类进入：默认分类 = 该分组
+	 * - 按策略组进入：默认出口 = 该策略组
+	 */
+	openCreateRule(opts?: { category?: string; target?: string } | string): void {
 		this.editingRule = null;
-		this.createDefaultCategory = defaultCategory ?? '';
+		// 兼容旧调用 openCreateRule('个人')
+		if (typeof opts === 'string') {
+			this.createDefaultCategory = opts;
+			this.createDefaultTarget = '';
+		} else {
+			this.createDefaultCategory = opts?.category ?? '';
+			this.createDefaultTarget = opts?.target ?? '';
+		}
 		this.showRuleModal.set(true);
+	}
+
+	/** 当前新建弹窗应使用的默认出口 */
+	createTargetForModal(): string {
+		return this.createDefaultTarget || this.defaultTarget() || '直连';
 	}
 
 	openNewCategoryModal(): void {
@@ -239,13 +379,14 @@ export class RuleEditorComponent implements OnInit {
 			return;
 		}
 		this.rememberCategory(name);
-		// 展开该分类
-		const collapsed = new Set(this.collapsedCategories());
-		collapsed.delete(name);
-		this.collapsedCategories.set(collapsed);
+		// 新建后切到分类视图并展开，便于立刻添加规则
+		this.viewMode.set('category');
+		const expanded = new Set(this.expandedCategoryKeys());
+		expanded.add(name);
+		this.expandedCategoryKeys.set(expanded);
 		this.closeNewCategoryModal();
 		// 直接打开添加规则，分类默认新名字
-		this.openCreateRule(name);
+		this.openCreateRule({ category: name });
 	}
 
 	openBatchImport(): void {
@@ -266,6 +407,7 @@ export class RuleEditorComponent implements OnInit {
 	openEditRule(rule: Rule): void {
 		this.editingRule = rule;
 		this.createDefaultCategory = '';
+		this.createDefaultTarget = '';
 		this.showRuleModal.set(true);
 	}
 
@@ -273,10 +415,21 @@ export class RuleEditorComponent implements OnInit {
 		this.showRuleModal.set(false);
 		this.editingRule = null;
 		this.createDefaultCategory = '';
+		this.createDefaultTarget = '';
 	}
 
 	onRuleSaved(category: string | null): void {
 		if (category) this.rememberCategory(category);
+		// 保存后展开当前视图对应分组，便于立刻看到新规则
+		if (this.viewMode() === 'category' && category) {
+			const expanded = new Set(this.expandedCategoryKeys());
+			expanded.add(category);
+			this.expandedCategoryKeys.set(expanded);
+		} else if (this.viewMode() === 'target' && this.createDefaultTarget) {
+			const expanded = new Set(this.expandedTargetKeys());
+			expanded.add(this.createDefaultTarget);
+			this.expandedTargetKeys.set(expanded);
+		}
 		this.closeRuleModal();
 		this.reload();
 		this.refreshDraftStatus();
@@ -359,28 +512,6 @@ export class RuleEditorComponent implements OnInit {
 		this.svc.deleteRule(rule.id).subscribe({
 			next: () => {
 				void this.dialog.success('规则已删除');
-				this.reload();
-				this.refreshDraftStatus();
-			},
-			error: (e: Error) => void this.dialog.error(e.message),
-		});
-	}
-
-	/** 按全局匹配顺序上移/下移（与 Clash 规则顺序一致；系统规则不可调） */
-	move(rule: Rule, dir: -1 | 1): void {
-		if (this.isSystemRule(rule)) {
-			void this.dialog.error('系统规则顺序固定，不可调整');
-			return;
-		}
-		const list = sortRules(this.rules());
-		const idx = list.findIndex((r) => r.id === rule.id);
-		const j = idx + dir;
-		if (idx < 0 || j < 0 || j >= list.length) return;
-		// 不允许与系统规则互换位置（后端也会钉死，这里直接拦）
-		if (this.isSystemRule(list[j])) return;
-		[list[idx], list[j]] = [list[j], list[idx]];
-		this.svc.reorder(list.map((r) => r.id)).subscribe({
-			next: () => {
 				this.reload();
 				this.refreshDraftStatus();
 			},

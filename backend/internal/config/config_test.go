@@ -31,9 +31,12 @@ func TestLoadDefaults(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.SessionTTL != 24*time.Hour || cfg.SourceMaxBytes != 8<<20 {
-			t.Fatalf("unexpected defaults: %+v", cfg)
-		}
+if cfg.SessionTTL != 24*time.Hour || cfg.SourceMaxBytes != 8<<20 {
+				t.Fatalf("unexpected defaults: %+v", cfg)
+			}
+			if cfg.RefreshInterval != 24*time.Hour {
+				t.Fatalf("expected RefreshInterval=24h, got %v", cfg.RefreshInterval)
+			}
 		if cfg.LogOutput != "console" {
 			t.Fatalf("expected LogOutput=console, got %q", cfg.LogOutput)
 		}
@@ -90,6 +93,27 @@ func TestLoadLogOutputAndRetention(t *testing.T) {
 	}
 	if cfg.LogRetentionDays != 14 {
 		t.Fatalf("got LogRetentionDays=%d", cfg.LogRetentionDays)
+	}
+}
+
+func TestLoadRefreshIntervalHours(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
+	t.Setenv("SOURCE_REFRESH_INTERVAL", "6")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.RefreshInterval != 6*time.Hour {
+		t.Fatalf("expected RefreshInterval=6h, got %v", cfg.RefreshInterval)
+	}
+
+	t.Setenv("SOURCE_REFRESH_INTERVAL", "24h")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected SOURCE_REFRESH_INTERVAL with unit suffix to fail")
+	}
+	t.Setenv("SOURCE_REFRESH_INTERVAL", "0")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected SOURCE_REFRESH_INTERVAL=0 to fail")
 	}
 }
 

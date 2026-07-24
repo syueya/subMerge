@@ -17,7 +17,7 @@ export class RuleService {
 		return this.api.post('/rules', body);
 	}
 
-	/** 批量导入：一行一条 TYPE,payload,target[,note[,category]] 或仅 payload */
+	/** 批量导入：一行一条 category,TYPE,payload,target[,note] 或仅 payload */
 	batchImportRules(body: {
 		text: string;
 		defaultType?: string;
