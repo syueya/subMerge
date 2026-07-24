@@ -1,3 +1,35 @@
+<!-- 顶部轻提示：不挡操作，1–2s 自动消失 -->
+@if (dialog.toast(); as t) {
+	@if (t.open) {
+		<div
+			class="app-toast"
+			[ngClass]="'toast-' + t.kind"
+			role="status"
+			aria-live="polite"
+			(click)="dialog.dismissToast()"
+			title="点击关闭"
+		>
+			<div class="app-toast-icon" [ngClass]="iconClass(t.kind)">
+				@switch (t.kind) {
+					@case ('success') {
+						<span>✓</span>
+					}
+					@case ('error') {
+						<span>!</span>
+					}
+					@default {
+						<span>i</span>
+					}
+				}
+			</div>
+			<div class="app-toast-text min-w-0">
+				<div class="app-toast-title">{{ t.title }}</div>
+				<div class="app-toast-msg">{{ t.message }}</div>
+			</div>
+		</div>
+	}
+}
+
 @if (dialog.state(); as s) {
 	@if (s.open) {
 		<div class="dialog-overlay" (click)="onBackdrop()">
@@ -32,7 +64,7 @@
 					</div>
 				</div>
 				<div class="dialog-body">
-					<p class="dialog-message" style="margin-top: 0">{{ s.message }}</p>
+					<p class="dialog-message" style="margin-top: 0; white-space: pre-wrap">{{ s.message }}</p>
 				</div>
 				<div class="dialog-actions">
 					@if (s.showCancel) {

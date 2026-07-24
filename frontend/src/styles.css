@@ -1781,14 +1781,99 @@ html.dark .badge-type-load-balance {
 	  border-top-color: color-mix(in srgb, var(--sm-border) 85%, transparent);
 	}
 
-	/* 系统弹窗标题行内图标+标题（header 内） */
-	.dialog-header .dialog-toast-row {
-	  flex: 1 1 auto;
-	  min-width: 0;
-	  width: 100%;
-	}
-	
-	.orphan-card {
+/* 系统弹窗标题行内图标+标题（header 内） */
+		.dialog-header .dialog-toast-row {
+		  flex: 1 1 auto;
+		  min-width: 0;
+		  width: 100%;
+		}
+
+/* 顶部轻提示：不挡操作，约 1–2s 自动消失 */
+.app-toast {
+  position: fixed;
+  top: 0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11000;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  max-width: min(28rem, calc(100vw - 1.5rem));
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--sm-dialog-border);
+  background: var(--sm-dialog-bg);
+  box-shadow: var(--sm-dialog-shadow);
+  color: var(--sm-fg);
+  cursor: pointer;
+  animation: app-toast-in 0.18s ease-out;
+  pointer-events: auto;
+}
+
+.app-toast-icon {
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--sm-dialog-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 0.05rem;
+}
+
+.app-toast-text {
+  min-width: 0;
+}
+
+.app-toast-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--sm-muted);
+}
+
+.app-toast-msg {
+  margin-top: 0.12rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.app-toast.toast-success .app-toast-icon {
+  background: color-mix(in srgb, var(--sm-badge-ok-bg) 80%, var(--sm-dialog-bg));
+  border-color: color-mix(in srgb, var(--sm-badge-ok-fg) 28%, var(--sm-dialog-border));
+  color: var(--sm-badge-ok-fg);
+}
+
+.app-toast.toast-error .app-toast-icon {
+  background: color-mix(in srgb, var(--sm-error-box-bg) 70%, var(--sm-dialog-bg));
+  border-color: color-mix(in srgb, var(--sm-error-box-fg) 30%, var(--sm-dialog-border));
+  color: var(--sm-error-box-fg);
+}
+
+.app-toast.toast-info .app-toast-icon {
+  background: color-mix(in srgb, var(--sm-primary) 14%, var(--sm-dialog-bg));
+  border-color: color-mix(in srgb, var(--sm-primary) 28%, var(--sm-dialog-border));
+  color: var(--sm-primary);
+}
+
+@keyframes app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+		
+		.orphan-card {
   border-radius: 0.75rem;
   border: 1px solid var(--sm-orphan-border);
   background: var(--sm-orphan-bg);

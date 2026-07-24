@@ -1,10 +1,13 @@
 package publish
 
 import (
+	"fmt"
+	"math"
 	"strings"
 	"testing"
 
 	"github.com/submerge/submerge/backend/internal/database"
+	"gopkg.in/yaml.v3"
 )
 
 func TestGeneratorBuild(t *testing.T) {
@@ -89,38 +92,44 @@ func TestGeneratorBuild(t *testing.T) {
 		}
 	}
 
-	func TestSanitizeDropsLegacyWSFields(t *testing.T) {
-		out := sanitizeProxiesForMeta([]map[string]interface{}{
-			{
-				"name":       "a",
-				"type":       "vmess",
-				"server":     "1.1.1.1",
-				"port":       443,
-				"ws-path":    "/",
-				"ws-headers": map[string]interface{}{"Host": "example.com"},
-				"ws-opts":    map[string]interface{}{"path": "/", "headers": map[string]interface{}{"Host": "example.com"}},
-			},
-		})
-		if len(out) != 1 {
-			t.Fatalf("len=%d", len(out))
-		}
-		if _, ok := out[0]["ws-path"]; ok {
-			t.Fatal("ws-path should be removed when ws-opts present")
-		}
-		if _, ok := out[0]["ws-headers"]; ok {
-			t.Fatal("ws-headers should be removed when ws-opts present")
-		}
-		if _, ok := out[0]["ws-opts"]; !ok {
-			t.Fatal("ws-opts should remain")
-		}
+func TestSanitizeDropsLegacyWSFields(t *testing.T) {
+	out, dropped := sanitizeProxiesForMeta([]map[string]interface{}{
+		{
+			"name":       "a",
+			"type":       "vmess",
+			"server":     "1.1.1.1",
+			"port":       443,
+			"ws-path":    "/",
+			"ws-headers": map[string]interface{}{"Host": "example.com"},
+			"ws-opts":    map[string]interface{}{"path": "/", "headers": map[string]interface{}{"Host": "example.com"}},
+		},
+	})
+	if dropped != 0 {
+		t.Fatalf("dropped=%d", dropped)
 	}
+	if len(out) != 1 {
+		t.Fatalf("len=%d", len(out))
+	}
+	if _, ok := out[0]["ws-path"]; ok {
+		t.Fatal("ws-path should be removed when ws-opts present")
+	}
+	if _, ok := out[0]["ws-headers"]; ok {
+		t.Fatal("ws-headers should be removed when ws-opts present")
+	}
+	if _, ok := out[0]["ws-opts"]; !ok {
+		t.Fatal("ws-opts should remain")
+	}
+}
 
 func TestSanitizeProxiesPortTypes(t *testing.T) {
-	out := sanitizeProxiesForMeta([]map[string]interface{}{
+	out, dropped := sanitizeProxiesForMeta([]map[string]interface{}{
 		{"name": "a", "type": "vmess", "server": "1.1.1.1", "port": "443"},
 		{"name": "b", "type": "ss", "server": "2.2.2.2", "port": 8443.0},
 		{"name": "bad", "type": "vmess", "server": "3.3.3.3"}, // no port
 	})
+	if dropped != 0 {
+		t.Fatalf("dropped=%d", dropped)
+	}
 	if len(out) != 2 {
 		t.Fatalf("expected 2, got %d", len(out))
 	}
@@ -129,6 +138,120 @@ func TestSanitizeProxiesPortTypes(t *testing.T) {
 	}
 	if out[1]["port"] != 8443 {
 		t.Fatalf("port1=%v", out[1]["port"])
+	}
+}
+
+func TestRealityShortIDQuotedNotScientific(t *testing.T) {
+	// 6314e825 未加引号会被 YAML 1.1 解析成 .inf → mihomo invalid REALITY short ID
+	g := NewGenerator()
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{
+			{
+				"name":               "JP-reality",
+				"type":               "vless",
+				"server":             "1.2.3.4",
+				"port":               443,
+				"uuid":               "98bb17d9-9815-4923-a1d7-3d017ffd3f08",
+				"tls":                true,
+				"client-fingerprint": "chrome",
+				"reality-opts": map[string]interface{}{
+					"public-key": "VOFSjjWT0wIH3Q0ntyEZd8WwksrIAb5gPt_3PBnEASg",
+					"short-id":   "6314e825",
+				},
+			},
+			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
+		},
+		Groups: []database.ProxyGroup{
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
+			{Name: "节点选择", Type: "select", Proxies: `["ALL"]`},
+		},
+		Rules:     []database.Rule{{Type: "MATCH", Target: "直连", Enabled: true}},
+		GroupMode: "auto",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(res.YAML, "short-id: 6314e825") && !strings.Contains(res.YAML, `short-id: "6314e825"`) {
+		t.Fatalf("short-id must be double-quoted, got:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, `short-id: "6314e825"`) {
+		t.Fatalf("expected quoted short-id:\n%s", res.YAML)
+	}
+	if strings.Contains(res.YAML, ".inf") || strings.Contains(res.YAML, ".Inf") {
+		t.Fatalf("yaml must not contain .inf:\n%s", res.YAML)
+	}
+	// name 应在 type 之前；并有 1-based 序号注释
+	jp := strings.Index(res.YAML, "name: JP-reality")
+	tp := strings.Index(res.YAML, "type: vless")
+	if jp < 0 || tp < 0 || jp > tp {
+		t.Fatalf("expected name before type in proxy block:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "# 1") {
+		t.Fatalf("expected proxy index comments:\n%s", res.YAML)
+	}
+	// 再 round-trip：客户端用 YAML 解析后 short-id 仍是字符串 6314e825
+	var doc map[string]interface{}
+	if err := yaml.Unmarshal([]byte(res.YAML), &doc); err != nil {
+		t.Fatal(err)
+	}
+	list, _ := doc["proxies"].([]interface{})
+	found := false
+	for _, item := range list {
+		m, _ := item.(map[string]interface{})
+		if fmt.Sprint(m["name"]) != "JP-reality" {
+			continue
+		}
+		found = true
+		ro, _ := m["reality-opts"].(map[string]interface{})
+		sid := fmt.Sprint(ro["short-id"])
+		if sid != "6314e825" {
+			t.Fatalf("round-trip short-id=%q type=%T want 6314e825", ro["short-id"], ro["short-id"])
+		}
+	}
+	if !found {
+		t.Fatal("JP-reality missing after unmarshal")
+	}
+}
+
+func TestSanitizeDropsInvalidRealityShortID(t *testing.T) {
+	out, dropped := sanitizeProxiesForMeta([]map[string]interface{}{
+		{
+			"name":   "bad-inf",
+			"type":   "vless",
+			"server": "1.1.1.1",
+			"port":   443,
+			"reality-opts": map[string]interface{}{
+				"public-key": "VOFSjjWT0wIH3Q0ntyEZd8WwksrIAb5gPt_3PBnEASg",
+				"short-id":   ".inf",
+			},
+		},
+		{
+			"name":   "bad-float",
+			"type":   "vless",
+			"server": "1.1.1.1",
+			"port":   443,
+			"reality-opts": map[string]interface{}{
+				"public-key": "VOFSjjWT0wIH3Q0ntyEZd8WwksrIAb5gPt_3PBnEASg",
+				// YAML 1.1 把 6314e825 解析成 +Inf 后的形态
+				"short-id": math.Inf(1),
+			},
+		},
+		{
+			"name":   "ok",
+			"type":   "vless",
+			"server": "1.1.1.1",
+			"port":   443,
+			"reality-opts": map[string]interface{}{
+				"public-key": "VOFSjjWT0wIH3Q0ntyEZd8WwksrIAb5gPt_3PBnEASg",
+				"short-id":   "9c5b8c53",
+			},
+		},
+	})
+	if dropped != 2 {
+		t.Fatalf("dropped=%d want 2", dropped)
+	}
+	if len(out) != 1 || fmt.Sprint(out[0]["name"]) != "ok" {
+		t.Fatalf("out=%v", out)
 	}
 }
 

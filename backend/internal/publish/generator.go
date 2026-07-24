@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -12,6 +13,96 @@ import (
 	"github.com/submerge/submerge/backend/internal/regioncatalog"
 	"gopkg.in/yaml.v3"
 )
+
+// yamlQuotedString 强制双引号输出，避免 short-id: 6314e825 被 YAML 1.1 解析成 .inf
+type yamlQuotedString string
+
+func (s yamlQuotedString) MarshalYAML() (interface{}, error) {
+	return &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Style: yaml.DoubleQuotedStyle,
+		Tag:   "!!str",
+		Value: string(s),
+	}, nil
+}
+
+// yamlMap 有序 map，保证 name/type 等关键字段排在前面（map 默认乱序不好读）
+type yamlMap []yamlKV
+
+type yamlKV struct {
+	Key   string
+	Value interface{}
+}
+
+func (m yamlMap) MarshalYAML() (interface{}, error) {
+	node := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	for _, kv := range m {
+		var valNode yaml.Node
+		if err := valNode.Encode(kv.Value); err != nil {
+			return nil, err
+		}
+		node.Content = append(node.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: kv.Key},
+			&valNode,
+		)
+	}
+	return node, nil
+}
+
+// proxyFieldOrder 节点字段展示顺序：name 最前，便于对照 proxy N 与策略组成员
+var proxyFieldOrder = []string{
+	"name", "type", "server", "port", "uuid", "password", "cipher", "alterId",
+	"network", "tls", "udp", "flow", "servername", "client-fingerprint",
+	"skip-cert-verify", "sni", "fingerprint", "ports",
+	"reality-opts", "ws-opts", "grpc-opts", "h2-opts", "http-opts",
+	"smux", "tfo", "mptcp",
+}
+
+// groupFieldOrder 策略组字段顺序
+var groupFieldOrder = []string{"name", "type", "proxies", "url", "interval", "lazy", "tolerance"}
+
+// realityFieldOrder REALITY 子字段顺序
+var realityFieldOrder = []string{"public-key", "short-id", "support-x25519mlkem768"}
+
+func orderedMap(m map[string]interface{}, prefer []string) yamlMap {
+	if m == nil {
+		return nil
+	}
+	out := make(yamlMap, 0, len(m))
+	seen := map[string]struct{}{}
+	for _, k := range prefer {
+		if v, ok := m[k]; ok {
+			out = append(out, yamlKV{Key: k, Value: v})
+			seen[k] = struct{}{}
+		}
+	}
+	rest := make([]string, 0, len(m))
+	for k := range m {
+		if _, ok := seen[k]; !ok {
+			rest = append(rest, k)
+		}
+	}
+	sort.Strings(rest)
+	for _, k := range rest {
+		out = append(out, yamlKV{Key: k, Value: m[k]})
+	}
+	return out
+}
+
+func orderedProxy(m map[string]interface{}) yamlMap {
+	// 嵌套 opts 也固定顺序
+	if ro, ok := m["reality-opts"].(map[string]interface{}); ok {
+		m["reality-opts"] = orderedMap(ro, realityFieldOrder)
+	}
+	return orderedMap(m, proxyFieldOrder)
+}
+
+func orderedGroup(m map[string]interface{}) yamlMap {
+	return orderedMap(m, groupFieldOrder)
+}
+
+// realityShortIDRe mihomo：hex，解码后 ≤8 字节（0~16 个 hex 字符，可为空）
+var realityShortIDRe = regexp.MustCompile(`(?i)^[0-9a-f]{0,16}$`)
 
 // Generator 生成 Clash Meta 配置
 type Generator struct{}
@@ -215,43 +306,99 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 	}
 
 		// 规范化节点字段，避免 yaml 数字变成 float、缺 type 等导致 mihomo 解析失败
-		proxies := sanitizeProxiesForMeta(in.Proxies)
+		proxies, droppedReality := sanitizeProxiesForMeta(in.Proxies)
+		if droppedReality > 0 {
+			warnings = append(warnings,
+				fmt.Sprintf("dropped %d proxy(ies) with invalid REALITY short-id", droppedReality))
+		}
+		// sanitize 可能丢节点，策略组成员需再滤一次（仅删不存在的节点名；DIRECT/REJECT/组名保留）
+		if droppedReality > 0 {
+			alive := map[string]struct{}{}
+			for _, p := range proxies {
+				if n, _ := p["name"].(string); n != "" {
+					alive[n] = struct{}{}
+				}
+			}
+			for _, g := range groupNames {
+				alive[g] = struct{}{}
+			}
+			alive["DIRECT"] = struct{}{}
+			alive["REJECT"] = struct{}{}
+			for _, g := range proxyGroups {
+				refs, _ := g["proxies"].([]string)
+				if refs == nil {
+					// yaml 前可能是 []interface{} 路径未走到；兼容 []string
+					if raw, ok := g["proxies"].([]interface{}); ok {
+						refs = make([]string, 0, len(raw))
+						for _, x := range raw {
+							refs = append(refs, fmt.Sprint(x))
+						}
+					}
+				}
+				filtered := make([]string, 0, len(refs))
+				for _, r := range refs {
+					if _, ok := alive[r]; ok {
+						filtered = append(filtered, r)
+					}
+				}
+				if len(filtered) == 0 {
+					filtered = []string{"DIRECT"}
+				}
+				g["proxies"] = filtered
+			}
+		}
+
+		// 有序输出：name 置顶；块状列表（不用 {} 行内），可读性更好，也方便对照 proxy N
+		orderedProxies := make([]yamlMap, 0, len(proxies))
+		for _, p := range proxies {
+			orderedProxies = append(orderedProxies, orderedProxy(p))
+		}
+		orderedGroups := make([]yamlMap, 0, len(proxyGroups))
+		for _, g := range proxyGroups {
+			orderedGroups = append(orderedGroups, orderedGroup(g))
+		}
 
 		// 订阅向配置：只下发节点 / 策略组 / 规则与少量无冲突的全局项。
 		// 刻意不写 mixed-port / external-controller / allow-lan 等客户端本机设置，
 		// 避免 Clash Verge 导入订阅时覆盖本机端口导致测速 error/timeout。
-		doc := map[string]interface{}{
-			"mode":           "rule",
-			"ipv6":           true,
-			"unified-delay":  true,
-			"tcp-concurrent": true,
-			"proxies":        proxies,
-			"proxy-groups":   proxyGroups,
-			"rules":          ruleLines,
+		// 顶层也用有序 map，保证 proxies → proxy-groups → rules 顺序稳定。
+		doc := yamlMap{
+			{Key: "mode", Value: "rule"},
+			{Key: "ipv6", Value: true},
+			{Key: "unified-delay", Value: true},
+			{Key: "tcp-concurrent", Value: true},
+			{Key: "proxies", Value: orderedProxies},
+			{Key: "proxy-groups", Value: orderedGroups},
+			{Key: "rules", Value: ruleLines},
 		}
 
 		out, err := yaml.Marshal(doc)
 		if err != nil {
 			return nil, err
 		}
+		// 在每个 proxy 块前插入「# 1」「# 2」序号注释（不改 name，避免组引用对不上）
+		body := annotateProxyIndexes(string(out))
 		// 文件头注释：方便识别与 mihomo 导入
 		header := "# SubMerge generated subscription for Clash Meta / mihomo / Clash Verge\n" +
-			"# proxies + proxy-groups + rules only; client keeps local port/DNS settings\n"
-		yamlText := header + string(out)
-	sum := sha256.Sum256([]byte(yamlText))
-	return &BuildResult{
-		YAML:       yamlText,
-		Hash:       hex.EncodeToString(sum[:]),
-		ProxyCount: len(proxies),
-		RuleCount:  len(ruleLines),
-		GroupNames: groupNames,
-		Warnings:   warnings,
-	}, nil
+			"# proxies + proxy-groups + rules only; client keeps local port/DNS settings\n" +
+			"# proxy field order: name, type, server, port, ...; index comments are 1-based\n"
+		yamlText := header + body
+		sum := sha256.Sum256([]byte(yamlText))
+		return &BuildResult{
+			YAML:       yamlText,
+			Hash:       hex.EncodeToString(sum[:]),
+			ProxyCount: len(proxies),
+			RuleCount:  len(ruleLines),
+			GroupNames: groupNames,
+			Warnings:   warnings,
+		}, nil
 }
 
-// sanitizeProxiesForMeta 清洗节点 map，保证 mihomo 可解析
-func sanitizeProxiesForMeta(in []map[string]interface{}) []map[string]interface{} {
+// sanitizeProxiesForMeta 清洗节点 map，保证 mihomo 可解析。
+// 第二返回值：因非法 REALITY short-id 丢弃的节点数。
+func sanitizeProxiesForMeta(in []map[string]interface{}) ([]map[string]interface{}, int) {
 	out := make([]map[string]interface{}, 0, len(in))
+	droppedReality := 0
 	for _, raw := range in {
 		if raw == nil {
 			continue
@@ -282,9 +429,141 @@ func sanitizeProxiesForMeta(in []map[string]interface{}) []map[string]interface{
 		}
 		// 旧式 ws-path / ws-headers 与 ws-opts 并存时，Meta 以 ws-opts 为准；去掉重复字段避免解析歧义
 		normalizeTransportOpts(m)
+		// REALITY：short-id 必须当字符串输出（防 6314e825 → .inf），并校验 hex
+		if !normalizeRealityOpts(m) {
+			droppedReality++
+			continue
+		}
 		out = append(out, m)
 	}
-	return out
+	return out, droppedReality
+}
+
+// normalizeRealityOpts 规范化 reality-opts；非法 short-id 返回 false（调用方应丢弃节点）
+func normalizeRealityOpts(m map[string]interface{}) bool {
+	raw, ok := m["reality-opts"]
+	if !ok || raw == nil {
+		return true
+	}
+	opts, ok := raw.(map[string]interface{})
+	if !ok {
+		// 兼容 json 反序列化后偶发的 map[string]string
+		if ms, ok := raw.(map[string]string); ok {
+			opts = make(map[string]interface{}, len(ms))
+			for k, v := range ms {
+				opts[k] = v
+			}
+		} else {
+			delete(m, "reality-opts")
+			return true
+		}
+	}
+	out := make(map[string]interface{}, len(opts)+2)
+	for k, v := range opts {
+		out[k] = v
+	}
+
+	if v, exists := out["public-key"]; exists && v != nil {
+		pk := strings.TrimSpace(fmt.Sprint(v))
+		if pk == "" || pk == "<nil>" {
+			delete(out, "public-key")
+		} else {
+			// 强制引号，避免 base64 中的特殊字符/歧义
+			out["public-key"] = yamlQuotedString(pk)
+		}
+	}
+
+	if v, exists := out["short-id"]; exists && v != nil {
+		sid := normalizeRealityShortID(v)
+		if sid == "" && fmt.Sprint(v) != "" && fmt.Sprint(v) != "<nil>" {
+			// 有值但非法（含 .inf / 非 hex / 过长）
+			return false
+		}
+		// 空 short-id 合法（部分节点允许）；仍强制字符串形态
+		out["short-id"] = yamlQuotedString(sid)
+	}
+
+	if len(out) == 0 {
+		delete(m, "reality-opts")
+		return true
+	}
+	m["reality-opts"] = out
+	return true
+}
+
+// annotateProxyIndexes 在 proxies 列表每项前加「# N」注释（1-based，对齐 mihomo proxy N 日志）
+func annotateProxyIndexes(yamlText string) string {
+	lines := strings.Split(yamlText, "\n")
+	out := make([]string, 0, len(lines)+32)
+	inProxies := false
+	idx := 0
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
+		// 进入 proxies:
+		if !inProxies {
+			if trimmed == "proxies:" {
+				inProxies = true
+				out = append(out, line)
+				continue
+			}
+			out = append(out, line)
+			continue
+		}
+		// 离开 proxies：下一顶层 key（无缩进且非空、非列表项）
+		if trimmed != "" && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") && !strings.HasPrefix(trimmed, "#") {
+			inProxies = false
+			out = append(out, line)
+			continue
+		}
+		// 列表项起始：两个空格 + "- "（yaml.v3 默认缩进）
+		if strings.HasPrefix(line, "  - ") || strings.HasPrefix(line, "    - ") {
+			idx++
+			// 注释缩进与列表项对齐
+			indent := "  "
+			if strings.HasPrefix(line, "    - ") {
+				indent = "    "
+			}
+			out = append(out, fmt.Sprintf("%s# %d", indent, idx))
+		}
+		out = append(out, line)
+	}
+	return strings.Join(out, "\n")
+}
+
+// normalizeRealityShortID 将 short-id 规范为 hex 字符串；非法返回 "" 且调用方应区分「空」与「非法」
+func normalizeRealityShortID(v interface{}) string {
+	// 若已被 YAML 误解析成 float/inf，无法还原原始 hex，只能判非法
+	switch t := v.(type) {
+	case float64, float32:
+		return ""
+	case yamlQuotedString:
+		return normalizeRealityShortID(string(t))
+	case string:
+		s := strings.TrimSpace(t)
+		if s == "" {
+			return ""
+		}
+		// 客户端已炸成 .inf / +Inf 等
+		low := strings.ToLower(s)
+		if low == ".inf" || low == "-.inf" || low == "+.inf" || low == "inf" || low == "+inf" || low == "-inf" || low == ".nan" || low == "nan" {
+			return ""
+		}
+		if !realityShortIDRe.MatchString(s) {
+			return ""
+		}
+		// mihomo hex.Decode：奇数长度会失败
+		if len(s)%2 != 0 {
+			return ""
+		}
+		return strings.ToLower(s)
+	default:
+		s := strings.TrimSpace(fmt.Sprint(v))
+		if s == "" || s == "<nil>" {
+			return ""
+		}
+		return normalizeRealityShortID(s)
+	}
 }
 
 // normalizeTransportOpts 统一传输层字段：保留 *-opts，去掉并行的旧字段
