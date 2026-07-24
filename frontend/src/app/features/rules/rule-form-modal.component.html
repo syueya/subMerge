@@ -1,0 +1,121 @@
+@if (open) {
+	<div class="dialog-overlay" (click)="close()">
+		<div class="dialog-panel dialog-panel-md" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+			<div class="dialog-header">
+				<button class="dialog-close" type="button" (click)="close()" title="关闭" aria-label="关闭">
+					<span class="dialog-close-x" aria-hidden="true">×</span>
+				</button>
+				<div class="dialog-header-text">
+					<h3 class="dialog-title">{{ editingRuleId == null ? '添加规则' : '编辑规则' }}</h3>
+					<p class="dialog-header-sub">
+						@if (systemLocked) {
+							系统规则：类型/匹配/分类固定，仅可改出口、备注、启用；改完需发布才生效
+						} @else {
+							按从上到下顺序匹配，命中即走对应出口；改完需发布才生效
+						}
+					</p>
+				</div>
+			</div>
+			<div class="dialog-body">
+				<div class="grid gap-3 sm:grid-cols-2">
+					<div>
+						<label class="field-label">
+							规则类型
+							<app-field-tip [text]="tip.ruleType" />
+						</label>
+						<select
+							class="w-full"
+							[(ngModel)]="ruleType"
+							(ngModelChange)="onRuleTypeChange()"
+							[disabled]="systemLocked"
+						>
+							@for (t of ruleTypes; track t.value) {
+								<option [ngValue]="t.value">{{ t.text }}</option>
+							}
+						</select>
+					</div>
+					<div>
+						<label class="field-label">
+							目标出口
+							<app-field-tip [text]="tip.ruleTarget" />
+						</label>
+						<select class="w-full" [(ngModel)]="ruleTarget">
+							@for (g of groups; track g.id) {
+								<option [ngValue]="g.name">{{ g.name }}</option>
+							}
+							@if (orphanTarget(); as orphan) {
+								<optgroup label="当前值（已不存在）">
+									<option [ngValue]="orphan">{{ orphan }}</option>
+								</optgroup>
+							}
+						</select>
+						@if (groups.length === 0) {
+							<p class="mt-1 text-xs text-muted">
+								暂无策略组，请先到
+								<a routerLink="/groups" class="text-link">策略组</a>
+								页创建
+							</p>
+						}
+					</div>
+
+					@if (!isMatchType()) {
+						<div class="sm:col-span-2">
+							<label class="field-label">
+								{{ payloadLabel() }}
+								<app-field-tip [text]="payloadTip()" />
+							</label>
+							<input
+								class="w-full"
+								[(ngModel)]="rulePayload"
+								[placeholder]="payloadPlaceholder()"
+								[disabled]="systemLocked"
+							/>
+						</div>
+					}
+
+					<div>
+						<label class="field-label">
+							业务分类
+							<app-field-tip [text]="tip.ruleCategory" />
+						</label>
+						@if (systemLocked) {
+							<input class="w-full" [ngModel]="'系统分类'" disabled />
+						} @else {
+							<select class="w-full" [(ngModel)]="ruleCategory">
+								@for (c of categorySelectOptions(); track c.value) {
+									<option [ngValue]="c.value">{{ c.text }}</option>
+								}
+							</select>
+							@if (ruleCategory === categoryNewValue) {
+								<input
+									class="mt-2 w-full"
+									[(ngModel)]="ruleCategoryCustom"
+									placeholder="输入新分类名，例如：个人"
+								/>
+							}
+						}
+					</div>
+					<div>
+						<label class="field-label">
+							备注（可选）
+							<app-field-tip [text]="tip.ruleNote" />
+						</label>
+						<input class="w-full" [(ngModel)]="ruleNote" placeholder="例如：国内直连 / OpenAI" />
+					</div>
+				</div>
+
+				<label class="mt-3 flex items-center gap-2 text-sm text-muted">
+					<input type="checkbox" [(ngModel)]="ruleEnabled" />
+					启用此规则
+					<app-field-tip [text]="tip.ruleEnabled" />
+				</label>
+			</div>
+			<div class="dialog-actions">
+				<button class="btn-secondary" type="button" (click)="close()">取消</button>
+				<button class="btn-primary" type="button" (click)="saveRule()">
+					{{ editingRuleId == null ? '添加规则' : '更新规则' }}
+				</button>
+			</div>
+		</div>
+	</div>
+}

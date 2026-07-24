@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { DialogService } from '../../common/dialog/dialog.service';
-import { formatDateTime } from '../../common/format';
+import { formatDateTime, localizeBuildError, shortBuildError } from '../../common/format';
 import { DraftStatus, Release } from '../../common/types';
 import { ReleaseService } from '../releases/release.service';
 import { RuleService } from '../rules/rule.service';
@@ -45,20 +45,27 @@ export class DashboardComponent implements OnInit {
 		},
 		{
 			n: '2',
-			title: '规则',
-			desc: '策略组用直连/拒绝/各国即可；业务分流写规则（如 AI→US）',
+			title: '策略组',
+			desc: '配置出口容器：直连/拒绝/各国节点成员与测速方式',
+			path: '/groups',
+			action: '去配置',
+		},
+		{
+			n: '3',
+			title: '分流规则',
+			desc: '按业务写匹配（如广告→拒绝、AI→美国）；出口指向策略组',
 			path: '/rules',
 			action: '去编辑',
 		},
 		{
-			n: '3',
+			n: '4',
 			title: '发布',
 			desc: '草稿不会自动生效，发布后订阅才更新；可回滚历史版本',
 			path: '/releases',
 			action: '去发布',
 		},
 		{
-			n: '4',
+			n: '5',
 			title: '令牌',
 			desc: '生成独立链接发给朋友；重生后旧链接失效',
 			path: '/tokens',
@@ -113,7 +120,7 @@ export class DashboardComponent implements OnInit {
 	draftLabel(): string {
 		const d = this.draft();
 		if (!d) return '—';
-		if (d.buildError) return this.shortBuildError(d.buildError);
+		if (d.buildError) return shortBuildError(d.buildError);
 		if (!d.hasPublished) return '尚未发布';
 		if (d.dirty) return '有未发布更改';
 		return '已与线上一致';
@@ -127,18 +134,8 @@ export class DashboardComponent implements OnInit {
 		return 'badge-ok';
 	}
 
-	/** 概览卡片用短文案；完整错误放 title */
-	shortBuildError(err: string): string {
-		const e = (err || '').toLowerCase();
-		if (e.includes('no proxies') || e.includes('proxies available')) return '无可用节点';
-		if (e.includes('proxy group') || e.includes('groups')) return '策略组不可用';
-		if (e.includes('match')) return '缺少 MATCH 规则';
-		if (e.includes('rule')) return '规则不完整';
-		return '草稿异常';
-	}
-
 	buildErrorDetail(): string {
-		return this.draft()?.buildError || '';
+		return localizeBuildError(this.draft()?.buildError);
 	}
 
 	formatTime = formatDateTime;

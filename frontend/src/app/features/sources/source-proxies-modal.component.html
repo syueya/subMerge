@@ -1,0 +1,99 @@
+@if (open) {
+	<div class="dialog-overlay" (click)="close()">
+		<div
+			class="dialog-panel dialog-panel-lg proxy-dialog"
+			role="dialog"
+			aria-modal="true"
+			(click)="$event.stopPropagation()"
+		>
+			<div class="dialog-header">
+				<button class="dialog-close" type="button" (click)="close()" title="关闭" aria-label="关闭">
+					<span class="dialog-close-x" aria-hidden="true">×</span>
+				</button>
+				<div class="dialog-header-text">
+					<h3 class="dialog-title">节点 · {{ source?.name }}</h3>
+					<p class="dialog-header-sub">
+						共 {{ proxies().length }} 个
+						@if (filteredProxies().length !== proxies().length) {
+							· 筛选 {{ filteredProxies().length }}
+						}
+						@if (lastRefreshSummary()) {
+							· 地区 {{ lastRefreshSummary() }}
+						}
+					</p>
+				</div>
+				<div class="proxy-dialog-toolbar">
+					<input
+						[ngModel]="proxySearch()"
+						(ngModelChange)="proxySearch.set($event)"
+						placeholder="搜索名称 / 服务器…"
+					/>
+					<select [ngModel]="proxyRegionFilter()" (ngModelChange)="proxyRegionFilter.set($event)">
+						<option value="">全部地区</option>
+						@for (r of proxyRegions(); track r) {
+							<option [value]="r">{{ r }}</option>
+						}
+					</select>
+					<select [ngModel]="proxyQualityFilter()" (ngModelChange)="proxyQualityFilter.set($event)">
+						<option value="">全部识别</option>
+						<option value="ok">仅正常</option>
+						<option value="bad">仅异常</option>
+					</select>
+					<button class="btn-secondary btn-sm" type="button" (click)="batchSetFiltered(true)">启用筛选</button>
+					<button class="btn-secondary btn-sm" type="button" (click)="batchSetFiltered(false)">禁用筛选</button>
+					@if (source) {
+						<button class="btn-secondary btn-sm" type="button" [disabled]="busy()" (click)="refresh()">
+							重新拉取
+						</button>
+					}
+				</div>
+			</div>
+
+			<div class="dialog-body proxy-dialog-table">
+				<table class="table">
+					<thead>
+						<tr>
+							<th class="w-14">启用</th>
+							<th>名称</th>
+							<th>地区</th>
+							<th>类型</th>
+							<th>服务器</th>
+							<th>识别</th>
+						</tr>
+					</thead>
+					<tbody>
+						@if (proxyLoading()) {
+							<tr>
+								<td colspan="6" class="text-muted">加载中…</td>
+							</tr>
+						} @else if (filteredProxies().length === 0) {
+							<tr>
+								<td colspan="6" class="text-muted">无节点</td>
+							</tr>
+						} @else {
+							@for (p of filteredProxies(); track p.id) {
+								<tr [class.opacity-50]="!p.enabled" [class.proxy-row-warn]="p.ok === false">
+									<td>
+										<input type="checkbox" [checked]="p.enabled" (change)="toggleProxy(p)" />
+									</td>
+									<td class="max-w-xs truncate font-medium" [title]="p.name">{{ p.name }}</td>
+									<td><span class="badge-muted">{{ p.region }}</span></td>
+									<td class="text-xs text-muted">{{ p.type }}</td>
+									<td class="font-mono text-xs text-muted">{{ p.server }}:{{ p.port }}</td>
+									<td class="proxy-quality">
+										@if (p.ok === false) {
+											<span class="badge-warn" [title]="p.issue || '异常'">异常</span>
+											<div class="proxy-issue" [title]="p.issue || ''">{{ p.issue || '未正常识别' }}</div>
+										} @else {
+											<span class="badge-ok">正常</span>
+										}
+									</td>
+								</tr>
+							}
+						}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+}

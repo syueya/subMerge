@@ -117,13 +117,16 @@ func TestLoadSeedDefaults(t *testing.T) {
 			if r.Target == "美国US" && (r.Note == "AI" || strings.HasPrefix(r.Note, "AI-")) {
 				hasAIToUS = true
 			}
-			if r.Type == "MATCH" {
-				hasMatch = true
-				// 大陆默认：未命中规则的境外流量走近端代理
-				if r.Target != "日本JP" {
-					t.Fatalf("MATCH should target 日本JP, got %s", r.Target)
+if r.Type == "MATCH" {
+					hasMatch = true
+					// 系统兜底：未命中规则默认走美国US
+					if r.Target != "美国US" {
+						t.Fatalf("MATCH should target 美国US, got %s", r.Target)
+					}
+					if r.Category != "系统分类" {
+						t.Fatalf("MATCH category = %q, want 系统分类", r.Category)
+					}
 				}
-			}
 			if r.Type == "GEOIP" && r.Payload == "CN" {
 				if r.Target != "直连" {
 					t.Fatalf("GEOIP CN should target 直连, got %s", r.Target)

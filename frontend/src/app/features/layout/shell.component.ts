@@ -45,13 +45,14 @@ import { Component, ElementRef, HostListener, OnDestroy, OnInit, inject, signal,
 	formAvatarPreview = '';
 	avatarDirty = false;
 
-	nav = [
-		{ path: '/home', label: '概览' },
-		{ path: '/sources', label: '订阅源' },
-		{ path: '/rules', label: '规则' },
-		{ path: '/releases', label: '发布' },
-		{ path: '/tokens', label: '令牌' },
-	];
+nav = [
+			{ path: '/home', label: '概览' },
+			{ path: '/sources', label: '订阅源' },
+			{ path: '/groups', label: '策略组' },
+			{ path: '/rules', label: '分流规则' },
+			{ path: '/releases', label: '发布' },
+			{ path: '/tokens', label: '令牌' },
+		];
 
 		ngOnInit(): void {
 			// 刷新后用服务端资料覆盖 localStorage；401 由 interceptor 处理，其它错误忽略

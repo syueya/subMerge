@@ -318,15 +318,26 @@ func (s *Service) EnabledProxies() ([]map[string]interface{}, error) {
 
 // EnabledProxiesBySourceIDs 返回指定启用源的启用节点 raw map。
 // sourceIDs 为空时等同全部启用源；非空时仅包含所列且仍启用的源。
+//
+// 会注入内部字段（发布生成器使用，输出 YAML 前会剥离）：
+//   - _source_id   uint   订阅源 ID
+//   - _source_name string 订阅源名称（用于 SOURCE:名称 展开）
 func (s *Service) EnabledProxiesBySourceIDs(sourceIDs []uint) ([]map[string]interface{}, error) {
-	q := s.db.
+	// 必须 Model(Proxy)：自定义结果结构体若直接 Find，GORM 会当成表名 proxy_with_sources
+	type proxyWithSource struct {
+		database.Proxy
+		SourceName string `gorm:"column:source_name"`
+	}
+	q := s.db.Model(&database.Proxy{}).
+		Select("proxies.*, sources.name AS source_name").
 		Joins("JOIN sources ON sources.id = proxies.source_id AND sources.deleted_at IS NULL AND sources.enabled = ?", true).
 		Where("proxies.enabled = ?", true)
 	if len(sourceIDs) > 0 {
 		q = q.Where("proxies.source_id IN ?", sourceIDs)
 	}
-	var rows []database.Proxy
-	err := q.Order("proxies.region asc, proxies.name asc").Find(&rows).Error
+	var rows []proxyWithSource
+	// Scan 绑定自定义列；Find 在部分 GORM 版本会对非模型结构体推错表名
+	err := q.Order("proxies.region asc, proxies.name asc").Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -336,6 +347,9 @@ func (s *Service) EnabledProxiesBySourceIDs(sourceIDs []uint) ([]map[string]inte
 		if err := json.Unmarshal([]byte(r.RawJSON), &m); err != nil {
 			continue
 		}
+		// 内部元数据：生成器 SOURCE: 展开用；不会写入 Clash YAML
+		m["_source_id"] = r.SourceID
+		m["_source_name"] = r.SourceName
 		out = append(out, m)
 	}
 	return out, nil

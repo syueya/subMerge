@@ -52,15 +52,17 @@ type ProxyNode struct {
 }
 
 // Rule 分流规则
-type Rule struct {
-	ID        uint     `json:"id"`
-	Type      RuleType `json:"type"`
-	Payload   string   `json:"payload"`
-	Target    string   `json:"target"`
-	Enabled   bool     `json:"enabled"`
-	SortOrder int      `json:"sortOrder"`
-	Note      string   `json:"note,omitempty"`
-}
+	type Rule struct {
+		ID        uint     `json:"id"`
+		Type      RuleType `json:"type"`
+		Payload   string   `json:"payload"`
+		Target    string   `json:"target"`
+		Enabled   bool     `json:"enabled"`
+		SortOrder int      `json:"sortOrder"`
+		Note      string   `json:"note,omitempty"`
+		// Category 业务分类（仅面板；不进 Clash）
+		Category  string   `json:"category,omitempty"`
+	}
 
 // ProxyGroup 策略组
 type ProxyGroup struct {

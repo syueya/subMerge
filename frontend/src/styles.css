@@ -1613,11 +1613,21 @@ html.dark .badge-type-load-balance {
 		  color: var(--sm-muted);
 		}
 
-	/* 规则表列宽：顺序 / 启用 / 类型 / 匹配 / 备注 */
-	.rule-table .rule-col-order {
-	  width: 3.25rem;
-	  white-space: nowrap;
-	}
+/* 规则表列宽：勾选 / 顺序 / 启用 / 类型 / 匹配 / 备注 */
+		.rule-table .rule-col-check {
+		  width: 2.25rem;
+		  white-space: nowrap;
+		  text-align: center;
+		}
+
+		.rule-table tr.is-selected {
+		  background: color-mix(in srgb, var(--sm-primary) 8%, transparent);
+		}
+
+		.rule-table .rule-col-order {
+		  width: 3.25rem;
+		  white-space: nowrap;
+		}
 
 	.rule-table .rule-col-status {
 	  width: 4.5rem;

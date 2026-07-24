@@ -86,6 +86,98 @@ func (h *Handler) UpdateRule(c *gin.Context) {
 	apiresp.OK(c, item)
 }
 
+func (h *Handler) BatchUpdateRulesTarget(c *gin.Context) {
+	var req common.BatchUpdateRulesTargetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+		return
+	}
+	if len(req.IDs) == 0 {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "ids required")
+		return
+	}
+	if strings.TrimSpace(req.Target) == "" {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "target required")
+		return
+	}
+	n, err := h.svc.BatchUpdateRulesTarget(req.IDs, req.Target)
+	if err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	h.audit.Log(middleware.GetUsername(c), "batch_update_rules_target", "rule",
+		strconv.Itoa(n)+" → "+strings.TrimSpace(req.Target), c.ClientIP())
+	apiresp.OK(c, common.BatchUpdateRulesTargetResponse{Updated: n})
+}
+
+func (h *Handler) BatchUpdateRulesEnabled(c *gin.Context) {
+	var req common.BatchUpdateRulesEnabledRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+		return
+	}
+	if len(req.IDs) == 0 {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "ids required")
+		return
+	}
+	n, err := h.svc.BatchUpdateRulesEnabled(req.IDs, req.Enabled)
+	if err != nil {
+		apiresp.Fail(c, http.StatusInternalServerError, "internal", "batch update rules enabled failed")
+		return
+	}
+	state := "disabled"
+	if req.Enabled {
+		state = "enabled"
+	}
+	h.audit.Log(middleware.GetUsername(c), "batch_update_rules_enabled", "rule",
+		strconv.Itoa(n)+" "+state, c.ClientIP())
+	apiresp.OK(c, common.BatchUpdateRulesEnabledResponse{Updated: n})
+}
+
+func (h *Handler) BatchUpdateRulesCategory(c *gin.Context) {
+	var req common.BatchUpdateRulesCategoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+		return
+	}
+	if len(req.IDs) == 0 {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "ids required")
+		return
+	}
+	n, err := h.svc.BatchUpdateRulesCategory(req.IDs, req.Category)
+	if err != nil {
+		apiresp.Fail(c, http.StatusInternalServerError, "internal", "batch update rules category failed")
+		return
+	}
+	cat := strings.TrimSpace(req.Category)
+	if cat == "" {
+		cat = "(未分类)"
+	}
+	h.audit.Log(middleware.GetUsername(c), "batch_update_rules_category", "rule",
+		strconv.Itoa(n)+" → "+cat, c.ClientIP())
+	apiresp.OK(c, common.BatchUpdateRulesCategoryResponse{Updated: n})
+}
+
+func (h *Handler) BatchDeleteRules(c *gin.Context) {
+	var req common.BatchDeleteRulesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+		return
+	}
+	if len(req.IDs) == 0 {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "ids required")
+		return
+	}
+	n, err := h.svc.BatchDeleteRules(req.IDs)
+	if err != nil {
+		apiresp.Fail(c, http.StatusInternalServerError, "internal", "batch delete rules failed")
+		return
+	}
+	h.audit.Log(middleware.GetUsername(c), "batch_delete_rules", "rule",
+		strconv.Itoa(n)+" deleted", c.ClientIP())
+	apiresp.OK(c, common.BatchDeleteRulesResponse{Deleted: n})
+}
+
 func (h *Handler) DeleteRule(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {

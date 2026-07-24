@@ -3,7 +3,7 @@
 小型 Clash 订阅合并与配置下发面板。
 
 - 合并多源 Clash 订阅（节点按地区码加前缀，如 `US-xxx`）
-- 网页维护策略组 / 分流规则，预览后发布
+- 网页分开展示：策略组管出口成员，分流规则管业务匹配；预览后发布
 - 独立订阅链接，隐藏上游地址；令牌可绑定部分源
 - 分流在 Clash Meta / Clash Verge 客户端执行
 
@@ -39,18 +39,23 @@ cd backend && go build -o ../bin/submerge .
 ## 主流程
 
 ```text
-登录 → 配置订阅源 → 拉取合并 → 改策略组/规则 → 发布
+登录 → 配置订阅源 → 拉取合并 → 改策略组 → 改分流规则 → 发布
      → 创建分享 token → 客户端 /subscribe/{token}
 ```
+
+- **策略组**（`/groups`）：出口容器。成员、测速方式；被规则引用为「目标出口」
+- **分流规则**（`/rules`）：匹配条件。按业务分类在面板浏览；`category` 仅后台用，不写入 Clash
 
 ## 默认规则
 
 空库时从 `backend/defaults/` 写入（已有数据不覆盖；改 YAML 需重新编译）：
 
 - **策略组**：直连 / 拒绝 / 常用国家 / 其他国家
-- **分流**：广告→拒绝；海外 AI/Netflix→美国；YouTube/GitHub→日本；电报/社交→香港；国内→直连；MATCH→日本
+- **分流**：业务规则见 `defaults/rules.yaml`；系统规则由代码固定生成（广告→拒绝、国内 GEOIP→直连、MATCH→美国）
 
-成员语法：`ALL`、`REGION:US`、`REGION:OTHER`、`DIRECT`/`REJECT`、组名或节点名。
+成员语法：`ALL`、`REGION:US`、`REGION:OTHER`、`SOURCE:源名`、`SOURCE:id:N`、`DIRECT`/`REJECT`、组名或节点名。
+
+Clash 规则行只含 `TYPE,payload,target`（`MATCH,target`），不含业务分类。
 
 ## 安全
 

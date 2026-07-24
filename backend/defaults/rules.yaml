@@ -1,355 +1,349 @@
-# 空库默认分流规则（backend/defaults/）。
-# 已有数据不会自动覆盖；修改后需重新编译且空库/无规则时才会写入。
+# 空库默认分流规则（backend/defaults/）——业务默认规则的唯一来源。
+# 空库：整表写入；已有库启动时只「补缺」（YAML 有、库中 type+payload 没有才插入），不覆盖用户已改出口。
 # 策略组见 groups.yaml（仅 直连 / 拒绝 / 各国）。
 #
-# 面向大陆用户的默认出口（可按机场线路再改）：
-#   广告 → 拒绝
+# 本文件只维护业务规则（AI / 流媒体 / PT…）。以下三条由代码固定生成，不要写进本文件：
+#   广告 GEOSITE category-ads-all → 拒绝（最前，系统分类）
+#   国内 GEOIP CN → 直连（倒数第二，系统分类）
+#   MATCH 兜底 → 美国US（最后，系统分类）
+#
+# 面向大陆用户的业务默认出口（可按机场线路再改）：
 #   AI / Netflix 等需解锁 → 美国US
 #   YouTube / 开发(GitHub·Docker) / 多数国外站 → 日本JP（延迟通常优于美西）
 #   电报 / 社交 → 香港HK
-#   国内 GEOIP → 直连
-#   MATCH → 日本JP（未命中规则的境外流量走近端代理）
 #
 # 顺序 = 本文件列表顺序（命中即停），seed 时自动编号，无需写 sortOrder。
-# 本文件仅放公共默认；个人域名请在面板「批量导入」添加（不会写回此文件）。
+# 字段顺序：category 放最前（面板分组显眼）；个人域名请在面板「批量导入」添加（不会写回此文件）。
 
 rules:
-  # ========== 广告 → 拒绝 ==========
-  - { type: GEOSITE, payload: category-ads-all, target: 拒绝, enabled: true, note: 广告 }
 
   # ========== 海外 AI ==========
-  - { type: DOMAIN-SUFFIX, payload: openai.com, target: 美国US, enabled: true, note: AI-OpenAI }
-  - { type: DOMAIN-SUFFIX, payload: chatgpt.com, target: 美国US, enabled: true, note: AI-ChatGPT }
-  - { type: DOMAIN-SUFFIX, payload: oaistatic.com, target: 美国US, enabled: true, note: AI-ChatGPT静态 }
-  - { type: DOMAIN-SUFFIX, payload: oaiusercontent.com, target: 美国US, enabled: true, note: AI-ChatGPT内容 }
-  - { type: DOMAIN-SUFFIX, payload: anthropic.com, target: 美国US, enabled: true, note: AI-Anthropic }
-  - { type: DOMAIN-SUFFIX, payload: claude.ai, target: 美国US, enabled: true, note: AI-Claude }
-  - { type: DOMAIN-SUFFIX, payload: x.ai, target: 美国US, enabled: true, note: AI-xAI }
-  - { type: DOMAIN-SUFFIX, payload: grok.com, target: 美国US, enabled: true, note: AI-Grok }
-  - { type: DOMAIN-SUFFIX, payload: googleapis.com, target: 美国US, enabled: true, note: AI-GoogleAPI }
-  - { type: DOMAIN-SUFFIX, payload: gemini.google.com, target: 美国US, enabled: true, note: AI-Gemini }
-  - { type: DOMAIN-SUFFIX, payload: cursor.com, target: 美国US, enabled: true, note: AI-Cursor }
-  - { type: DOMAIN-SUFFIX, payload: cursor.sh, target: 美国US, enabled: true, note: AI-Cursor }
-  - { type: DOMAIN-SUFFIX, payload: perplexity.ai, target: 美国US, enabled: true, note: AI-Perplexity }
-  - { type: DOMAIN-SUFFIX, payload: copilot.microsoft.com, target: 美国US, enabled: true, note: AI-Copilot }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: openai.com, target: 美国US, enabled: true, note: AI-OpenAI }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: chatgpt.com, target: 美国US, enabled: true, note: AI-ChatGPT }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: oaistatic.com, target: 美国US, enabled: true, note: AI-ChatGPT静态 }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: oaiusercontent.com, target: 美国US, enabled: true, note: AI-ChatGPT内容 }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: anthropic.com, target: 美国US, enabled: true, note: AI-Anthropic }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: claude.ai, target: 美国US, enabled: true, note: AI-Claude }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: x.ai, target: 美国US, enabled: true, note: AI-xAI }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: grok.com, target: 美国US, enabled: true, note: AI-Grok }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: googleapis.com, target: 美国US, enabled: true, note: AI-GoogleAPI }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: gemini.google.com, target: 美国US, enabled: true, note: AI-Gemini }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: cursor.com, target: 美国US, enabled: true, note: AI-Cursor }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: cursor.sh, target: 美国US, enabled: true, note: AI-Cursor }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: perplexity.ai, target: 美国US, enabled: true, note: AI-Perplexity }
+  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: copilot.microsoft.com, target: 美国US, enabled: true, note: AI-Copilot }
 
   # ========== 国内 AI ==========
-  - { type: DOMAIN-SUFFIX, payload: zhipuai.cn, target: 直连, enabled: true, note: AI-智谱 }
-  - { type: DOMAIN, payload: zcode.z.ai, target: 直连, enabled: true, note: AI-智谱 }
-  - { type: DOMAIN-SUFFIX, payload: bigmodel.cn, target: 直连, enabled: true, note: AI-智谱开放平台 }
-  - { type: DOMAIN-SUFFIX, payload: chatglm.cn, target: 直连, enabled: true, note: AI-ChatGLM }
-  - { type: DOMAIN-SUFFIX, payload: deepseek.com, target: 直连, enabled: true, note: AI-DeepSeek }
-  - { type: DOMAIN-SUFFIX, payload: moonshot.cn, target: 直连, enabled: true, note: AI-月之暗面 }
-  - { type: DOMAIN-SUFFIX, payload: kimi.com, target: 直连, enabled: true, note: AI-Kimi }
-  - { type: DOMAIN-SUFFIX, payload: tongyi.aliyun.com, target: 直连, enabled: true, note: AI-通义千问 }
-  - { type: DOMAIN-SUFFIX, payload: dashscope.aliyuncs.com, target: 直连, enabled: true, note: AI-通义DashScope }
-  - { type: DOMAIN-SUFFIX, payload: qianfan.baidubce.com, target: 直连, enabled: true, note: AI-百度千帆 }
-  - { type: DOMAIN-SUFFIX, payload: yunqing.com, target: 直连, enabled: true, note: AI-云青 }
-  - { type: DOMAIN-SUFFIX, payload: volces.com, target: 直连, enabled: true, note: AI-火山引擎 }
-  - { type: DOMAIN-SUFFIX, payload: doubao.com, target: 直连, enabled: true, note: AI-豆包 }
-  - { type: DOMAIN-SUFFIX, payload: siliconflow.cn, target: 直连, enabled: true, note: AI-硅基流动 }
-  - { type: DOMAIN-SUFFIX, payload: modelscope.cn, target: 直连, enabled: true, note: AI-魔搭ModelScope }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: zhipuai.cn, target: 直连, enabled: true, note: AI-智谱 }
+  - { category: 国内AI, type: DOMAIN, payload: zcode.z.ai, target: 直连, enabled: true, note: AI-智谱 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: bigmodel.cn, target: 直连, enabled: true, note: AI-智谱开放平台 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: chatglm.cn, target: 直连, enabled: true, note: AI-ChatGLM }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: deepseek.com, target: 直连, enabled: true, note: AI-DeepSeek }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: moonshot.cn, target: 直连, enabled: true, note: AI-月之暗面 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: kimi.com, target: 直连, enabled: true, note: AI-Kimi }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: tongyi.aliyun.com, target: 直连, enabled: true, note: AI-通义千问 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: dashscope.aliyuncs.com, target: 直连, enabled: true, note: AI-通义DashScope }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: qianfan.baidubce.com, target: 直连, enabled: true, note: AI-百度千帆 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: yunqing.com, target: 直连, enabled: true, note: AI-云青 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: volces.com, target: 直连, enabled: true, note: AI-火山引擎 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: doubao.com, target: 直连, enabled: true, note: AI-豆包 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: siliconflow.cn, target: 直连, enabled: true, note: AI-硅基流动 }
+  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: modelscope.cn, target: 直连, enabled: true, note: AI-魔搭ModelScope }
 
   # ========== 流媒体 ==========
-  - { type: DOMAIN-SUFFIX, payload: netflix.com, target: 美国US, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: nflxvideo.net, target: 美国US, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: nflxso.net, target: 美国US, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: disneyplus.com, target: 美国US, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: bamgrid.com, target: 美国US, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: hulu.com, target: 美国US, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: spotify.com, target: 日本JP, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: scdn.co, target: 日本JP, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: youtube.com, target: 日本JP, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: ytimg.com, target: 日本JP, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: googlevideo.com, target: 日本JP, enabled: true, note: 流媒体 }
-  - { type: DOMAIN-SUFFIX, payload: youtu.be, target: 日本JP, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: netflix.com, target: 美国US, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: nflxvideo.net, target: 美国US, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: nflxso.net, target: 美国US, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: disneyplus.com, target: 美国US, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: bamgrid.com, target: 美国US, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: hulu.com, target: 美国US, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: spotify.com, target: 日本JP, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: scdn.co, target: 日本JP, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: youtube.com, target: 日本JP, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: ytimg.com, target: 日本JP, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: googlevideo.com, target: 日本JP, enabled: true, note: 流媒体 }
+  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: youtu.be, target: 日本JP, enabled: true, note: 流媒体 }
 
   # ========== 影视元数据 ==========
-  - { type: DOMAIN-SUFFIX, payload: themoviedb.org, target: 日本JP, enabled: true, note: TMDB }
-  - { type: DOMAIN-SUFFIX, payload: tmdb.org, target: 日本JP, enabled: true, note: TMDB }
-  - { type: DOMAIN-SUFFIX, payload: tmdb-image-prod.freetls.fastly.net, target: 日本JP, enabled: true, note: TMDB图片CDN }
-  - { type: DOMAIN-SUFFIX, payload: fanart.tv, target: 日本JP, enabled: true, note: Fanart }
-  - { type: DOMAIN-SUFFIX, payload: thetvdb.com, target: 日本JP, enabled: true, note: TVDB }
-  - { type: DOMAIN-SUFFIX, payload: tvdb.com, target: 日本JP, enabled: true, note: TVDB }
-  - { type: DOMAIN-SUFFIX, payload: imdb.com, target: 日本JP, enabled: true, note: IMDb }
-  - { type: DOMAIN-SUFFIX, payload: media-amazon.com, target: 日本JP, enabled: true, note: IMDb图片 }
-  - { type: DOMAIN-SUFFIX, payload: omdbapi.com, target: 日本JP, enabled: true, note: OMDb }
-  - { type: DOMAIN-SUFFIX, payload: musicbrainz.org, target: 日本JP, enabled: true, note: MusicBrainz }
-  - { type: DOMAIN-SUFFIX, payload: coverartarchive.org, target: 日本JP, enabled: true, note: CoverArt }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: themoviedb.org, target: 日本JP, enabled: true, note: TMDB }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: tmdb.org, target: 日本JP, enabled: true, note: TMDB }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: tmdb-image-prod.freetls.fastly.net, target: 日本JP, enabled: true, note: TMDB图片CDN }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: fanart.tv, target: 日本JP, enabled: true, note: Fanart }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: thetvdb.com, target: 日本JP, enabled: true, note: TVDB }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: tvdb.com, target: 日本JP, enabled: true, note: TVDB }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: imdb.com, target: 日本JP, enabled: true, note: IMDb }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: media-amazon.com, target: 日本JP, enabled: true, note: IMDb图片 }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: omdbapi.com, target: 日本JP, enabled: true, note: OMDb }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: musicbrainz.org, target: 日本JP, enabled: true, note: MusicBrainz }
+  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: coverartarchive.org, target: 日本JP, enabled: true, note: CoverArt }
 
   # ========== 电报 ==========
-  - { type: DOMAIN-SUFFIX, payload: telegram.org, target: 香港HK, enabled: true, note: 电报 }
-  - { type: DOMAIN-SUFFIX, payload: t.me, target: 香港HK, enabled: true, note: 电报 }
-  - { type: DOMAIN-SUFFIX, payload: tdesktop.com, target: 香港HK, enabled: true, note: 电报 }
-  - { type: DOMAIN-SUFFIX, payload: telegra.ph, target: 香港HK, enabled: true, note: 电报 }
+  - { category: 电报, type: DOMAIN-SUFFIX, payload: telegram.org, target: 香港HK, enabled: true, note: 电报 }
+  - { category: 电报, type: DOMAIN-SUFFIX, payload: t.me, target: 香港HK, enabled: true, note: 电报 }
+  - { category: 电报, type: DOMAIN-SUFFIX, payload: tdesktop.com, target: 香港HK, enabled: true, note: 电报 }
+  - { category: 电报, type: DOMAIN-SUFFIX, payload: telegra.ph, target: 香港HK, enabled: true, note: 电报 }
 
   # ========== 开发：GitHub / Docker ==========
-  - { type: DOMAIN-SUFFIX, payload: github.com, target: 日本JP, enabled: true, note: GitHub }
-  - { type: DOMAIN-SUFFIX, payload: githubusercontent.com, target: 日本JP, enabled: true, note: GitHub }
-  - { type: DOMAIN-SUFFIX, payload: githubassets.com, target: 日本JP, enabled: true, note: GitHub }
-  - { type: DOMAIN-SUFFIX, payload: github.io, target: 日本JP, enabled: true, note: GitHub }
-  - { type: DOMAIN-SUFFIX, payload: ghcr.io, target: 日本JP, enabled: true, note: GitHub }
-  - { type: DOMAIN-SUFFIX, payload: docker.com, target: 日本JP, enabled: true, note: Docker }
-  - { type: DOMAIN-SUFFIX, payload: docker.io, target: 日本JP, enabled: true, note: Docker }
-  - { type: DOMAIN-SUFFIX, payload: dockerhub.com, target: 日本JP, enabled: true, note: Docker }
+  - { category: 开发, type: DOMAIN-SUFFIX, payload: github.com, target: 日本JP, enabled: true, note: GitHub }
+  - { category: 开发, type: DOMAIN-SUFFIX, payload: githubusercontent.com, target: 日本JP, enabled: true, note: GitHub }
+  - { category: 开发, type: DOMAIN-SUFFIX, payload: githubassets.com, target: 日本JP, enabled: true, note: GitHub }
+  - { category: 开发, type: DOMAIN-SUFFIX, payload: github.io, target: 日本JP, enabled: true, note: GitHub }
+  - { category: 开发, type: DOMAIN-SUFFIX, payload: ghcr.io, target: 日本JP, enabled: true, note: GitHub }
+  - { category: 开发, type: DOMAIN-SUFFIX, payload: docker.com, target: 日本JP, enabled: true, note: Docker }
+  - { category: 开发, type: DOMAIN-SUFFIX, payload: docker.io, target: 日本JP, enabled: true, note: Docker }
+  - { category: 开发, type: DOMAIN-SUFFIX, payload: dockerhub.com, target: 日本JP, enabled: true, note: Docker }
 
   # ========== Google ==========
-  - { type: DOMAIN-SUFFIX, payload: google.com, target: 日本JP, enabled: true, note: Google }
-  - { type: DOMAIN-SUFFIX, payload: gstatic.com, target: 日本JP, enabled: true, note: Google }
-  - { type: DOMAIN-SUFFIX, payload: googleusercontent.com, target: 日本JP, enabled: true, note: Google }
-  - { type: DOMAIN-SUFFIX, payload: ggpht.com, target: 日本JP, enabled: true, note: Google }
+  - { category: Google, type: DOMAIN-SUFFIX, payload: google.com, target: 日本JP, enabled: true, note: Google }
+  - { category: Google, type: DOMAIN-SUFFIX, payload: gstatic.com, target: 日本JP, enabled: true, note: Google }
+  - { category: Google, type: DOMAIN-SUFFIX, payload: googleusercontent.com, target: 日本JP, enabled: true, note: Google }
+  - { category: Google, type: DOMAIN-SUFFIX, payload: ggpht.com, target: 日本JP, enabled: true, note: Google }
 
   # ========== 社交 ==========
-  - { type: DOMAIN-SUFFIX, payload: twitter.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: x.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: twimg.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: facebook.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: fbcdn.net, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: instagram.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: cdninstagram.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: discord.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: discordapp.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: discord.gg, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: reddit.com, target: 香港HK, enabled: true, note: 社交 }
-  - { type: DOMAIN-SUFFIX, payload: redd.it, target: 香港HK, enabled: true, note: 社交 }
-
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: twitter.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: x.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: twimg.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: facebook.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: fbcdn.net, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: instagram.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: cdninstagram.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: discord.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: discordapp.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: discord.gg, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: reddit.com, target: 香港HK, enabled: true, note: 社交 }
+  - { category: 社交, type: DOMAIN-SUFFIX, payload: redd.it, target: 香港HK, enabled: true, note: 社交 }
 
   # ========== 其它常用 ==========
-  - { type: DOMAIN-SUFFIX, payload: bing.com, target: 日本JP, enabled: true, note: 搜索 }
-  - { type: DOMAIN-SUFFIX, payload: cloudflare.com, target: 直连, enabled: true, note: 基础设施 }
-  - { type: DOMAIN-KEYWORD, payload: epicgames.com, target: 直连, enabled: true, note: 游戏 }
-  - { type: DOMAIN-SUFFIX, payload: ugnas.com, target: 直连, enabled: true, note: NAS }
-  - { type: DOMAIN, payload: www.ug.link, target: 直连, enabled: true, note: NAS }
-  - { type: DOMAIN-SUFFIX, payload: giffgaff.com, target: 直连, enabled: true, note: GG卡 }
-  - { type: DOMAIN, payload: zh.z-library.sk, target: 日本JP, enabled: true, note: Z站 }
-  - { type: DOMAIN-SUFFIX, payload: 1000qm.vip, target: 直连, enabled: true, note: 阡陌居 }
+  - { category: 其它, type: DOMAIN-SUFFIX, payload: bing.com, target: 日本JP, enabled: true, note: 搜索 }
+  - { category: 其它, type: DOMAIN-SUFFIX, payload: cloudflare.com, target: 直连, enabled: true, note: 基础设施 }
+  - { category: 其它, type: DOMAIN-KEYWORD, payload: epicgames.com, target: 直连, enabled: true, note: 游戏 }
+  - { category: 其它, type: DOMAIN-SUFFIX, payload: ugnas.com, target: 直连, enabled: true, note: NAS }
+  - { category: 其它, type: DOMAIN, payload: www.ug.link, target: 直连, enabled: true, note: NAS }
+  - { category: 其它, type: DOMAIN-SUFFIX, payload: giffgaff.com, target: 直连, enabled: true, note: GG卡 }
+  - { category: 其它, type: DOMAIN, payload: zh.z-library.sk, target: 日本JP, enabled: true, note: Z站 }
+  - { category: 其它, type: DOMAIN-SUFFIX, payload: 1000qm.vip, target: 直连, enabled: true, note: 阡陌居 }
 
   # ========== PT站 ==========
-  - { type: DOMAIN, payload: pt.0ff.cc, target: 直连, enabled: true, note: 自由农场 }
-  - { type: DOMAIN, payload: farmm.cc, target: 直连, enabled: true, note: 自由农场 }
-  - { type: DOMAIN, payload: 13city.org, target: 直连, enabled: true, note: 13city }
-  - { type: DOMAIN, payload: 1ptba.com, target: 直连, enabled: true, note: 壹PT }
-  - { type: DOMAIN, payload: www.52movie.top, target: 直连, enabled: true, note: 52movie }
-  - { type: DOMAIN, payload: 52pt.site, target: 直连, enabled: true, note: 52pt }
-  - { type: DOMAIN, payload: pt.agsvpt.cn, target: 直连, enabled: true, note: 末日种子 }
-  - { type: DOMAIN, payload: abroad.agsvpt.com, target: 直连, enabled: true, note: 末日种子 }
-  - { type: DOMAIN, payload: www.agsvpt.com, target: 直连, enabled: true, note: 末日种子 }
-  - { type: DOMAIN, payload: aither.cc, target: 直连, enabled: true, note: Ait }
-  - { type: DOMAIN, payload: pt.aling.de, target: 直连, enabled: true, note: aling }
-  - { type: DOMAIN, payload: audiences.me, target: 直连, enabled: true, note: 观众 }
-  - { type: DOMAIN, payload: azusa.wiki, target: 直连, enabled: true, note: 梓喵 }
-  - { type: DOMAIN, payload: zimiao.icu, target: 直连, enabled: true, note: 梓喵 }
-  - { type: DOMAIN, payload: p.t-baozi.cc, target: 直连, enabled: true, note: 包子 }
-  - { type: DOMAIN, payload: www.beitai.pt, target: 直连, enabled: true, note: 备胎 }
-  - { type: DOMAIN, payload: bilibili.download, target: 直连, enabled: true, note: BILIBILI }
-  - { type: DOMAIN, payload: www.bit-hdtv.com, target: 直连, enabled: true, note: Bit-HDTV }
-  - { type: DOMAIN, payload: bitporn.eu, target: 直连, enabled: true, note: BitPor }
-  - { type: DOMAIN, payload: blutopia.cc, target: 直连, enabled: true, note: Blutopia }
-  - { type: DOMAIN, payload: share.dmhy.org, target: 直连, enabled: true, note: 动漫花园 }
-  - { type: DOMAIN, payload: pt.btschool.club, target: 直连, enabled: true, note: 学校 }
-  - { type: DOMAIN, payload: hudbt.hust.edu.cn, target: 直连, enabled: true, note: 蝴蝶 }
-  - { type: DOMAIN, payload: zeus.hamsters.space, target: 直连, enabled: true, note: 蝴蝶 }
-  - { type: DOMAIN, payload: byr.pt, target: 直连, enabled: true, note: 北邮人 }
-  - { type: DOMAIN, payload: cangbao.ge, target: 直连, enabled: true, note: 藏宝阁 }
-  - { type: DOMAIN, payload: carpt.net, target: 直连, enabled: true, note: 小车站 }
-  - { type: DOMAIN, payload: pt.cdfile.org, target: 直连, enabled: true, note: CD File }
-  - { type: DOMAIN, payload: t.ceskeforum.com, target: 直连, enabled: true, note: CeskeForum }
-  - { type: DOMAIN, payload: cinematik.net, target: 直连, enabled: true, note: Tik }
-  - { type: DOMAIN, payload: clearjav.com, target: 直连, enabled: true, note: ClearJav }
-  - { type: DOMAIN, payload: concertos.live, target: 直连, enabled: true, note: concertos }
-  - { type: DOMAIN, payload: crabpt.vip, target: 直连, enabled: true, note: 蟹黄堡 }
-  - { type: DOMAIN, payload: pt.837576.xyz, target: 直连, enabled: true, note: 蟹黄堡 }
-  - { type: DOMAIN, payload: cspt.top, target: 直连, enabled: true, note: 财神 }
-  - { type: DOMAIN, payload: cyanbug.net, target: 直连, enabled: true, note: 大青虫 }
-  - { type: DOMAIN, payload: pt.525968.xyz, target: 直连, enabled: true, note: 大宝剑 }
-  - { type: DOMAIN, payload: dajiao.cyou, target: 直连, enabled: true, note: 打胶 }
-  - { type: DOMAIN, payload: danishbytes.club, target: 直连, enabled: true, note: DBy }
-  - { type: DOMAIN, payload: darkland.top, target: 直连, enabled: true, note: Darkland }
-  - { type: DOMAIN, payload: datascene.xyz, target: 直连, enabled: true, note: Datascene }
-  - { type: DOMAIN, payload: pt.daxiangjiao.org, target: 直连, enabled: true, note: 大香蕉 }
-  - { type: DOMAIN, payload: dstudio.me, target: 直连, enabled: true, note: Depth Studio }
-  - { type: DOMAIN, payload: www.devtracker.me, target: 直连, enabled: true, note: DevTracker }
-  - { type: DOMAIN, payload: dicmusic.com, target: 直连, enabled: true, note: 海豚 }
-  - { type: DOMAIN, payload: tracker.52dic.vip, target: 直连, enabled: true, note: 海豚 }
-  - { type: DOMAIN, payload: discfan.net, target: 直连, enabled: true, note: 蝶粉 }
-  - { type: DOMAIN, payload: www.dragonhd.xyz, target: 直连, enabled: true, note: 龙之家 }
-  - { type: DOMAIN, payload: dubhe.site, target: 直连, enabled: true, note: 天枢 }
-  - { type: DOMAIN, payload: emuwarez.com, target: 直连, enabled: true, note: eMz }
-  - { type: DOMAIN, payload: pt.eastgame.org, target: 直连, enabled: true, note: 吐鲁番 }
-  - { type: DOMAIN, payload: pt.ecust.pp.ua, target: 直连, enabled: true, note: 花梨月下 }
-  - { type: DOMAIN, payload: public.ecustpt.eu.org, target: 直连, enabled: true, note: 花梨月下 }
-  - { type: DOMAIN, payload: eiga.moi, target: 直连, enabled: true, note: ACM }
-  - { type: DOMAIN, payload: www.empornium.sx, target: 直连, enabled: true, note: EMP }
-  - { type: DOMAIN, payload: exoticaz.to, target: 直连, enabled: true, note: exoticaz }
-  - { type: DOMAIN, payload: fearnopeer.com, target: 直连, enabled: true, note: FNP }
-  - { type: DOMAIN, payload: femdomcult.org, target: 直连, enabled: true, note: FEM }
-  - { type: DOMAIN, payload: filelist.io, target: 直连, enabled: true, note: Filelist }
-  - { type: DOMAIN, payload: fsm.name, target: 直连, enabled: true, note: 飞天拉面 }
-  - { type: DOMAIN, payload: gemini-tracker.org, target: 直连, enabled: true, note: G3MINI }
-  - { type: DOMAIN, payload: generation-free.org, target: 直连, enabled: true, note: GFF }
-  - { type: DOMAIN, payload: www.gamegamept.com, target: 直连, enabled: true, note: GGPT }
-  - { type: DOMAIN, payload: greatposterwall.com, target: 直连, enabled: true, note: 海豹 }
-  - { type: DOMAIN, payload: www.haidan.cc, target: 直连, enabled: true, note: 海胆之家 }
-  - { type: DOMAIN, payload: happyfappy.net, target: 直连, enabled: true, note: HF }
-  - { type: DOMAIN, payload: hawke.uno, target: 直连, enabled: true, note: HAWKE-ONE }
-  - { type: DOMAIN, payload: hdarea.club, target: 直连, enabled: true, note: 好大 }
-  - { type: DOMAIN, payload: hdhome.org, target: 直连, enabled: true, note: 家园 }
-  - { type: DOMAIN, payload: hdtime.org, target: 直连, enabled: true, note: 高清时间 }
-  - { type: DOMAIN, payload: hd-united.vn, target: 直连, enabled: true, note: HD-UNiT3D }
-  - { type: DOMAIN, payload: hdfun.me, target: 直连, enabled: true, note: 空间 }
-  - { type: DOMAIN, payload: hdatmos.club, target: 直连, enabled: true, note: 阿童木 }
-  - { type: DOMAIN, payload: hdbao.cc, target: 直连, enabled: true, note: HDBAO }
-  - { type: DOMAIN, payload: hdbits.org, target: 直连, enabled: true, note: HDB }
-  - { type: DOMAIN, payload: hdcity.work, target: 直连, enabled: true, note: 城市 }
-  - { type: DOMAIN, payload: pt.hdclone.org, target: 直连, enabled: true, note: HDCLONE }
-  - { type: DOMAIN, payload: www.hddolby.com, target: 直连, enabled: true, note: 高清杜比 }
-  - { type: DOMAIN, payload: hdfans.org, target: 直连, enabled: true, note: 红豆饭 }
-  - { type: DOMAIN, payload: www.hdkyl.in, target: 直连, enabled: true, note: 麒麟 }
-  - { type: DOMAIN, payload: na.hdkylin.com, target: 直连, enabled: true, note: 麒麟 }
-  - { type: DOMAIN, payload: pt.hdpost.top, target: 直连, enabled: true, note: HDPOST }
-  - { type: DOMAIN, payload: hdpt.xyz, target: 直连, enabled: true, note: 明教 }
-  - { type: DOMAIN, payload: hdroute.org, target: 直连, enabled: true, note: HDRoute }
-  - { type: DOMAIN, payload: hdsky.me, target: 直连, enabled: true, note: 天空 }
-  - { type: DOMAIN, payload: pt.hdupt.com, target: 直连, enabled: true, note: 好多油 }
-  - { type: DOMAIN, payload: hdvideo.top, target: 直连, enabled: true, note: HDVIDEO }
-  - { type: DOMAIN, payload: hdvideo.one, target: 直连, enabled: true, note: HDVIDEO }
-  - { type: DOMAIN, payload: hellenic-hd.cc, target: 直连, enabled: true, note: HELLENIC-HD }
-  - { type: DOMAIN, payload: hhanclub.net, target: 直连, enabled: true, note: 憨憨 }
-  - { type: DOMAIN, payload: www.hitpt.com, target: 直连, enabled: true, note: 百川 }
-  - { type: DOMAIN, payload: www.homeporntorrents.club, target: 直连, enabled: true, note: HPT }
-  - { type: DOMAIN, payload: homiehelpdesk.net, target: 直连, enabled: true, note: HHD }
-  - { type: DOMAIN, payload: tracker.hqmusic.info, target: 直连, enabled: true, note: HQMusic }
-  - { type: DOMAIN, payload: hspt.club, target: 直连, enabled: true, note: 回声 }
-  - { type: DOMAIN, payload: www.htpt.cc, target: 直连, enabled: true, note: 海棠 }
-  - { type: DOMAIN, payload: www.hxpt.org, target: 直连, enabled: true, note: 好学 }
-  - { type: DOMAIN, payload: www.icc2022.com, target: 直连, enabled: true, note: 冰淇淋 }
-  - { type: DOMAIN, payload: mua.xloli.cc, target: 直连, enabled: true, note: 萝莉 }
-  - { type: DOMAIN, payload: share.ilolicon.com, target: 直连, enabled: true, note: 萝莉 }
-  - { type: DOMAIN, payload: iptorrents.com, target: 直连, enabled: true, note: ipt }
-  - { type: DOMAIN, payload: nex.jivon.de, target: 直连, enabled: true, note: 未来幻境 }
-  - { type: DOMAIN, payload: www.joyhd.net, target: 直连, enabled: true, note: 开心 }
-  - { type: DOMAIN, payload: jpopsuki.eu, target: 直连, enabled: true, note: JPopsuki }
-  - { type: DOMAIN, payload: kamept.com, target: 直连, enabled: true, note: KamePT }
-  - { type: DOMAIN, payload: karagarga.in, target: 直连, enabled: true, note: KG }
-  - { type: DOMAIN, payload: pt.keepfrds.com, target: 直连, enabled: true, note: 朋友 }
-  - { type: DOMAIN, payload: our.kelu.one, target: 直连, enabled: true, note: 克鲁 }
-  - { type: DOMAIN, payload: kufei.org, target: 直连, enabled: true, note: 库非 }
-  - { type: DOMAIN, payload: kufirc.com, target: 直连, enabled: true, note: Kufirc }
-  - { type: DOMAIN, payload: pt.lajidui.top, target: 直连, enabled: true, note: 垃圾堆 }
-  - { type: DOMAIN, payload: leaves.red, target: 直连, enabled: true, note: 红叶PT }
-  - { type: DOMAIN, payload: lemonhd.club, target: 直连, enabled: true, note: 柠檬不酸 }
-  - { type: DOMAIN, payload: lemonhd.net, target: 直连, enabled: true, note: 柠檬不甜 }
-  - { type: DOMAIN, payload: longpt.org, target: 直连, enabled: true, note: longpt }
-  - { type: DOMAIN, payload: lp-bits.com, target: 直连, enabled: true, note: LP-Bits }
-  - { type: DOMAIN, payload: lst.gg, target: 直连, enabled: true, note: LST }
-  - { type: DOMAIN, payload: pt.luckpt.de, target: 直连, enabled: true, note: 幸运草 }
-  - { type: DOMAIN, payload: luminarr.me, target: 直连, enabled: true, note: Luminarr }
-  - { type: DOMAIN, payload: duckboobee.org, target: 直连, enabled: true, note: 三月传媒 }
-  - { type: DOMAIN, payload: www.momentpt.top, target: 直连, enabled: true, note: 瞬间 }
-  - { type: DOMAIN, payload: monikadesign.uk, target: 直连, enabled: true, note: 莫妮卡 }
-  - { type: DOMAIN, payload: anime-no-index.com, target: 直连, enabled: true, note: 莫妮卡 }
-  - { type: DOMAIN, payload: kp.m-team.cc, target: 直连, enabled: true, note: 馒头 }
-  - { type: DOMAIN, payload: api.m-team.cc, target: 直连, enabled: true, note: 馒头 }
-  - { type: DOMAIN, payload: mtapi.m-team.cc, target: 直连, enabled: true, note: 馒头 }
-  - { type: DOMAIN, payload: pt.muxuege.org, target: 直连, enabled: true, note: 慕雪阁 }
-  - { type: DOMAIN, payload: cc.mypt.cc, target: 直连, enabled: true, note: 我的PT }
-  - { type: DOMAIN, payload: www.myspleen.org, target: 直连, enabled: true, note: MySpleen }
-  - { type: DOMAIN, payload: nanyangpt.com, target: 直连, enabled: true, note: 南洋PT }
-  - { type: DOMAIN, payload: ncore.pro, target: 直连, enabled: true, note: nCore }
-  - { type: DOMAIN, payload: www.nicept.net, target: 直连, enabled: true, note: 老师 }
-  - { type: DOMAIN, payload: njtupt.top, target: 直连, enabled: true, note: 浦园PT }
-  - { type: DOMAIN, payload: pt.novahd.top, target: 直连, enabled: true, note: NovaHD }
-  - { type: DOMAIN, payload: www.okpt.net, target: 直连, enabled: true, note: okpt }
-  - { type: DOMAIN, payload: oldtoons.world, target: 直连, enabled: true, note: 老卡通 }
-  - { type: DOMAIN, payload: www.open.cd, target: 直连, enabled: true, note: 皇后 }
-  - { type: DOMAIN, payload: www.oshen.win, target: 直连, enabled: true, note: 奥神 }
-  - { type: DOMAIN, payload: ourbits.club, target: 直连, enabled: true, note: 我堡 }
-  - { type: DOMAIN, payload: pt.ourhelp.club, target: 直连, enabled: true, note: 我堡 }
-  - { type: DOMAIN, payload: pandapt.net, target: 直连, enabled: true, note: 熊猫 }
-  - { type: DOMAIN, payload: piggo.me, target: 直连, enabled: true, note: 猪猪 }
-  - { type: DOMAIN, payload: playlet.cc, target: 直连, enabled: true, note: PlayLet }
-  - { type: DOMAIN, payload: playletpt.xyz, target: 直连, enabled: true, note: PlayLet }
-  - { type: DOMAIN, payload: polishtorrent.top, target: 直连, enabled: true, note: PTT }
-  - { type: DOMAIN, payload: portugas.org, target: 直连, enabled: true, note: Portugas }
-  - { type: DOMAIN, payload: ptcafe.club, target: 直连, enabled: true, note: 咖啡 }
-  - { type: DOMAIN, payload: ptchdbits.co, target: 直连, enabled: true, note: 彩虹岛 }
-  - { type: DOMAIN, payload: bj.chddiy.xyz, target: 直连, enabled: true, note: 彩虹岛 }
-  - { type: DOMAIN, payload: js.chddiy.xyz, target: 直连, enabled: true, note: 彩虹岛 }
-  - { type: DOMAIN, payload: hn.chddiy.xyz, target: 直连, enabled: true, note: 彩虹岛 }
-  - { type: DOMAIN, payload: ptchina.org, target: 直连, enabled: true, note: 铂金学院 }
-  - { type: DOMAIN, payload: pterclub.net, target: 直连, enabled: true, note: 猫站 }
-  - { type: DOMAIN, payload: pterclub.com, target: 直连, enabled: true, note: 猫站 }
-  - { type: DOMAIN, payload: ptfans.cc, target: 直连, enabled: true, note: PTFANS }
-  - { type: DOMAIN, payload: pt.gtk.pw, target: 直连, enabled: true, note: ptgtk }
-  - { type: DOMAIN, payload: pt.gtkpw.xyz, target: 直连, enabled: true, note: ptgtk }
-  - { type: DOMAIN, payload: www.pthome.net, target: 直连, enabled: true, note: 铂金家 }
-  - { type: DOMAIN, payload: ptlgs.org, target: 直连, enabled: true, note: 劳改所 }
-  - { type: DOMAIN, payload: www.ptlover.cc, target: 直连, enabled: true, note: AFUN }
-  - { type: DOMAIN, payload: ptsbao.club, target: 直连, enabled: true, note: 烧包乐园 }
-  - { type: DOMAIN, payload: www.ptskit.com, target: 直连, enabled: true, note: 葫芦娃 }
-  - { type: DOMAIN, payload: www.ptskit.org, target: 直连, enabled: true, note: 葫芦娃 }
-  - { type: DOMAIN, payload: www.pttime.org, target: 直连, enabled: true, note: PT时间 }
-  - { type: DOMAIN, payload: ptvicomo.net, target: 直连, enabled: true, note: 象站 }
-  - { type: DOMAIN, payload: ptzone.xyz, target: 直连, enabled: true, note: ptzone }
-  - { type: DOMAIN, payload: pt.sjtu.edu.cn, target: 直连, enabled: true, note: 葡萄 }
-  - { type: DOMAIN, payload: www.qingwapt.com, target: 直连, enabled: true, note: 青蛙 }
-  - { type: DOMAIN, payload: qingwapt.com, target: 直连, enabled: true, note: 青蛙 }
-  - { type: DOMAIN, payload: new.qingwa.pro, target: 直连, enabled: true, note: 青蛙 }
-  - { type: DOMAIN, payload: racing4everyone.eu, target: 直连, enabled: true, note: R4E }
-  - { type: DOMAIN, payload: raingfh.top, target: 直连, enabled: true, note: 雨 }
-  - { type: DOMAIN, payload: www.raingfh.top, target: 直连, enabled: true, note: 雨 }
-  - { type: DOMAIN, payload: rastastugan.org, target: 直连, enabled: true, note: Rastastugan }
-  - { type: DOMAIN, payload: redacted.sh, target: 直连, enabled: true, note: RED }
-  - { type: DOMAIN, payload: reelflix.cc, target: 直连, enabled: true, note: Ree }
-  - { type: DOMAIN, payload: rocket-hd.cc, target: 直连, enabled: true, note: RocketHD }
-  - { type: DOMAIN, payload: rotorrent.info, target: 直连, enabled: true, note: ROT }
-  - { type: DOMAIN, payload: rousi.pro, target: 直连, enabled: true, note: Rousi }
-  - { type: DOMAIN, payload: sanpro.pw, target: 直连, enabled: true, note: 伞 }
-  - { type: DOMAIN, payload: sbpt.link, target: 直连, enabled: true, note: SBPT }
-  - { type: DOMAIN, payload: sewerpt.com, target: 直连, enabled: true, note: 下水道 }
-  - { type: DOMAIN, payload: shareisland.org, target: 直连, enabled: true, note: ShareIsland }
-  - { type: DOMAIN, payload: si-qi.xyz, target: 直连, enabled: true, note: 思齐 }
-  - { type: DOMAIN, payload: skipthecommercials.xyz, target: 直连, enabled: true, note: STC }
-  - { type: DOMAIN, payload: pt.soulvoice.club, target: 直连, enabled: true, note: 聆音 }
-  - { type: DOMAIN, payload: www.srvfi.top, target: 直连, enabled: true, note: 超分辨率 }
-  - { type: DOMAIN, payload: springsunday.net, target: 直连, enabled: true, note: 春天 }
-  - { type: DOMAIN, payload: star-space.net, target: 直连, enabled: true, note: 星空 }
-  - { type: DOMAIN, payload: sunnypt.top, target: 直连, enabled: true, note: Sunny }
-  - { type: DOMAIN, payload: www.tangpt.top, target: 直连, enabled: true, note: 躺平 }
-  - { type: DOMAIN, payload: et8.org, target: 直连, enabled: true, note: TCCF }
-  - { type: DOMAIN, payload: pt.tey.cc, target: 直连, enabled: true, note: 太乙 }
-  - { type: DOMAIN, payload: tjupt.org, target: 直连, enabled: true, note: 北洋园 }
-  - { type: DOMAIN, payload: tlzdigital.com, target: 直连, enabled: true, note: TLZ }
-  - { type: DOMAIN, payload: tmpt.top, target: 直连, enabled: true, note: 唐门 }
-  - { type: DOMAIN, payload: www.tokyopt.xyz, target: 直连, enabled: true, note: 动态漫 }
-  - { type: DOMAIN, payload: torr9.xyz, target: 直连, enabled: true, note: Torr9 }
-  - { type: DOMAIN, payload: torrenthub.club, target: 直连, enabled: true, note: 种子库 }
-  - { type: DOMAIN, payload: t.tosky.club, target: 直连, enabled: true, note: tosky }
-  - { type: DOMAIN, payload: totheglory.im, target: 直连, enabled: true, note: 听听歌 }
-  - { type: DOMAIN, payload: pt.tu88.men, target: 直连, enabled: true, note: tu88 }
-  - { type: DOMAIN, payload: turkseed.com, target: 直连, enabled: true, note: TURKSEED }
-  - { type: DOMAIN, payload: u2.dmhy.org, target: 直连, enabled: true, note: 幼儿园 }
-  - { type: DOMAIN, payload: ubits.club, target: 直连, enabled: true, note: UBits }
-  - { type: DOMAIN, payload: ultrahd.net, target: 直连, enabled: true, note: ultrahd }
-  - { type: DOMAIN, payload: wintersakura.net, target: 直连, enabled: true, note: 冬樱 }
-  - { type: DOMAIN, payload: wukongwendao.top, target: 直连, enabled: true, note: 悟空问道 }
-  - { type: DOMAIN, payload: xingtan.one, target: 直连, enabled: true, note: 杏坛 }
-  - { type: DOMAIN, payload: xingwan.cc, target: 直连, enabled: true, note: 星湾 }
-  - { type: DOMAIN, payload: pt.xingyungept.org, target: 直连, enabled: true, note: 星陨阁 }
-  - { type: DOMAIN, payload: www.xingyungept.org, target: 直连, enabled: true, note: 星陨阁 }
-  - { type: DOMAIN, payload: xing.xingyunge.sbs, target: 直连, enabled: true, note: 星陨阁 }
-  - { type: DOMAIN, payload: pt.xingyungept.cn, target: 直连, enabled: true, note: 星陨阁 }
-  - { type: DOMAIN, payload: www.yemapt.org, target: 直连, enabled: true, note: 野马 }
-  - { type: DOMAIN, payload: www.yhpp.cc, target: 直连, enabled: true, note: 昆仑 }
-  - { type: DOMAIN, payload: pt.ying.us.kg, target: 直连, enabled: true, note: 樱花 }
-  - { type: DOMAIN, payload: zhuque.in, target: 直连, enabled: true, note: 朱雀 }
-  - { type: DOMAIN, payload: zmpt.cc, target: 直连, enabled: true, note: 织梦 }
-  - { type: DOMAIN, payload: zmpt.club, target: 直连, enabled: true, note: 织梦 }
-  - { type: DOMAIN, payload: www.zootracker.vip, target: 直连, enabled: true, note: ZOO }
-  - { type: DOMAIN, payload: zrpt.cc, target: 直连, enabled: true, note: 自然 }
+  - { category: PT站, type: DOMAIN, payload: pt.0ff.cc, target: 直连, enabled: true, note: 自由农场 }
+  - { category: PT站, type: DOMAIN, payload: farmm.cc, target: 直连, enabled: true, note: 自由农场 }
+  - { category: PT站, type: DOMAIN, payload: 13city.org, target: 直连, enabled: true, note: 13city }
+  - { category: PT站, type: DOMAIN, payload: 1ptba.com, target: 直连, enabled: true, note: 壹PT }
+  - { category: PT站, type: DOMAIN, payload: www.52movie.top, target: 直连, enabled: true, note: 52movie }
+  - { category: PT站, type: DOMAIN, payload: 52pt.site, target: 直连, enabled: true, note: 52pt }
+  - { category: PT站, type: DOMAIN, payload: pt.agsvpt.cn, target: 直连, enabled: true, note: 末日种子 }
+  - { category: PT站, type: DOMAIN, payload: abroad.agsvpt.com, target: 直连, enabled: true, note: 末日种子 }
+  - { category: PT站, type: DOMAIN, payload: www.agsvpt.com, target: 直连, enabled: true, note: 末日种子 }
+  - { category: PT站, type: DOMAIN, payload: aither.cc, target: 直连, enabled: true, note: Ait }
+  - { category: PT站, type: DOMAIN, payload: pt.aling.de, target: 直连, enabled: true, note: aling }
+  - { category: PT站, type: DOMAIN, payload: audiences.me, target: 直连, enabled: true, note: 观众 }
+  - { category: PT站, type: DOMAIN, payload: azusa.wiki, target: 直连, enabled: true, note: 梓喵 }
+  - { category: PT站, type: DOMAIN, payload: zimiao.icu, target: 直连, enabled: true, note: 梓喵 }
+  - { category: PT站, type: DOMAIN, payload: p.t-baozi.cc, target: 直连, enabled: true, note: 包子 }
+  - { category: PT站, type: DOMAIN, payload: www.beitai.pt, target: 直连, enabled: true, note: 备胎 }
+  - { category: PT站, type: DOMAIN, payload: bilibili.download, target: 直连, enabled: true, note: BILIBILI }
+  - { category: PT站, type: DOMAIN, payload: www.bit-hdtv.com, target: 直连, enabled: true, note: Bit-HDTV }
+  - { category: PT站, type: DOMAIN, payload: bitporn.eu, target: 直连, enabled: true, note: BitPor }
+  - { category: PT站, type: DOMAIN, payload: blutopia.cc, target: 直连, enabled: true, note: Blutopia }
+  - { category: PT站, type: DOMAIN, payload: share.dmhy.org, target: 直连, enabled: true, note: 动漫花园 }
+  - { category: PT站, type: DOMAIN, payload: pt.btschool.club, target: 直连, enabled: true, note: 学校 }
+  - { category: PT站, type: DOMAIN, payload: hudbt.hust.edu.cn, target: 直连, enabled: true, note: 蝴蝶 }
+  - { category: PT站, type: DOMAIN, payload: zeus.hamsters.space, target: 直连, enabled: true, note: 蝴蝶 }
+  - { category: PT站, type: DOMAIN, payload: byr.pt, target: 直连, enabled: true, note: 北邮人 }
+  - { category: PT站, type: DOMAIN, payload: cangbao.ge, target: 直连, enabled: true, note: 藏宝阁 }
+  - { category: PT站, type: DOMAIN, payload: carpt.net, target: 直连, enabled: true, note: 小车站 }
+  - { category: PT站, type: DOMAIN, payload: pt.cdfile.org, target: 直连, enabled: true, note: CD File }
+  - { category: PT站, type: DOMAIN, payload: t.ceskeforum.com, target: 直连, enabled: true, note: CeskeForum }
+  - { category: PT站, type: DOMAIN, payload: cinematik.net, target: 直连, enabled: true, note: Tik }
+  - { category: PT站, type: DOMAIN, payload: clearjav.com, target: 直连, enabled: true, note: ClearJav }
+  - { category: PT站, type: DOMAIN, payload: concertos.live, target: 直连, enabled: true, note: concertos }
+  - { category: PT站, type: DOMAIN, payload: crabpt.vip, target: 直连, enabled: true, note: 蟹黄堡 }
+  - { category: PT站, type: DOMAIN, payload: pt.837576.xyz, target: 直连, enabled: true, note: 蟹黄堡 }
+  - { category: PT站, type: DOMAIN, payload: cspt.top, target: 直连, enabled: true, note: 财神 }
+  - { category: PT站, type: DOMAIN, payload: cyanbug.net, target: 直连, enabled: true, note: 大青虫 }
+  - { category: PT站, type: DOMAIN, payload: pt.525968.xyz, target: 直连, enabled: true, note: 大宝剑 }
+  - { category: PT站, type: DOMAIN, payload: dajiao.cyou, target: 直连, enabled: true, note: 打胶 }
+  - { category: PT站, type: DOMAIN, payload: danishbytes.club, target: 直连, enabled: true, note: DBy }
+  - { category: PT站, type: DOMAIN, payload: darkland.top, target: 直连, enabled: true, note: Darkland }
+  - { category: PT站, type: DOMAIN, payload: datascene.xyz, target: 直连, enabled: true, note: Datascene }
+  - { category: PT站, type: DOMAIN, payload: pt.daxiangjiao.org, target: 直连, enabled: true, note: 大香蕉 }
+  - { category: PT站, type: DOMAIN, payload: dstudio.me, target: 直连, enabled: true, note: Depth Studio }
+  - { category: PT站, type: DOMAIN, payload: www.devtracker.me, target: 直连, enabled: true, note: DevTracker }
+  - { category: PT站, type: DOMAIN, payload: dicmusic.com, target: 直连, enabled: true, note: 海豚 }
+  - { category: PT站, type: DOMAIN, payload: tracker.52dic.vip, target: 直连, enabled: true, note: 海豚 }
+  - { category: PT站, type: DOMAIN, payload: discfan.net, target: 直连, enabled: true, note: 蝶粉 }
+  - { category: PT站, type: DOMAIN, payload: www.dragonhd.xyz, target: 直连, enabled: true, note: 龙之家 }
+  - { category: PT站, type: DOMAIN, payload: dubhe.site, target: 直连, enabled: true, note: 天枢 }
+  - { category: PT站, type: DOMAIN, payload: emuwarez.com, target: 直连, enabled: true, note: eMz }
+  - { category: PT站, type: DOMAIN, payload: pt.eastgame.org, target: 直连, enabled: true, note: 吐鲁番 }
+  - { category: PT站, type: DOMAIN, payload: pt.ecust.pp.ua, target: 直连, enabled: true, note: 花梨月下 }
+  - { category: PT站, type: DOMAIN, payload: public.ecustpt.eu.org, target: 直连, enabled: true, note: 花梨月下 }
+  - { category: PT站, type: DOMAIN, payload: eiga.moi, target: 直连, enabled: true, note: ACM }
+  - { category: PT站, type: DOMAIN, payload: www.empornium.sx, target: 直连, enabled: true, note: EMP }
+  - { category: PT站, type: DOMAIN, payload: exoticaz.to, target: 直连, enabled: true, note: exoticaz }
+  - { category: PT站, type: DOMAIN, payload: fearnopeer.com, target: 直连, enabled: true, note: FNP }
+  - { category: PT站, type: DOMAIN, payload: femdomcult.org, target: 直连, enabled: true, note: FEM }
+  - { category: PT站, type: DOMAIN, payload: filelist.io, target: 直连, enabled: true, note: Filelist }
+  - { category: PT站, type: DOMAIN, payload: fsm.name, target: 直连, enabled: true, note: 飞天拉面 }
+  - { category: PT站, type: DOMAIN, payload: gemini-tracker.org, target: 直连, enabled: true, note: G3MINI }
+  - { category: PT站, type: DOMAIN, payload: generation-free.org, target: 直连, enabled: true, note: GFF }
+  - { category: PT站, type: DOMAIN, payload: www.gamegamept.com, target: 直连, enabled: true, note: GGPT }
+  - { category: PT站, type: DOMAIN, payload: greatposterwall.com, target: 直连, enabled: true, note: 海豹 }
+  - { category: PT站, type: DOMAIN, payload: www.haidan.cc, target: 直连, enabled: true, note: 海胆之家 }
+  - { category: PT站, type: DOMAIN, payload: happyfappy.net, target: 直连, enabled: true, note: HF }
+  - { category: PT站, type: DOMAIN, payload: hawke.uno, target: 直连, enabled: true, note: HAWKE-ONE }
+  - { category: PT站, type: DOMAIN, payload: hdarea.club, target: 直连, enabled: true, note: 好大 }
+  - { category: PT站, type: DOMAIN, payload: hdhome.org, target: 直连, enabled: true, note: 家园 }
+  - { category: PT站, type: DOMAIN, payload: hdtime.org, target: 直连, enabled: true, note: 高清时间 }
+  - { category: PT站, type: DOMAIN, payload: hd-united.vn, target: 直连, enabled: true, note: HD-UNiT3D }
+  - { category: PT站, type: DOMAIN, payload: hdfun.me, target: 直连, enabled: true, note: 空间 }
+  - { category: PT站, type: DOMAIN, payload: hdatmos.club, target: 直连, enabled: true, note: 阿童木 }
+  - { category: PT站, type: DOMAIN, payload: hdbao.cc, target: 直连, enabled: true, note: HDBAO }
+  - { category: PT站, type: DOMAIN, payload: hdbits.org, target: 直连, enabled: true, note: HDB }
+  - { category: PT站, type: DOMAIN, payload: hdcity.work, target: 直连, enabled: true, note: 城市 }
+  - { category: PT站, type: DOMAIN, payload: pt.hdclone.org, target: 直连, enabled: true, note: HDCLONE }
+  - { category: PT站, type: DOMAIN, payload: www.hddolby.com, target: 直连, enabled: true, note: 高清杜比 }
+  - { category: PT站, type: DOMAIN, payload: hdfans.org, target: 直连, enabled: true, note: 红豆饭 }
+  - { category: PT站, type: DOMAIN, payload: www.hdkyl.in, target: 直连, enabled: true, note: 麒麟 }
+  - { category: PT站, type: DOMAIN, payload: na.hdkylin.com, target: 直连, enabled: true, note: 麒麟 }
+  - { category: PT站, type: DOMAIN, payload: pt.hdpost.top, target: 直连, enabled: true, note: HDPOST }
+  - { category: PT站, type: DOMAIN, payload: hdpt.xyz, target: 直连, enabled: true, note: 明教 }
+  - { category: PT站, type: DOMAIN, payload: hdroute.org, target: 直连, enabled: true, note: HDRoute }
+  - { category: PT站, type: DOMAIN, payload: hdsky.me, target: 直连, enabled: true, note: 天空 }
+  - { category: PT站, type: DOMAIN, payload: pt.hdupt.com, target: 直连, enabled: true, note: 好多油 }
+  - { category: PT站, type: DOMAIN, payload: hdvideo.top, target: 直连, enabled: true, note: HDVIDEO }
+  - { category: PT站, type: DOMAIN, payload: hdvideo.one, target: 直连, enabled: true, note: HDVIDEO }
+  - { category: PT站, type: DOMAIN, payload: hellenic-hd.cc, target: 直连, enabled: true, note: HELLENIC-HD }
+  - { category: PT站, type: DOMAIN, payload: hhanclub.net, target: 直连, enabled: true, note: 憨憨 }
+  - { category: PT站, type: DOMAIN, payload: www.hitpt.com, target: 直连, enabled: true, note: 百川 }
+  - { category: PT站, type: DOMAIN, payload: www.homeporntorrents.club, target: 直连, enabled: true, note: HPT }
+  - { category: PT站, type: DOMAIN, payload: homiehelpdesk.net, target: 直连, enabled: true, note: HHD }
+  - { category: PT站, type: DOMAIN, payload: tracker.hqmusic.info, target: 直连, enabled: true, note: HQMusic }
+  - { category: PT站, type: DOMAIN, payload: hspt.club, target: 直连, enabled: true, note: 回声 }
+  - { category: PT站, type: DOMAIN, payload: www.htpt.cc, target: 直连, enabled: true, note: 海棠 }
+  - { category: PT站, type: DOMAIN, payload: www.hxpt.org, target: 直连, enabled: true, note: 好学 }
+  - { category: PT站, type: DOMAIN, payload: www.icc2022.com, target: 直连, enabled: true, note: 冰淇淋 }
+  - { category: PT站, type: DOMAIN, payload: mua.xloli.cc, target: 直连, enabled: true, note: 萝莉 }
+  - { category: PT站, type: DOMAIN, payload: share.ilolicon.com, target: 直连, enabled: true, note: 萝莉 }
+  - { category: PT站, type: DOMAIN, payload: iptorrents.com, target: 直连, enabled: true, note: ipt }
+  - { category: PT站, type: DOMAIN, payload: nex.jivon.de, target: 直连, enabled: true, note: 未来幻境 }
+  - { category: PT站, type: DOMAIN, payload: www.joyhd.net, target: 直连, enabled: true, note: 开心 }
+  - { category: PT站, type: DOMAIN, payload: jpopsuki.eu, target: 直连, enabled: true, note: JPopsuki }
+  - { category: PT站, type: DOMAIN, payload: kamept.com, target: 直连, enabled: true, note: KamePT }
+  - { category: PT站, type: DOMAIN, payload: karagarga.in, target: 直连, enabled: true, note: KG }
+  - { category: PT站, type: DOMAIN, payload: pt.keepfrds.com, target: 直连, enabled: true, note: 朋友 }
+  - { category: PT站, type: DOMAIN, payload: our.kelu.one, target: 直连, enabled: true, note: 克鲁 }
+  - { category: PT站, type: DOMAIN, payload: kufei.org, target: 直连, enabled: true, note: 库非 }
+  - { category: PT站, type: DOMAIN, payload: kufirc.com, target: 直连, enabled: true, note: Kufirc }
+  - { category: PT站, type: DOMAIN, payload: pt.lajidui.top, target: 直连, enabled: true, note: 垃圾堆 }
+  - { category: PT站, type: DOMAIN, payload: leaves.red, target: 直连, enabled: true, note: 红叶PT }
+  - { category: PT站, type: DOMAIN, payload: lemonhd.club, target: 直连, enabled: true, note: 柠檬不酸 }
+  - { category: PT站, type: DOMAIN, payload: lemonhd.net, target: 直连, enabled: true, note: 柠檬不甜 }
+  - { category: PT站, type: DOMAIN, payload: longpt.org, target: 直连, enabled: true, note: longpt }
+  - { category: PT站, type: DOMAIN, payload: lp-bits.com, target: 直连, enabled: true, note: LP-Bits }
+  - { category: PT站, type: DOMAIN, payload: lst.gg, target: 直连, enabled: true, note: LST }
+  - { category: PT站, type: DOMAIN, payload: pt.luckpt.de, target: 直连, enabled: true, note: 幸运草 }
+  - { category: PT站, type: DOMAIN, payload: luminarr.me, target: 直连, enabled: true, note: Luminarr }
+  - { category: PT站, type: DOMAIN, payload: duckboobee.org, target: 直连, enabled: true, note: 三月传媒 }
+  - { category: PT站, type: DOMAIN, payload: www.momentpt.top, target: 直连, enabled: true, note: 瞬间 }
+  - { category: PT站, type: DOMAIN, payload: monikadesign.uk, target: 直连, enabled: true, note: 莫妮卡 }
+  - { category: PT站, type: DOMAIN, payload: anime-no-index.com, target: 直连, enabled: true, note: 莫妮卡 }
+  - { category: PT站, type: DOMAIN, payload: kp.m-team.cc, target: 直连, enabled: true, note: 馒头 }
+  - { category: PT站, type: DOMAIN, payload: api.m-team.cc, target: 直连, enabled: true, note: 馒头 }
+  - { category: PT站, type: DOMAIN, payload: mtapi.m-team.cc, target: 直连, enabled: true, note: 馒头 }
+  - { category: PT站, type: DOMAIN, payload: pt.muxuege.org, target: 直连, enabled: true, note: 慕雪阁 }
+  - { category: PT站, type: DOMAIN, payload: cc.mypt.cc, target: 直连, enabled: true, note: 我的PT }
+  - { category: PT站, type: DOMAIN, payload: www.myspleen.org, target: 直连, enabled: true, note: MySpleen }
+  - { category: PT站, type: DOMAIN, payload: nanyangpt.com, target: 直连, enabled: true, note: 南洋PT }
+  - { category: PT站, type: DOMAIN, payload: ncore.pro, target: 直连, enabled: true, note: nCore }
+  - { category: PT站, type: DOMAIN, payload: www.nicept.net, target: 直连, enabled: true, note: 老师 }
+  - { category: PT站, type: DOMAIN, payload: njtupt.top, target: 直连, enabled: true, note: 浦园PT }
+  - { category: PT站, type: DOMAIN, payload: pt.novahd.top, target: 直连, enabled: true, note: NovaHD }
+  - { category: PT站, type: DOMAIN, payload: www.okpt.net, target: 直连, enabled: true, note: okpt }
+  - { category: PT站, type: DOMAIN, payload: oldtoons.world, target: 直连, enabled: true, note: 老卡通 }
+  - { category: PT站, type: DOMAIN, payload: www.open.cd, target: 直连, enabled: true, note: 皇后 }
+  - { category: PT站, type: DOMAIN, payload: www.oshen.win, target: 直连, enabled: true, note: 奥神 }
+  - { category: PT站, type: DOMAIN, payload: ourbits.club, target: 直连, enabled: true, note: 我堡 }
+  - { category: PT站, type: DOMAIN, payload: pt.ourhelp.club, target: 直连, enabled: true, note: 我堡 }
+  - { category: PT站, type: DOMAIN, payload: pandapt.net, target: 直连, enabled: true, note: 熊猫 }
+  - { category: PT站, type: DOMAIN, payload: piggo.me, target: 直连, enabled: true, note: 猪猪 }
+  - { category: PT站, type: DOMAIN, payload: playlet.cc, target: 直连, enabled: true, note: PlayLet }
+  - { category: PT站, type: DOMAIN, payload: playletpt.xyz, target: 直连, enabled: true, note: PlayLet }
+  - { category: PT站, type: DOMAIN, payload: polishtorrent.top, target: 直连, enabled: true, note: PTT }
+  - { category: PT站, type: DOMAIN, payload: portugas.org, target: 直连, enabled: true, note: Portugas }
+  - { category: PT站, type: DOMAIN, payload: ptcafe.club, target: 直连, enabled: true, note: 咖啡 }
+  - { category: PT站, type: DOMAIN, payload: ptchdbits.co, target: 直连, enabled: true, note: 彩虹岛 }
+  - { category: PT站, type: DOMAIN, payload: bj.chddiy.xyz, target: 直连, enabled: true, note: 彩虹岛 }
+  - { category: PT站, type: DOMAIN, payload: js.chddiy.xyz, target: 直连, enabled: true, note: 彩虹岛 }
+  - { category: PT站, type: DOMAIN, payload: hn.chddiy.xyz, target: 直连, enabled: true, note: 彩虹岛 }
+  - { category: PT站, type: DOMAIN, payload: ptchina.org, target: 直连, enabled: true, note: 铂金学院 }
+  - { category: PT站, type: DOMAIN, payload: pterclub.net, target: 直连, enabled: true, note: 猫站 }
+  - { category: PT站, type: DOMAIN, payload: pterclub.com, target: 直连, enabled: true, note: 猫站 }
+  - { category: PT站, type: DOMAIN, payload: ptfans.cc, target: 直连, enabled: true, note: PTFANS }
+  - { category: PT站, type: DOMAIN, payload: pt.gtk.pw, target: 直连, enabled: true, note: ptgtk }
+  - { category: PT站, type: DOMAIN, payload: pt.gtkpw.xyz, target: 直连, enabled: true, note: ptgtk }
+  - { category: PT站, type: DOMAIN, payload: www.pthome.net, target: 直连, enabled: true, note: 铂金家 }
+  - { category: PT站, type: DOMAIN, payload: ptlgs.org, target: 直连, enabled: true, note: 劳改所 }
+  - { category: PT站, type: DOMAIN, payload: www.ptlover.cc, target: 直连, enabled: true, note: AFUN }
+  - { category: PT站, type: DOMAIN, payload: ptsbao.club, target: 直连, enabled: true, note: 烧包乐园 }
+  - { category: PT站, type: DOMAIN, payload: www.ptskit.com, target: 直连, enabled: true, note: 葫芦娃 }
+  - { category: PT站, type: DOMAIN, payload: www.ptskit.org, target: 直连, enabled: true, note: 葫芦娃 }
+  - { category: PT站, type: DOMAIN, payload: www.pttime.org, target: 直连, enabled: true, note: PT时间 }
+  - { category: PT站, type: DOMAIN, payload: ptvicomo.net, target: 直连, enabled: true, note: 象站 }
+  - { category: PT站, type: DOMAIN, payload: ptzone.xyz, target: 直连, enabled: true, note: ptzone }
+  - { category: PT站, type: DOMAIN, payload: pt.sjtu.edu.cn, target: 直连, enabled: true, note: 葡萄 }
+  - { category: PT站, type: DOMAIN, payload: www.qingwapt.com, target: 直连, enabled: true, note: 青蛙 }
+  - { category: PT站, type: DOMAIN, payload: qingwapt.com, target: 直连, enabled: true, note: 青蛙 }
+  - { category: PT站, type: DOMAIN, payload: new.qingwa.pro, target: 直连, enabled: true, note: 青蛙 }
+  - { category: PT站, type: DOMAIN, payload: racing4everyone.eu, target: 直连, enabled: true, note: R4E }
+  - { category: PT站, type: DOMAIN, payload: raingfh.top, target: 直连, enabled: true, note: 雨 }
+  - { category: PT站, type: DOMAIN, payload: www.raingfh.top, target: 直连, enabled: true, note: 雨 }
+  - { category: PT站, type: DOMAIN, payload: rastastugan.org, target: 直连, enabled: true, note: Rastastugan }
+  - { category: PT站, type: DOMAIN, payload: redacted.sh, target: 直连, enabled: true, note: RED }
+  - { category: PT站, type: DOMAIN, payload: reelflix.cc, target: 直连, enabled: true, note: Ree }
+  - { category: PT站, type: DOMAIN, payload: rocket-hd.cc, target: 直连, enabled: true, note: RocketHD }
+  - { category: PT站, type: DOMAIN, payload: rotorrent.info, target: 直连, enabled: true, note: ROT }
+  - { category: PT站, type: DOMAIN, payload: rousi.pro, target: 直连, enabled: true, note: Rousi }
+  - { category: PT站, type: DOMAIN, payload: sanpro.pw, target: 直连, enabled: true, note: 伞 }
+  - { category: PT站, type: DOMAIN, payload: sbpt.link, target: 直连, enabled: true, note: SBPT }
+  - { category: PT站, type: DOMAIN, payload: sewerpt.com, target: 直连, enabled: true, note: 下水道 }
+  - { category: PT站, type: DOMAIN, payload: shareisland.org, target: 直连, enabled: true, note: ShareIsland }
+  - { category: PT站, type: DOMAIN, payload: si-qi.xyz, target: 直连, enabled: true, note: 思齐 }
+  - { category: PT站, type: DOMAIN, payload: skipthecommercials.xyz, target: 直连, enabled: true, note: STC }
+  - { category: PT站, type: DOMAIN, payload: pt.soulvoice.club, target: 直连, enabled: true, note: 聆音 }
+  - { category: PT站, type: DOMAIN, payload: www.srvfi.top, target: 直连, enabled: true, note: 超分辨率 }
+  - { category: PT站, type: DOMAIN, payload: springsunday.net, target: 直连, enabled: true, note: 春天 }
+  - { category: PT站, type: DOMAIN, payload: star-space.net, target: 直连, enabled: true, note: 星空 }
+  - { category: PT站, type: DOMAIN, payload: sunnypt.top, target: 直连, enabled: true, note: Sunny }
+  - { category: PT站, type: DOMAIN, payload: www.tangpt.top, target: 直连, enabled: true, note: 躺平 }
+  - { category: PT站, type: DOMAIN, payload: et8.org, target: 直连, enabled: true, note: TCCF }
+  - { category: PT站, type: DOMAIN, payload: pt.tey.cc, target: 直连, enabled: true, note: 太乙 }
+  - { category: PT站, type: DOMAIN, payload: tjupt.org, target: 直连, enabled: true, note: 北洋园 }
+  - { category: PT站, type: DOMAIN, payload: tlzdigital.com, target: 直连, enabled: true, note: TLZ }
+  - { category: PT站, type: DOMAIN, payload: tmpt.top, target: 直连, enabled: true, note: 唐门 }
+  - { category: PT站, type: DOMAIN, payload: www.tokyopt.xyz, target: 直连, enabled: true, note: 动态漫 }
+  - { category: PT站, type: DOMAIN, payload: torr9.xyz, target: 直连, enabled: true, note: Torr9 }
+  - { category: PT站, type: DOMAIN, payload: torrenthub.club, target: 直连, enabled: true, note: 种子库 }
+  - { category: PT站, type: DOMAIN, payload: t.tosky.club, target: 直连, enabled: true, note: tosky }
+  - { category: PT站, type: DOMAIN, payload: totheglory.im, target: 直连, enabled: true, note: 听听歌 }
+  - { category: PT站, type: DOMAIN, payload: pt.tu88.men, target: 直连, enabled: true, note: tu88 }
+  - { category: PT站, type: DOMAIN, payload: turkseed.com, target: 直连, enabled: true, note: TURKSEED }
+  - { category: PT站, type: DOMAIN, payload: u2.dmhy.org, target: 直连, enabled: true, note: 幼儿园 }
+  - { category: PT站, type: DOMAIN, payload: ubits.club, target: 直连, enabled: true, note: UBits }
+  - { category: PT站, type: DOMAIN, payload: ultrahd.net, target: 直连, enabled: true, note: ultrahd }
+  - { category: PT站, type: DOMAIN, payload: wintersakura.net, target: 直连, enabled: true, note: 冬樱 }
+  - { category: PT站, type: DOMAIN, payload: wukongwendao.top, target: 直连, enabled: true, note: 悟空问道 }
+  - { category: PT站, type: DOMAIN, payload: xingtan.one, target: 直连, enabled: true, note: 杏坛 }
+  - { category: PT站, type: DOMAIN, payload: xingwan.cc, target: 直连, enabled: true, note: 星湾 }
+  - { category: PT站, type: DOMAIN, payload: pt.xingyungept.org, target: 直连, enabled: true, note: 星陨阁 }
+  - { category: PT站, type: DOMAIN, payload: www.xingyungept.org, target: 直连, enabled: true, note: 星陨阁 }
+  - { category: PT站, type: DOMAIN, payload: xing.xingyunge.sbs, target: 直连, enabled: true, note: 星陨阁 }
+  - { category: PT站, type: DOMAIN, payload: pt.xingyungept.cn, target: 直连, enabled: true, note: 星陨阁 }
+  - { category: PT站, type: DOMAIN, payload: www.yemapt.org, target: 直连, enabled: true, note: 野马 }
+  - { category: PT站, type: DOMAIN, payload: www.yhpp.cc, target: 直连, enabled: true, note: 昆仑 }
+  - { category: PT站, type: DOMAIN, payload: pt.ying.us.kg, target: 直连, enabled: true, note: 樱花 }
+  - { category: PT站, type: DOMAIN, payload: zhuque.in, target: 直连, enabled: true, note: 朱雀 }
+  - { category: PT站, type: DOMAIN, payload: zmpt.cc, target: 直连, enabled: true, note: 织梦 }
+  - { category: PT站, type: DOMAIN, payload: zmpt.club, target: 直连, enabled: true, note: 织梦 }
+  - { category: PT站, type: DOMAIN, payload: www.zootracker.vip, target: 直连, enabled: true, note: ZOO }
+  - { category: PT站, type: DOMAIN, payload: zrpt.cc, target: 直连, enabled: true, note: 自然 }
 
-  # ========== 国内IP ==========
-  - { type: GEOIP, payload: CN, target: 直连, enabled: true, note: 国内直连 }
-
-  # ========== 兜底（未命中规则的境外流量）==========
-  - { type: MATCH, payload: "", target: 日本JP, enabled: true, note: 默认走代理 }

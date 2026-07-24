@@ -41,56 +41,56 @@ func TestGeneratorBuild(t *testing.T) {
 	if !strings.Contains(res.YAML, "JP-b") {
 		t.Fatalf("missing JP node in yaml: %s", res.YAML)
 	}
-		// 订阅配置核心字段（不强制 mixed-port/dns，避免覆盖客户端本机设置）
-		for _, key := range []string{"mode: rule", "proxies:", "proxy-groups:", "rules:"} {
-			if !strings.Contains(res.YAML, key) {
-				t.Fatalf("missing field %q in yaml:\n%s", key, res.YAML)
-			}
-		}
-		// 不应写入本机端口/控制器，避免 Clash Verge 导入后测速异常
-		for _, key := range []string{"mixed-port:", "external-controller:", "dns:"} {
-			if strings.Contains(res.YAML, key) {
-				t.Fatalf("subscription yaml should not contain %q:\n%s", key, res.YAML)
-			}
+	// 订阅配置核心字段（不强制 mixed-port/dns，避免覆盖客户端本机设置）
+	for _, key := range []string{"mode: rule", "proxies:", "proxy-groups:", "rules:"} {
+		if !strings.Contains(res.YAML, key) {
+			t.Fatalf("missing field %q in yaml:\n%s", key, res.YAML)
 		}
 	}
-
-	func TestBuildHashStableAcrossRuns(t *testing.T) {
-		g := NewGenerator()
-		in := BuildInput{
-			Proxies: []map[string]interface{}{
-				{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
-				{"name": "JP-b", "type": "ss", "server": "2.2.2.2", "port": 443},
-				{"name": "DE-c", "type": "ss", "server": "3.3.3.3", "port": 443},
-				{"name": "FR-d", "type": "ss", "server": "4.4.4.4", "port": 443},
-				{"name": "CA-e", "type": "ss", "server": "5.5.5.5", "port": 443},
-			},
-			Groups: []database.ProxyGroup{
-				{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-				{Name: "美国US", Type: "url-test", Proxies: `["REGION:US"]`, URL: "https://www.gstatic.com/generate_204"},
-				{Name: "其他国家", Type: "url-test", Proxies: `["REGION:OTHER"]`, URL: "https://www.gstatic.com/generate_204"},
-			},
-			Rules: []database.Rule{
-				{Type: "MATCH", Target: "直连", Enabled: true},
-			},
+	// 不应写入本机端口/控制器，避免 Clash Verge 导入后测速异常
+	for _, key := range []string{"mixed-port:", "external-controller:", "dns:"} {
+		if strings.Contains(res.YAML, key) {
+			t.Fatalf("subscription yaml should not contain %q:\n%s", key, res.YAML)
 		}
-		first, err := g.Build(in)
+	}
+}
+
+func TestBuildHashStableAcrossRuns(t *testing.T) {
+	g := NewGenerator()
+	in := BuildInput{
+		Proxies: []map[string]interface{}{
+			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
+			{"name": "JP-b", "type": "ss", "server": "2.2.2.2", "port": 443},
+			{"name": "DE-c", "type": "ss", "server": "3.3.3.3", "port": 443},
+			{"name": "FR-d", "type": "ss", "server": "4.4.4.4", "port": 443},
+			{"name": "CA-e", "type": "ss", "server": "5.5.5.5", "port": 443},
+		},
+		Groups: []database.ProxyGroup{
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
+			{Name: "美国US", Type: "url-test", Proxies: `["REGION:US"]`, URL: "https://www.gstatic.com/generate_204"},
+			{Name: "其他国家", Type: "url-test", Proxies: `["REGION:OTHER"]`, URL: "https://www.gstatic.com/generate_204"},
+		},
+		Rules: []database.Rule{
+			{Type: "MATCH", Target: "直连", Enabled: true},
+		},
+	}
+	first, err := g.Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 30; i++ {
+		res, err := g.Build(in)
 		if err != nil {
 			t.Fatal(err)
 		}
-		for i := 0; i < 30; i++ {
-			res, err := g.Build(in)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if res.Hash != first.Hash {
-				t.Fatalf("hash unstable at iter %d: first=%s got=%s", i, first.Hash, res.Hash)
-			}
-			if res.YAML != first.YAML {
-				t.Fatalf("yaml unstable at iter %d", i)
-			}
+		if res.Hash != first.Hash {
+			t.Fatalf("hash unstable at iter %d: first=%s got=%s", i, first.Hash, res.Hash)
+		}
+		if res.YAML != first.YAML {
+			t.Fatalf("yaml unstable at iter %d", i)
 		}
 	}
+}
 
 func TestSanitizeDropsLegacyWSFields(t *testing.T) {
 	out, dropped := sanitizeProxiesForMeta([]map[string]interface{}{
@@ -268,129 +268,129 @@ func TestGeneratorRejectsUnknownRuleTarget(t *testing.T) {
 }
 
 func TestGeneratorAllModeKeepsEmptyGroup(t *testing.T) {
-		g := NewGenerator()
-		// all：空 JP 保留为 DIRECT
-		res, err := g.Build(BuildInput{
-			Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
-			Groups: []database.ProxyGroup{
-				{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-				{Name: "US", Type: "select", Proxies: `["REGION:US"]`},
-				{Name: "JP", Type: "select", Proxies: `["REGION:JP"]`},
-			},
-			Rules: []database.Rule{
-				{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "JP", Enabled: true},
-				{Type: "MATCH", Target: "直连", Enabled: true},
-			},
-			GroupMode: "all",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(res.YAML, "name: JP") {
-			t.Fatalf("expected JP group kept in all mode:\n%s", res.YAML)
-		}
-		if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,JP") {
-			t.Fatalf("expected rule keep target JP:\n%s", res.YAML)
+	g := NewGenerator()
+	// all：空 JP 保留为 DIRECT
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
+		Groups: []database.ProxyGroup{
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
+			{Name: "US", Type: "select", Proxies: `["REGION:US"]`},
+			{Name: "JP", Type: "select", Proxies: `["REGION:JP"]`},
+		},
+		Rules: []database.Rule{
+			{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "JP", Enabled: true},
+			{Type: "MATCH", Target: "直连", Enabled: true},
+		},
+		GroupMode: "all",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(res.YAML, "name: JP") {
+		t.Fatalf("expected JP group kept in all mode:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,JP") {
+		t.Fatalf("expected rule keep target JP:\n%s", res.YAML)
+	}
+}
+
+func TestGeneratorAutoPrunesEmptyGroup(t *testing.T) {
+	g := NewGenerator()
+	// auto：仅 US 节点时剪掉 JP；有「节点选择」时规则目标优先回退到它
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
+		Groups: []database.ProxyGroup{
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
+			{Name: "节点选择", Type: "select", Proxies: `["ALL"]`},
+			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
+			{Name: "日本JP", Type: "select", Proxies: `["REGION:JP"]`},
+			{Name: "菲律宾PH", Type: "select", Proxies: `["REGION:PH"]`},
+		},
+		Rules: []database.Rule{
+			{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "日本JP", Enabled: true},
+			{Type: "MATCH", Target: "直连", Enabled: true},
+		},
+		GroupMode: "auto",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(res.YAML, "name: 日本JP") || strings.Contains(res.YAML, "name: 菲律宾PH") {
+		t.Fatalf("auto should prune empty region groups:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "name: 美国US") {
+		t.Fatalf("auto should keep US group:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "name: 节点选择") {
+		t.Fatalf("auto should keep 节点选择:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,节点选择") {
+		t.Fatalf("rule targeting pruned group should fallback 节点选择:\n%s", res.YAML)
+	}
+	found := false
+	for _, w := range res.Warnings {
+		if strings.Contains(w, "日本JP") && strings.Contains(w, "节点选择") {
+			found = true
+			break
 		}
 	}
-
-		func TestGeneratorAutoPrunesEmptyGroup(t *testing.T) {
-			g := NewGenerator()
-			// auto：仅 US 节点时剪掉 JP；有「节点选择」时规则目标优先回退到它
-			res, err := g.Build(BuildInput{
-				Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
-				Groups: []database.ProxyGroup{
-					{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-					{Name: "节点选择", Type: "select", Proxies: `["ALL"]`},
-					{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
-					{Name: "日本JP", Type: "select", Proxies: `["REGION:JP"]`},
-					{Name: "菲律宾PH", Type: "select", Proxies: `["REGION:PH"]`},
-				},
-				Rules: []database.Rule{
-					{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "日本JP", Enabled: true},
-					{Type: "MATCH", Target: "直连", Enabled: true},
-				},
-				GroupMode: "auto",
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if strings.Contains(res.YAML, "name: 日本JP") || strings.Contains(res.YAML, "name: 菲律宾PH") {
-				t.Fatalf("auto should prune empty region groups:\n%s", res.YAML)
-			}
-			if !strings.Contains(res.YAML, "name: 美国US") {
-				t.Fatalf("auto should keep US group:\n%s", res.YAML)
-			}
-			if !strings.Contains(res.YAML, "name: 节点选择") {
-				t.Fatalf("auto should keep 节点选择:\n%s", res.YAML)
-			}
-			if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,节点选择") {
-				t.Fatalf("rule targeting pruned group should fallback 节点选择:\n%s", res.YAML)
-			}
-			found := false
-			for _, w := range res.Warnings {
-				if strings.Contains(w, "日本JP") && strings.Contains(w, "节点选择") {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Fatalf("expected fallback warning, got %v", res.Warnings)
-			}
-		}
-
-		func TestGeneratorAutoFallbackDirectWithoutSelectGroup(t *testing.T) {
-			g := NewGenerator()
-			// 无「节点选择」时仍回退 DIRECT
-			res, err := g.Build(BuildInput{
-				Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
-				Groups: []database.ProxyGroup{
-					{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-					{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
-					{Name: "日本JP", Type: "select", Proxies: `["REGION:JP"]`},
-				},
-				Rules: []database.Rule{
-					{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "日本JP", Enabled: true},
-					{Type: "MATCH", Target: "直连", Enabled: true},
-				},
-				GroupMode: "auto",
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,DIRECT") {
-				t.Fatalf("without 节点选择 should fallback DIRECT:\n%s", res.YAML)
-			}
-		}
-
-	func TestGeneratorCustomWhitelist(t *testing.T) {
-		g := NewGenerator()
-		res, err := g.Build(BuildInput{
-			Proxies: []map[string]interface{}{
-				{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
-				{"name": "PH-b", "type": "ss", "server": "2.2.2.2", "port": 443},
-			},
-			Groups: []database.ProxyGroup{
-				{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-				{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
-				{Name: "菲律宾PH", Type: "select", Proxies: `["REGION:PH"]`},
-			},
-			Rules: []database.Rule{
-				{Type: "MATCH", Target: "直连", Enabled: true},
-			},
-			GroupMode:     "custom",
-			AllowedGroups: []string{"直连", "菲律宾PH"},
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(res.YAML, "name: 美国US") {
-			t.Fatalf("custom should not include US:\n%s", res.YAML)
-		}
-		if !strings.Contains(res.YAML, "name: 菲律宾PH") {
-			t.Fatalf("custom should include PH:\n%s", res.YAML)
-		}
+	if !found {
+		t.Fatalf("expected fallback warning, got %v", res.Warnings)
 	}
+}
+
+func TestGeneratorAutoFallbackDirectWithoutSelectGroup(t *testing.T) {
+	g := NewGenerator()
+	// 无「节点选择」时仍回退 DIRECT
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
+		Groups: []database.ProxyGroup{
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
+			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
+			{Name: "日本JP", Type: "select", Proxies: `["REGION:JP"]`},
+		},
+		Rules: []database.Rule{
+			{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "日本JP", Enabled: true},
+			{Type: "MATCH", Target: "直连", Enabled: true},
+		},
+		GroupMode: "auto",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,DIRECT") {
+		t.Fatalf("without 节点选择 should fallback DIRECT:\n%s", res.YAML)
+	}
+}
+
+func TestGeneratorCustomWhitelist(t *testing.T) {
+	g := NewGenerator()
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{
+			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
+			{"name": "PH-b", "type": "ss", "server": "2.2.2.2", "port": 443},
+		},
+		Groups: []database.ProxyGroup{
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
+			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
+			{Name: "菲律宾PH", Type: "select", Proxies: `["REGION:PH"]`},
+		},
+		Rules: []database.Rule{
+			{Type: "MATCH", Target: "直连", Enabled: true},
+		},
+		GroupMode:     "custom",
+		AllowedGroups: []string{"直连", "菲律宾PH"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(res.YAML, "name: 美国US") {
+		t.Fatalf("custom should not include US:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "name: 菲律宾PH") {
+		t.Fatalf("custom should include PH:\n%s", res.YAML)
+	}
+}
 
 func TestGeneratorSkipsEmptyRegionGroup(t *testing.T) {
 	g := NewGenerator()
@@ -450,5 +450,156 @@ func TestGeneratorRegionOther(t *testing.T) {
 	// 其他国家组应含 DE/NG，不应只剩空
 	if !strings.Contains(res.YAML, "其他国家") {
 		t.Fatalf("missing 其他国家 group:\n%s", res.YAML)
+	}
+}
+
+func TestGeneratorSourceByName(t *testing.T) {
+	g := NewGenerator()
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{
+			{"name": "US-a-良心云", "type": "ss", "server": "1.1.1.1", "port": 443, "_source_id": uint(1), "_source_name": "良心云"},
+			{"name": "JP-b-良心云", "type": "ss", "server": "2.2.2.2", "port": 443, "_source_id": uint(1), "_source_name": "良心云"},
+			{"name": "US-c-机场B", "type": "ss", "server": "3.3.3.3", "port": 443, "_source_id": uint(2), "_source_name": "机场B"},
+		},
+		Groups: []database.ProxyGroup{
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`, Enabled: true},
+			{Name: "良心云", Type: "select", Proxies: `["SOURCE:良心云"]`, Enabled: true},
+			{Name: "机场B", Type: "url-test", Proxies: `["SOURCE:机场B"]`, URL: "https://www.gstatic.com/generate_204", Enabled: true},
+		},
+		Rules: []database.Rule{{Type: "MATCH", Target: "良心云", Enabled: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 源组应含对应节点
+	if !strings.Contains(res.YAML, "US-a-良心云") || !strings.Contains(res.YAML, "JP-b-良心云") {
+		t.Fatalf("SOURCE:良心云 should expand nodes:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "US-c-机场B") {
+		t.Fatalf("SOURCE:机场B should expand nodes:\n%s", res.YAML)
+	}
+	// 内部字段不得泄漏到 YAML
+	if strings.Contains(res.YAML, "_source_id") || strings.Contains(res.YAML, "_source_name") {
+		t.Fatalf("internal source meta leaked into yaml:\n%s", res.YAML)
+	}
+	// 告警应列出可用源
+	joined := strings.Join(res.Warnings, "\n")
+	if !strings.Contains(joined, "available sources:") {
+		t.Fatalf("expected available sources warning, got: %v", res.Warnings)
+	}
+}
+
+func TestGeneratorSourceByID(t *testing.T) {
+	g := NewGenerator()
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{
+			{"name": "US-a-old", "type": "ss", "server": "1.1.1.1", "port": 443, "_source_id": uint(3), "_source_name": "旧名"},
+			{"name": "JP-b-other", "type": "ss", "server": "2.2.2.2", "port": 443, "_source_id": uint(9), "_source_name": "其它"},
+		},
+		Groups: []database.ProxyGroup{
+			{Name: "按ID", Type: "select", Proxies: `["SOURCE:id:3"]`, Enabled: true},
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`, Enabled: true},
+		},
+		Rules: []database.Rule{{Type: "MATCH", Target: "按ID", Enabled: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(res.YAML, "US-a-old") {
+		t.Fatalf("SOURCE:id:3 should include US-a-old:\n%s", res.YAML)
+	}
+	// 不应把其它源节点放进「按ID」组：解析 proxy-groups 粗查
+	// 组内列表在 YAML 中连续出现；至少保证 JP-b-other 存在于 proxies 但 MATCH 目标组名正确
+	if !strings.Contains(res.YAML, "JP-b-other") {
+		t.Fatalf("other source node should still be in proxies list:\n%s", res.YAML)
+	}
+}
+
+func TestGeneratorSourceCaseInsensitiveName(t *testing.T) {
+	g := NewGenerator()
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{
+			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443, "_source_id": 1, "_source_name": "FooBar"},
+		},
+		Groups: []database.ProxyGroup{
+			{Name: "源组", Type: "select", Proxies: `["SOURCE:foobar"]`, Enabled: true},
+		},
+		Rules: []database.Rule{{Type: "MATCH", Target: "源组", Enabled: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(res.YAML, "US-a") {
+		t.Fatalf("SOURCE name match should be case-insensitive:\n%s", res.YAML)
+	}
+}
+
+func TestGeneratorSourceEmptyPruned(t *testing.T) {
+	g := NewGenerator()
+	// 只有源 A 的节点；SOURCE:B 应被 auto 剪掉
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{
+			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443, "_source_id": uint(1), "_source_name": "A"},
+		},
+		Groups: []database.ProxyGroup{
+			{Name: "A", Type: "select", Proxies: `["SOURCE:A"]`, Enabled: true},
+			{Name: "B", Type: "select", Proxies: `["SOURCE:B"]`, Enabled: true},
+		},
+		Rules: []database.Rule{{Type: "MATCH", Target: "A", Enabled: true}},
+		// 显式 auto：允许规则回退；此处 MATCH 指向 A，B 被剪
+		GroupMode: "auto",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(res.YAML, "name: B") {
+		t.Fatalf("empty SOURCE:B group should be pruned:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "name: A") {
+		t.Fatalf("SOURCE:A group should remain:\n%s", res.YAML)
+	}
+}
+
+// formatRule 只输出 Clash 三元组，业务 category 不得进入 YAML
+func TestFormatRuleOmitsCategory(t *testing.T) {
+	g := NewGenerator()
+	res, err := g.Build(BuildInput{
+		Proxies: []map[string]interface{}{
+			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
+		},
+		Groups: []database.ProxyGroup{
+			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`, Enabled: true},
+			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`, Enabled: true},
+		},
+		Rules: []database.Rule{
+			{
+				Type:     "DOMAIN-SUFFIX",
+				Payload:  "openai.com",
+				Target:   "美国US",
+				Enabled:  true,
+				Note:     "仅后台",
+				Category: "海外AI",
+			},
+			{Type: "MATCH", Target: "直连", Enabled: true, Category: "兜底"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,openai.com,美国US") {
+		t.Fatalf("expected TYPE,payload,target without category:\n%s", res.YAML)
+	}
+	if !strings.Contains(res.YAML, "MATCH,直连") {
+		t.Fatalf("expected MATCH,target:\n%s", res.YAML)
+	}
+	for _, bad := range []string{"海外AI", "兜底", "仅后台", "category"} {
+		// rules 段不应出现业务分类/备注；proxies 里也不会有这些中文
+		if strings.Contains(res.YAML, bad) {
+			t.Fatalf("yaml must not contain %q:\n%s", bad, res.YAML)
+		}
+	}
+	// 确认没有多出第 4 段
+	if strings.Contains(res.YAML, "openai.com,美国US,") {
+		t.Fatalf("rule line must not have extra fields after target:\n%s", res.YAML)
 	}
 }

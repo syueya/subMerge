@@ -1,6 +1,6 @@
 import { HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay, tap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import {
 		ListResponse,
@@ -16,12 +16,28 @@ import {
 export class SourceService {
 	private readonly api = inject(ApiService);
 
+	/**
+	 * 地区目录来自编译进后端的 regions.yaml，运行期不变。
+	 * 会话内只请求一次（订阅源页 / 规则页共用）；失败不缓存，下次可重试。
+	 */
+	private regions$: Observable<RegionCatalogResponse> | null = null;
+
 	list(): Observable<ListResponse<SubscriptionSource>> {
 		return this.api.get('/sources');
 	}
 
 	listRegions(): Observable<RegionCatalogResponse> {
-		return this.api.get('/regions');
+		if (!this.regions$) {
+			this.regions$ = this.api.get<RegionCatalogResponse>('/regions').pipe(
+				tap({
+					error: () => {
+						this.regions$ = null;
+					},
+				}),
+				shareReplay({ bufferSize: 1, refCount: false }),
+			);
+		}
+		return this.regions$;
 	}
 
 	create(body: SourceUpsertBody & { name: string; region: string; url: string }): Observable<SubscriptionSource> {

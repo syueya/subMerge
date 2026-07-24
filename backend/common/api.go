@@ -161,27 +161,30 @@ type RuleListResponse struct {
 }
 
 // UpsertRuleRequest 创建/更新规则
-type UpsertRuleRequest struct {
-	Type      string `json:"type" binding:"required"`
-	Payload   string `json:"payload"`
-	Target    string `json:"target" binding:"required"`
-	Enabled   *bool  `json:"enabled"`
-	SortOrder *int   `json:"sortOrder"`
-	Note      string `json:"note"`
-}
+	type UpsertRuleRequest struct {
+		Type      string `json:"type" binding:"required"`
+		Payload   string `json:"payload"`
+		Target    string `json:"target" binding:"required"`
+		Enabled   *bool  `json:"enabled"`
+		SortOrder *int   `json:"sortOrder"`
+		Note      string `json:"note"`
+		// Category 业务分类（面板分组）
+		Category  string `json:"category"`
+	}
 
-// BatchImportRulesRequest 批量导入规则（文本一行一条）
-// 每行格式：
-//   TYPE,payload,target[,note]
-//   或仅 payload（用 defaultType / defaultTarget / defaultNote）
-// 空行与 # 注释忽略。新规则插在 GEOIP CN / MATCH 之前。
-type BatchImportRulesRequest struct {
-	Text          string `json:"text" binding:"required"`
-	DefaultType   string `json:"defaultType"`
-	DefaultTarget string `json:"defaultTarget"`
-	DefaultNote   string `json:"defaultNote"`
-	Enabled       *bool  `json:"enabled"`
-}
+	// BatchImportRulesRequest 批量导入规则（文本一行一条）
+	// 每行格式：
+	//   TYPE,payload,target[,note[,category]]
+	//   或仅 payload（用 defaultType / defaultTarget / defaultNote / defaultCategory）
+	// 空行与 # 注释忽略。新规则插在 GEOIP CN / MATCH 之前。
+	type BatchImportRulesRequest struct {
+		Text            string `json:"text" binding:"required"`
+		DefaultType     string `json:"defaultType"`
+		DefaultTarget   string `json:"defaultTarget"`
+		DefaultNote     string `json:"defaultNote"`
+		DefaultCategory string `json:"defaultCategory"`
+		Enabled         *bool  `json:"enabled"`
+	}
 
 // BatchImportRulesResponse 批量导入结果
 type BatchImportRulesResponse struct {
@@ -195,6 +198,49 @@ type BatchImportRulesResponse struct {
 type ReorderRulesRequest struct {
 	OrderedIDs []uint `json:"orderedIds" binding:"required"`
 }
+
+// BatchUpdateRulesTargetRequest 批量修改规则目标出口
+	type BatchUpdateRulesTargetRequest struct {
+		IDs    []uint `json:"ids" binding:"required"`
+		Target string `json:"target" binding:"required"`
+	}
+
+	// BatchUpdateRulesTargetResponse 批量改出口结果
+	type BatchUpdateRulesTargetResponse struct {
+		Updated int `json:"updated"`
+	}
+
+	// BatchUpdateRulesEnabledRequest 批量启用/禁用规则
+	type BatchUpdateRulesEnabledRequest struct {
+		IDs     []uint `json:"ids" binding:"required"`
+		Enabled bool   `json:"enabled"`
+	}
+
+	// BatchUpdateRulesEnabledResponse 批量启用/禁用结果
+	type BatchUpdateRulesEnabledResponse struct {
+		Updated int `json:"updated"`
+	}
+
+	// BatchUpdateRulesCategoryRequest 批量修改规则业务分类
+	type BatchUpdateRulesCategoryRequest struct {
+		IDs      []uint `json:"ids" binding:"required"`
+		Category string `json:"category"`
+	}
+
+	// BatchUpdateRulesCategoryResponse 批量改分类结果
+	type BatchUpdateRulesCategoryResponse struct {
+		Updated int `json:"updated"`
+	}
+
+	// BatchDeleteRulesRequest 批量删除规则
+	type BatchDeleteRulesRequest struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+
+	// BatchDeleteRulesResponse 批量删除结果
+	type BatchDeleteRulesResponse struct {
+		Deleted int `json:"deleted"`
+	}
 
 // ProxyGroupListResponse 策略组列表
 type ProxyGroupListResponse struct {

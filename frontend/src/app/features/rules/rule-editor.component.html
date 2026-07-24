@@ -1,606 +1,299 @@
 <div class="space-y-6">
-	 <div class="flex flex-wrap items-start justify-between gap-3">
-<div>
-		 <h2 class="text-xl font-semibold">规则</h2>
-		 <p class="text-sm text-muted">
-			维护策略组与分流规则；改完后需发布，订阅才会更新。
-		 </p>
-		 @if (draftStatusNote()) {
-		 <p class="mt-1 text-xs" [class.text-amber-600]="draftDirty()" [class.text-muted-2]="!draftDirty()">
-		 {{ draftStatusNote() }}
-		 @if (draftDirty()) {
-		 <button type="button" class="ml-2 text-link" (click)="openPublishModal()">去发布</button>
-		 }
-		 </p>
-		 }
-		 </div>
-<div class="flex flex-wrap gap-2">
-		 <button class="btn-secondary" type="button" (click)="openBatchImport()">批量导入</button>
-		 <button class="btn-secondary" type="button" (click)="openTestModal()">测试匹配</button>
-		 <button class="btn-primary" type="button" (click)="openPublishModal()">
-		 @if (draftDirty()) {
-		 发布配置 *
-		 } @else {
-		 发布配置
-		 }
-		 </button>
-		 </div>
-	 </div>
-
-<section class="card group-list-well space-y-4">
-	 <div class="flex flex-wrap items-center justify-between gap-2">
-	 <div>
-	<h3 class="font-medium">策略组</h3>
-		<p class="mt-0.5 text-xs text-muted-2">
-			 共 {{ groups().length }} 个策略组 · {{ rules().length }} 条规则 · 规则目标指向组名
-			 @if (orphanRules().length) {
-			 · <span class="text-muted">{{ orphanRules().length }} 条出口失效</span>
-		 }
-		 </p>
-	 </div>
-	 <button class="btn-secondary" type="button" (click)="openCreateGroup()">新增策略组</button>
-	 </div>
-	
-	 <div class="space-y-3">
-@for (g of groups(); track g.id) {
-	 <div class="group-card">
-	 <div class="group-card-head flex flex-wrap items-start justify-between gap-3 p-4">
-	 <button
-	 type="button"
-	 class="min-w-0 flex-1 text-left"
-	 (click)="toggleGroupExpand(g.name)"
-	 >
-	 <div class="flex flex-wrap items-center gap-2">
-	 <span class="text-muted-2">{{ isGroupExpanded(g.name) ? '▼' : '▶' }}</span>
-<span class="font-medium text-fg">{{ g.name }}</span>
-		<span [class]="groupTypeBadgeClass(g.type)" [title]="groupTypeTip(g.type)">{{ groupTypeText(g.type) }}</span>
-			 <span class="badge-ok">{{ rulesOfGroup(g.name).length }} 条规则</span>
-			 @if (!g.enabled) {
-			 <span class="badge-warn">已禁用</span>
-			 }
-				 @if (g.type === 'url-test' || g.type === 'fallback') {
-				 <span [class]="groupTypeBadgeClass(g.type)" title="测速间隔">{{ g.interval ?? defaultTestInterval }}s</span>
-				 }
-		 </div>
-		 <div class="mt-1.5 pl-5 font-mono text-xs text-muted-2">
-		 成员：{{ g.proxies.join(', ') || '（空）' }}
-		 @if ((g.type === 'url-test' || g.type === 'fallback') && g.url) {
-		 <span class="ml-2">· 测速 {{ g.url }}</span>
-		 }
-		 </div>
-	 </button>
-<div class="flex flex-wrap gap-2">
-			 <button class="btn-secondary" type="button" (click)="openCreateRule(g.name)">添加规则</button>
-			 <button class="btn-secondary" type="button" (click)="openEditGroup(g)">编辑</button>
-			 <button class="btn-danger-soft" type="button" (click)="removeGroup(g)">删除</button>
-			 </div>
-	 </div>
-	
-	 @if (isGroupExpanded(g.name)) {
-	 <div class="group-card-rules">
-	 @if (rulesOfGroup(g.name).length === 0) {
-	 <p class="px-4 py-6 text-center text-sm text-muted-2">
-	 该策略组下暂无规则，点击「添加规则」创建
-	 </p>
-	 } @else {
-		 <div class="overflow-x-auto">
-	<table class="table rule-table">
-		 <thead>
-		 <tr>
-		 <th class="rule-col-order" title="全局匹配顺序（跨策略组，Clash 自上而下）">#</th>
-		 <th class="rule-col-status">启用</th>
-		 <th class="rule-col-type">类型</th>
-		 <th class="rule-col-payload">匹配</th>
-		 <th class="rule-col-note">备注</th>
-		 <th class="text-right">操作</th>
-		 </tr>
-		 </thead>
-		 <tbody>
-		 @for (rule of rulesOfGroup(g.name); track rule.id) {
-		 <tr [class.is-disabled]="!rule.enabled">
-		 <td class="rule-col-order text-xs text-muted-2" [title]="'全局第 ' + globalOrderNo(rule) + ' 条'">{{ globalOrderNo(rule) }}</td>
-		 <td class="rule-col-status">
-		 @if (rule.enabled) {
-		 <span class="badge-ok">启用</span>
-		 } @else {
-		 <span class="badge-muted">禁用</span>
-		 }
-		 </td>
-		 <td class="rule-col-type">
-		 <span class="text-xs font-medium text-fg">{{ ruleTypeText(rule.type) }}</span>
-		 </td>
-		 <td class="rule-col-payload">
-		 @if (rule.payload) {
-		 <span class="font-mono text-xs text-muted break-all">{{ rule.payload }}</span>
-		 } @else {
-		 <span class="text-xs text-muted-2">—</span>
-		 }
-		 </td>
-		 <td class="rule-col-note">
-		 @if (rule.note) {
-		 <span class="text-xs text-muted-2">{{ rule.note }}</span>
-		 } @else {
-		 <span class="text-xs text-muted-2">—</span>
-		 }
-		 </td>
-		 <td class="text-right">
-	 <div class="inline-flex flex-wrap justify-end gap-1">
-	 <button class="btn-icon" type="button" title="全局匹配顺序上移（可能跨策略组）" aria-label="上移" (click)="move(rule, -1)">
-	 <svg viewBox="0 0 24 24"><path d="M12 5v14M6 11l6-6 6 6"/></svg>
-	 </button>
-	 <button class="btn-icon" type="button" title="全局匹配顺序下移（可能跨策略组）" aria-label="下移" (click)="move(rule, 1)">
-	 <svg viewBox="0 0 24 24"><path d="M12 19V5M6 13l6 6 6-6"/></svg>
-	 </button>
-	 <button class="btn-icon" type="button" title="编辑" aria-label="编辑" (click)="openEditRule(rule)">
-	 <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-	 </button>
-	 <button
-	 class="btn-icon"
-	 type="button"
-	 [title]="rule.enabled ? '禁用' : '启用'"
-	 [attr.aria-label]="rule.enabled ? '禁用' : '启用'"
-	 (click)="toggleRule(rule)"
-	 >
-	 @if (rule.enabled) {
-	 <svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-5 0-9.27-3.11-11-8 1-2.73 2.92-4.95 5.3-6.35"/><path d="M1 1l22 22"/><path d="M9.9 4.24A10.9 10.9 0 0 1 12 4c5 0 9.27 3.11 11 8a11.6 11.6 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>
-	 } @else {
-	 <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-	 }
-	 </button>
-	 <button class="btn-icon-danger" type="button" title="删除" aria-label="删除" (click)="removeRule(rule)">
-	 <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-	 </button>
-	 </div>
-	 </td>
-	 </tr>
-	 }
-	 </tbody>
-	 </table>
-	 </div>
- }
- </div>
- }
- </div>
- } @empty {
- <p class="py-6 text-center text-sm text-muted">暂无策略组，请先新增</p>
- }
- </div>
-
-@if (orphanRules().length) {
-	 <div class="orphan-card">
-	 <div class="group-card-head flex flex-wrap items-start justify-between gap-3 p-4">
-	 <button type="button" class="min-w-0 flex-1 text-left" (click)="toggleGroupExpand('__orphan__')">
-	 <div class="flex flex-wrap items-center gap-2">
-	 <span class="text-muted-2">{{ isGroupExpanded('__orphan__') ? '▼' : '▶' }}</span>
-	 <span class="font-medium text-fg">出口失效</span>
-	 <span class="badge-warn">{{ orphanRules().length }} 条规则</span>
-	 </div>
-	 <div class="mt-1.5 pl-5 text-xs text-muted-2">
-	 规则指向的策略组已删除，请改出口或删除这些规则
-	 </div>
-	 </button>
-	 </div>
-	
-	 @if (isGroupExpanded('__orphan__')) {
-	 <div class="group-card-rules">
-		 <div class="overflow-x-auto">
-	<table class="table rule-table">
-		 <thead>
-		 <tr>
-		 <th class="rule-col-order" title="全局匹配顺序（跨策略组，Clash 自上而下）">#</th>
-		 <th class="rule-col-status">启用</th>
-		 <th class="rule-col-type">类型</th>
-		 <th class="rule-col-payload">匹配</th>
-		 <th class="rule-col-target">原出口</th>
-		 <th class="rule-col-note">备注</th>
-		 <th class="text-right">操作</th>
-		 </tr>
-		 </thead>
-		 <tbody>
-		 @for (rule of orphanRules(); track rule.id) {
-		 <tr [class.is-disabled]="!rule.enabled">
-		 <td class="rule-col-order text-xs text-muted-2" [title]="'全局第 ' + globalOrderNo(rule) + ' 条'">{{ globalOrderNo(rule) }}</td>
-		 <td class="rule-col-status">
-		 @if (rule.enabled) {
-		 <span class="badge-ok">启用</span>
-		 } @else {
-		 <span class="badge-muted">禁用</span>
-		 }
-		 </td>
-		 <td class="rule-col-type">
-		 <span class="text-xs font-medium text-fg">{{ ruleTypeText(rule.type) }}</span>
-		 </td>
-		 <td class="rule-col-payload">
-		 @if (rule.payload) {
-		 <span class="font-mono text-xs text-muted break-all">{{ rule.payload }}</span>
-		 } @else {
-		 <span class="text-xs text-muted-2">—</span>
-		 }
-		 </td>
-		 <td class="rule-col-target font-mono text-xs text-muted">{{ rule.target }}</td>
-		 <td class="rule-col-note">
-		 @if (rule.note) {
-		 <span class="text-xs text-muted-2">{{ rule.note }}</span>
-		 } @else {
-		 <span class="text-xs text-muted-2">—</span>
-		 }
-		 </td>
-	 <td class="text-right">
- <div class="inline-flex flex-wrap justify-end gap-1">
- <button class="btn-icon" type="button" title="全局匹配顺序上移（可能跨策略组）" aria-label="上移" (click)="move(rule, -1)">
- <svg viewBox="0 0 24 24"><path d="M12 5v14M6 11l6-6 6 6"/></svg>
- </button>
- <button class="btn-icon" type="button" title="全局匹配顺序下移（可能跨策略组）" aria-label="下移" (click)="move(rule, 1)">
- <svg viewBox="0 0 24 24"><path d="M12 19V5M6 13l6 6 6-6"/></svg>
- </button>
- <button class="btn-icon" type="button" title="编辑" aria-label="编辑" (click)="openEditRule(rule)">
- <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
- </button>
- <button
- class="btn-icon"
- type="button"
- [title]="rule.enabled ? '禁用' : '启用'"
- [attr.aria-label]="rule.enabled ? '禁用' : '启用'"
- (click)="toggleRule(rule)"
- >
- @if (rule.enabled) {
- <svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-5 0-9.27-3.11-11-8 1-2.73 2.92-4.95 5.3-6.35"/><path d="M1 1l22 22"/><path d="M9.9 4.24A10.9 10.9 0 0 1 12 4c5 0 9.27 3.11 11 8a11.6 11.6 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>
- } @else {
- <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z"/><circle cx="12" cy="12" r="3"/></svg>
- }
- </button>
- <button class="btn-icon-danger" type="button" title="删除" aria-label="删除" (click)="removeRule(rule)">
- <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
- </button>
- </div>
- </td>
- </tr>
- }
- </tbody>
- </table>
- </div>
- </div>
- }
- </div>
- }
- </section>
-</div>
-
-	<app-rule-match-dialog
-		[open]="showTestModal()"
-		title="测试规则匹配"
-		subtitle="按当前草稿从上到下模拟匹配（未发布也按草稿）。支持域名；IP 仅 IP-CIDR；GEOSITE/GEOIP 浏览器侧会跳过。"
-		[rules]="testMatchRules()"
-		[typeText]="matchTypeText"
-		[targetText]="matchTargetText"
-		[showEditAction]="true"
-		[showLocateAction]="true"
-		[canLocate]="canLocateMatchRule"
-		(closed)="closeTestModal()"
-		(editRule)="onMatchEditRule($event)"
-		(locateGroup)="onMatchLocateGroup($event)"
-	/>
-
-@if (showGroupModal()) {
-	 <div class="dialog-overlay" (click)="closeGroupModal()">
-	 <div
-	 class="dialog-panel dialog-panel-md"
-	 role="dialog"
-	 aria-modal="true"
-	 (click)="$event.stopPropagation()"
-	 >
-		<div class="dialog-header">
-			<button class="dialog-close" type="button" (click)="closeGroupModal()" title="关闭" aria-label="关闭">
-				<span class="dialog-close-x" aria-hidden="true">×</span>
-			</button>
-			<div class="dialog-header-text">
-				<h3 class="dialog-title">{{ editingGroupId == null ? '新增策略组' : '编辑策略组' }}</h3>
-				<p class="dialog-header-sub">组名会被规则引用；成员在发布时展开为实际节点</p>
-			</div>
-		</div>
-		<div class="dialog-body">
-	 <label class="flex items-center gap-2 text-sm text-muted">
-	 <input type="checkbox" [(ngModel)]="groupEnabled" />
-	 启用此策略组
-	 <app-field-tip [text]="tip.groupEnabled" />
-	 </label>
-
-	<div class="mt-3 grid gap-3 sm:grid-cols-2">
-	 <div>
-	 <label class="field-label">
-	 组名
-	 <app-field-tip [text]="tip.groupName" />
-	 </label>
-	 <input class="w-full" [(ngModel)]="groupName" placeholder="例如 OpenAI、PROXY、JP" />
-	 </div>
-	<div>
-		 <label class="field-label">
-		 选择方式
-		 <app-field-tip [text]="tip.groupType" />
-		 </label>
-		 <select class="w-full" [ngModel]="groupType" (ngModelChange)="onGroupTypeChange($event)">
-		 @for (t of groupTypes; track t.value) {
-		 <option [ngValue]="t.value">{{ t.text }}</option>
-		 }
-		 </select>
-		 </div>
-		 </div>
-	
-			 @if (needsTestParams()) {
-			 <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_8rem]">
-			 <div>
-			 <label class="field-label">
-			 测速 URL
-			 <app-field-tip [text]="tip.groupUrl" />
-			 </label>
-			 <input class="w-full font-mono text-xs" [(ngModel)]="groupUrl" [placeholder]="defaultTestURL" />
-			 </div>
-			 <div>
-			 <label class="field-label">
-			 测速间隔（秒）
-			 <app-field-tip [text]="tip.groupInterval" />
-			 </label>
-			 <input class="w-full" type="number" min="30" step="30" [(ngModel)]="groupInterval" />
-			 </div>
-			 </div>
-			 }
-		
-			 <div class="mt-3">
-			 <label class="field-label">
-			 成员
-			 <app-field-tip [text]="tip.groupProxies" />
-			 </label>
-
-		 <div class="flex gap-2">
-		 <input
-		 class="min-w-0 flex-1"
-		 [(ngModel)]="groupCustomMember"
-		 placeholder="手动添加节点名 / REGION:XX / 组名"
-		 (keydown.enter)="$event.preventDefault(); addCustomMember()"
-		 />
-		 <button class="btn-secondary shrink-0" type="button" (click)="addCustomMember()">添加</button>
-		 </div>
-
-		 <div class="mt-2 space-y-3 panel-box">
-		 <div>
-		 <div class="mb-1.5 text-xs font-medium text-muted-2">预设</div>
-		 <div class="flex flex-wrap gap-x-4 gap-y-2">
-		 @for (p of memberPresets(); track p.value) {
-		 <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted">
-		 <input
-		 type="checkbox"
-		 [checked]="isMemberSelected(p.value)"
-		 (change)="toggleMember(p.value)"
-		 />
-		 {{ p.text }}
-		 </label>
-		 }
-		 </div>
-		 </div>
-		
-		 @if (memberGroupOptions().length) {
-		 <div>
-		 <div class="mb-1.5 text-xs font-medium text-muted-2">其它策略组</div>
-		 <div class="flex flex-wrap gap-x-4 gap-y-2">
-		 @for (g of memberGroupOptions(); track g.id) {
-		 <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted">
-		 <input
-		 type="checkbox"
-		 [checked]="isMemberSelected(g.name)"
-		 (change)="toggleMember(g.name)"
-		 />
-		 {{ g.name }}
-		 </label>
-		 }
-		 </div>
-		 </div>
-		 }
-		
-		 @if (customMembers().length) {
-		 <div>
-		 <div class="mb-1.5 text-xs font-medium text-muted-2">自定义</div>
-		 <div class="flex flex-wrap gap-2">
-		 @for (m of customMembers(); track m) {
-		 <span class="chip">
-		 <span class="font-mono">{{ m }}</span>
-		 <button
-		 type="button"
-		 class="text-muted hover:text-muted"
-		 title="移除"
-		 (click)="removeMember(m)"
-		 >
-		 ×
-		 </button>
-		 </span>
-		 }
-		 </div>
-		 </div>
-		 }
-		 </div>
-		
-		 @if (groupMembers.length) {
-		 <p class="mt-2 font-mono text-xs text-muted-2">
-		 已选 {{ groupMembers.length }} 项：{{ groupMembers.join(', ') }}
-		 </p>
-		 } @else {
-		 <p class="mt-2 text-xs text-muted">尚未选择成员</p>
-		 }
-		 </div>
-	
-	 </div>
-
-
- <div class="dialog-actions">
- <button class="btn-secondary" type="button" (click)="closeGroupModal()">取消</button>
- <button class="btn-primary" type="button" (click)="saveGroup()">
- {{ editingGroupId == null ? '创建策略组' : '保存修改' }}
- </button>
- </div>
- </div>
- </div>
-}
-
-@if (showBatchImportModal()) {
-	<div class="dialog-overlay" (click)="closeBatchImportModal()">
-		<div class="dialog-panel dialog-panel-md" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-			<div class="dialog-header">
-				<button
-					class="dialog-close"
-					type="button"
-					[disabled]="batchImporting()"
-					(click)="closeBatchImportModal()"
-					title="关闭"
-					aria-label="关闭"
+	<div class="flex flex-wrap items-start justify-between gap-3">
+		<div>
+			<h2 class="text-xl font-semibold">分流规则</h2>
+			<p class="text-sm text-muted">
+				按业务分类维护分流规则；出口请到
+				<a routerLink="/groups" class="text-link">策略组</a>
+				页配置。改完后需发布，订阅才会更新。
+			</p>
+			@if (draftStatusNote()) {
+				<p
+					class="mt-1 text-xs"
+					[class.text-amber-600]="draftDirty()"
+					[class.text-muted-2]="!draftDirty()"
 				>
+					{{ draftStatusNote() }}
+					@if (draftDirty()) {
+						<button type="button" class="ml-2 text-link" (click)="openPublishModal()">去发布</button>
+					}
+				</p>
+			}
+		</div>
+<div class="flex flex-wrap gap-2">
+				<button class="btn-secondary" type="button" (click)="openBatchImport()">批量导入</button>
+				<button class="btn-secondary" type="button" (click)="openTestModal()">测试匹配</button>
+				<button class="btn-secondary" type="button" (click)="openNewCategoryModal()">新增分类</button>
+				<button class="btn-secondary" type="button" (click)="openCreateRule()">添加规则</button>
+				<button class="btn-primary" type="button" (click)="openPublishModal()">
+					@if (draftDirty()) {
+						发布配置 *
+					} @else {
+						发布配置
+					}
+				</button>
+			</div>
+	</div>
+
+	<section class="card group-list-well space-y-4">
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<p class="text-sm text-muted-2">
+				共 {{ rules().length }} 条规则 · {{ groups().length }} 个可用出口
+				@if (orphanRuleCount()) {
+					· <span class="text-muted">{{ orphanRuleCount() }} 条出口失效</span>
+				}
+			</p>
+			<a class="btn-secondary btn-sm" routerLink="/groups">管理策略组</a>
+		</div>
+
+		@if (categorySections().length === 0) {
+			<p class="py-8 text-center text-sm text-muted">暂无规则，点击「添加规则」或「批量导入」</p>
+		}
+
+		@for (sec of categorySections(); track sec.key) {
+			<div class="group-card">
+				<div class="group-card-head flex flex-wrap items-start justify-between gap-3 p-4">
+					<button type="button" class="min-w-0 flex-1 text-left" (click)="toggleCategory(sec.key)">
+						<div class="flex flex-wrap items-center gap-2">
+							<span class="text-muted-2">{{ isCategoryCollapsed(sec.key) ? '▶' : '▼' }}</span>
+							<span class="font-medium text-fg">{{ sec.label }}</span>
+							<span class="badge-ok">{{ sec.rules.length }} 条</span>
+						</div>
+						<div class="mt-1 pl-5 text-xs text-muted-2">
+							业务分类仅面板展示；匹配顺序以 # 列全局序号为准（Clash 自上而下）
+						</div>
+					</button>
+<button class="btn-secondary" type="button" (click)="openCreateRule(sec.key)">添加规则</button>
+					</div>
+
+@if (!isCategoryCollapsed(sec.key)) {
+						<div class="group-card-rules">
+							@if (sec.rules.length === 0) {
+								<p class="px-4 py-6 text-center text-sm text-muted-2">
+									暂无规则，点击右上角「添加规则」写入本分类
+								</p>
+							} @else {
+							<div class="overflow-x-auto">
+								<table class="table rule-table">
+									<thead>
+										<tr>
+											<th class="rule-col-order" title="全局匹配顺序（Clash 自上而下）">#</th>
+											<th class="rule-col-status">启用</th>
+											<th class="rule-col-type">类型</th>
+											<th class="rule-col-payload">匹配</th>
+											<th class="rule-col-target">出口</th>
+											<th class="rule-col-note">备注</th>
+											<th class="text-right">操作</th>
+										</tr>
+									</thead>
+									<tbody>
+										@for (rule of sec.rules; track rule.id) {
+										<tr [class.is-disabled]="!rule.enabled">
+											<td
+												class="rule-col-order text-xs text-muted-2"
+												[title]="'全局第 ' + globalOrderNo(rule) + ' 条'"
+											>
+												{{ globalOrderNo(rule) }}
+											</td>
+											<td class="rule-col-status">
+												@if (rule.enabled) {
+													<span class="badge-ok">启用</span>
+												} @else {
+													<span class="badge-muted">禁用</span>
+												}
+											</td>
+											<td class="rule-col-type">
+												<span class="text-xs font-medium text-fg">{{ ruleTypeText(rule.type) }}</span>
+											</td>
+											<td class="rule-col-payload">
+												@if (rule.payload) {
+													<span class="font-mono text-xs text-muted break-all">{{ rule.payload }}</span>
+												} @else {
+													<span class="text-xs text-muted-2">—</span>
+												}
+											</td>
+											<td class="rule-col-target">
+												<span
+													class="font-mono text-xs"
+													[class.text-muted]="!isOrphanTarget(rule.target)"
+													[class.text-amber-600]="isOrphanTarget(rule.target)"
+													[title]="isOrphanTarget(rule.target) ? '策略组已不存在' : ''"
+												>
+													{{ rule.target }}
+												</span>
+												@if (isOrphanTarget(rule.target)) {
+													<span class="ml-1 badge-warn">失效</span>
+												}
+											</td>
+											<td class="rule-col-note">
+												@if (rule.note) {
+													<span class="text-xs text-muted-2">{{ rule.note }}</span>
+												} @else {
+													<span class="text-xs text-muted-2">—</span>
+												}
+											</td>
+<td class="text-right">
+													<div class="inline-flex flex-wrap justify-end gap-1">
+														@if (!isSystemRule(rule)) {
+															<button
+																class="btn-icon"
+																type="button"
+																title="全局匹配顺序上移"
+																aria-label="上移"
+																(click)="move(rule, -1)"
+															>
+																<svg viewBox="0 0 24 24"><path d="M12 5v14M6 11l6-6 6 6" /></svg>
+															</button>
+															<button
+																class="btn-icon"
+																type="button"
+																title="全局匹配顺序下移"
+																aria-label="下移"
+																(click)="move(rule, 1)"
+															>
+																<svg viewBox="0 0 24 24"><path d="M12 19V5M6 13l6 6 6-6" /></svg>
+															</button>
+														}
+														<button
+															class="btn-icon"
+															type="button"
+															title="编辑"
+															aria-label="编辑"
+															(click)="openEditRule(rule)"
+														>
+															<svg viewBox="0 0 24 24">
+																<path d="M12 20h9" />
+																<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+															</svg>
+														</button>
+														<button
+															class="btn-icon"
+															type="button"
+															[title]="rule.enabled ? '禁用' : '启用'"
+															[attr.aria-label]="rule.enabled ? '禁用' : '启用'"
+															(click)="toggleRule(rule)"
+														>
+															@if (rule.enabled) {
+																<svg viewBox="0 0 24 24">
+																	<path
+																		d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-5 0-9.27-3.11-11-8 1-2.73 2.92-4.95 5.3-6.35"
+																	/>
+																	<path d="M1 1l22 22" />
+																	<path
+																		d="M9.9 4.24A10.9 10.9 0 0 1 12 4c5 0 9.27 3.11 11 8a11.6 11.6 0 0 1-2.16 3.19"
+																	/>
+																	<path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+																</svg>
+															} @else {
+																<svg viewBox="0 0 24 24">
+																	<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z" />
+																	<circle cx="12" cy="12" r="3" />
+																</svg>
+															}
+														</button>
+														@if (!isSystemRule(rule)) {
+															<button
+																class="btn-icon-danger"
+																type="button"
+																title="删除"
+																aria-label="删除"
+																(click)="removeRule(rule)"
+															>
+																<svg viewBox="0 0 24 24">
+																	<path d="M3 6h18" />
+																	<path d="M8 6V4h8v2" />
+																	<path d="M19 6l-1 14H6L5 6" />
+																	<path d="M10 11v6M14 11v6" />
+																</svg>
+															</button>
+														}
+													</div>
+												</td>
+										</tr>
+									}
+</tbody>
+								</table>
+							</div>
+							}
+						</div>
+					}
+				</div>
+			}
+		</section>
+	</div>
+
+<app-rule-match-dialog
+	[open]="showTestModal()"
+	title="测试规则匹配"
+	subtitle="按当前草稿从上到下模拟匹配（未发布也按草稿）。支持域名；IP 仅 IP-CIDR；GEOSITE/GEOIP 浏览器侧会跳过。"
+	[rules]="testMatchRules()"
+	[typeText]="matchTypeText"
+	[targetText]="matchTargetText"
+	[showEditAction]="true"
+	[showLocateAction]="false"
+	[canLocate]="canLocateMatchRule"
+	(closed)="closeTestModal()"
+	(editRule)="onMatchEditRule($event)"
+	(locateGroup)="onMatchLocateGroup($event)"
+/>
+
+<app-batch-import-modal
+	[open]="showBatchImportModal()"
+	[groups]="groups()"
+	[rules]="rules()"
+	[extraCategories]="extraCategories()"
+	[defaultTarget]="defaultTarget() || '直连'"
+	(closed)="closeBatchImportModal()"
+	(imported)="onBatchImported($event)"
+/>
+
+<app-rule-form-modal
+	[open]="showRuleModal()"
+	[editingRule]="editingRule"
+	[groups]="groups()"
+	[rules]="rules()"
+	[extraCategories]="extraCategories()"
+	[defaultCategory]="createDefaultCategory"
+	[defaultTarget]="defaultTarget()"
+	(closed)="closeRuleModal()"
+	(saved)="onRuleSaved($event)"
+/>
+
+@if (showNewCategoryModal()) {
+	<div class="dialog-overlay" (click)="closeNewCategoryModal()">
+		<div class="dialog-panel dialog-panel-sm" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+			<div class="dialog-header">
+				<button class="dialog-close" type="button" (click)="closeNewCategoryModal()" title="关闭" aria-label="关闭">
 					<span class="dialog-close-x" aria-hidden="true">×</span>
 				</button>
 				<div class="dialog-header-text">
-					<h3 class="dialog-title">批量导入规则</h3>
-					<p class="dialog-header-sub">一行一条；适合个人域名/中转 API，不写进默认 seed</p>
+					<h3 class="dialog-title">新增分类</h3>
+					<p class="dialog-header-sub">先建空分组，再在该分类下添加规则；分类仅面板展示</p>
 				</div>
 			</div>
-			<div class="dialog-body space-y-3">
-				<div>
-					<label class="field-label">
-						规则文本
-						<app-field-tip [text]="tip.batchImport" />
-					</label>
-					<textarea
-						class="w-full font-mono text-sm"
-						rows="12"
-						[(ngModel)]="batchImportText"
-						placeholder="DOMAIN-SUFFIX,xiaxiazi.ccwu.cc,直连,个人-小鸡&#10;gpt-api.xxww.online&#10;DOMAIN-KEYWORD,hybgzs,直连,个人-中转"
-					></textarea>
-				</div>
-				<div class="grid gap-3 sm:grid-cols-2">
-					<div>
-						<label class="field-label">默认类型（仅写匹配内容时）</label>
-						<select class="w-full" [(ngModel)]="batchImportDefaultType">
-							@for (t of ruleTypes; track t.value) {
-								@if (t.value !== 'MATCH') {
-									<option [ngValue]="t.value">{{ t.text }}</option>
-								}
-							}
-						</select>
-					</div>
-					<div>
-						<label class="field-label">默认出口</label>
-						<select class="w-full" [(ngModel)]="batchImportDefaultTarget">
-							@for (g of groups(); track g.id) {
-								<option [ngValue]="g.name">{{ g.name }}</option>
-							}
-						</select>
-					</div>
-					<div class="sm:col-span-2">
-						<label class="field-label">默认备注（可选）</label>
-						<input class="w-full" [(ngModel)]="batchImportDefaultNote" placeholder="例如：个人-中转" />
-					</div>
-				</div>
-				<label class="flex items-center gap-2 text-sm text-muted">
-					<input type="checkbox" [(ngModel)]="batchImportEnabled" />
-					启用导入的规则
+			<div class="dialog-body">
+				<label class="field-label">
+					分类名称
+					<app-field-tip [text]="tip.newCategory" />
 				</label>
+				<input
+					class="w-full"
+					[(ngModel)]="newCategoryName"
+					placeholder="例如：个人 / 公司 / 游戏"
+					(keydown.enter)="submitNewCategory()"
+				/>
 			</div>
 			<div class="dialog-actions">
-				<button class="btn-secondary" type="button" [disabled]="batchImporting()" (click)="closeBatchImportModal()">
-					取消
-				</button>
-				<button class="btn-primary" type="button" [disabled]="batchImporting()" (click)="submitBatchImport()">
-					{{ batchImporting() ? '导入中…' : '导入' }}
-				</button>
+				<button class="btn-secondary" type="button" (click)="closeNewCategoryModal()">取消</button>
+				<button class="btn-primary" type="button" (click)="submitNewCategory()">创建并添加规则</button>
 			</div>
 		</div>
 	</div>
 }
 
-@if (showRuleModal()) {
-	 <div class="dialog-overlay" (click)="closeRuleModal()">
-	 <div class="dialog-panel dialog-panel-md" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-			<div class="dialog-header">
-				<button class="dialog-close" type="button" (click)="closeRuleModal()" title="关闭" aria-label="关闭">
-					<span class="dialog-close-x" aria-hidden="true">×</span>
-				</button>
-				<div class="dialog-header-text">
-					<h3 class="dialog-title">{{ editingRuleId == null ? '添加规则' : '编辑规则' }}</h3>
-					<p class="dialog-header-sub">按从上到下顺序匹配，命中即走对应出口；改完需发布才生效</p>
-				</div>
-			</div>
-		<div class="dialog-body">
-<div class="grid gap-3 sm:grid-cols-2">
- <div>
- <label class="field-label">
- 规则类型
- <app-field-tip [text]="tip.ruleType" />
- </label>
- <select class="w-full" [(ngModel)]="ruleType" (ngModelChange)="onRuleTypeChange()">
- @for (t of ruleTypes; track t.value) {
- <option [ngValue]="t.value">{{ t.text }}</option>
- }
- </select>
- </div>
- <div>
- <label class="field-label">
- 目标出口
- <app-field-tip [text]="tip.ruleTarget" />
- </label>
- <select class="w-full" [(ngModel)]="ruleTarget">
-	 @for (g of groups(); track g.id) {
-	 <option [ngValue]="g.name">{{ g.name }}</option>
-	 }
-	 @if (orphanTarget(); as orphan) {
-	 <optgroup label="当前值（已不存在）">
-	 <option [ngValue]="orphan">{{ orphan }}</option>
-	 </optgroup>
-	 }
-	 </select>
- </div>
-
- @if (!isMatchType()) {
- <div class="sm:col-span-2">
- <label class="field-label">
- {{ payloadLabel() }}
- <app-field-tip [text]="payloadTip()" />
- </label>
- <input class="w-full" [(ngModel)]="rulePayload" [placeholder]="payloadPlaceholder()" />
- </div>
- }
-
- <div class="sm:col-span-2">
- <label class="field-label">
- 备注（可选）
- <app-field-tip [text]="tip.ruleNote" />
- </label>
- <input class="w-full" [(ngModel)]="ruleNote" placeholder="例如：国内直连 / OpenAI" />
- </div>
- </div>
-
- <label class="mt-3 flex items-center gap-2 text-sm text-muted">
- <input type="checkbox" [(ngModel)]="ruleEnabled" />
- 启用此规则
- <app-field-tip [text]="tip.ruleEnabled" />
- </label>
-
- </div>
-
-
- <div class="dialog-actions">
- <button class="btn-secondary" type="button" (click)="closeRuleModal()">取消</button>
- <button class="btn-primary" type="button" (click)="saveRule()">
- {{ editingRuleId == null ? '添加规则' : '更新规则' }}
- </button>
- </div>
- </div>
- </div>
-}
-
 @if (showPublishModal()) {
- <div class="dialog-overlay" (click)="closePublishModal()">
- <div
-	 class="dialog-panel dialog-panel-md"
-	 role="dialog"
-	 aria-modal="true"
-	 (click)="$event.stopPropagation()"
-	 >
+	<div class="dialog-overlay" (click)="closePublishModal()">
+		<div class="dialog-panel dialog-panel-md" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
 			<div class="dialog-header">
 				<button
 					class="dialog-close"
@@ -614,40 +307,48 @@
 				</button>
 				<div class="dialog-header-text">
 					<h3 class="dialog-title">发布配置</h3>
-					<p class="dialog-header-sub">先「生成预览」检查 YAML，确认无误后再发布；发布后订阅链接会立刻使用新配置</p>
+					<p class="dialog-header-sub">
+						先「生成预览」检查 YAML，确认无误后再发布；发布后订阅链接会立刻使用新配置
+					</p>
 				</div>
 			</div>
 			<div class="dialog-body">
-	<div class="space-y-3">
-	 <div>
-	 <label class="field-label">
-	 发布备注（可选）
-	 <app-field-tip [text]="tip.publishNote" />
-	 </label>
-	 <input class="w-full" [(ngModel)]="publishNote" placeholder="例如：调整 OpenAI 规则" />
-	 </div>
+				<div class="space-y-3">
+					<div>
+						<label class="field-label">
+							发布备注（可选）
+							<app-field-tip [text]="tip.publishNote" />
+						</label>
+						<input class="w-full" [(ngModel)]="publishNote" placeholder="例如：调整 OpenAI 规则" />
+					</div>
 
- @if (preview(); as p) {
- <div class="space-y-3 panel-box">
- <div class="flex flex-wrap gap-4 text-sm">
- <div>节点：<span class="font-medium">{{ p.proxyCount }}</span></div>
- <div>规则：<span class="font-medium">{{ p.ruleCount }}</span></div>
- <div>策略组：<span class="font-medium">{{ p.groups.join(', ') }}</span></div>
- </div>
- @if (p.warnings.length) {
- <div class="text-sm text-muted">
- 警告：
- <ul class="list-disc pl-5">
- @for (w of p.warnings; track w) {
- <li>{{ w }}</li>
- }
- </ul>
- </div>
- }
- <pre class="pre-box">{{ p.yamlPreview }}</pre>
- </div>
- }
-</div>
+					@if (preview(); as p) {
+						<div class="space-y-3 panel-box">
+							<div class="flex flex-wrap gap-4 text-sm">
+								<div>
+									节点：<span class="font-medium">{{ p.proxyCount }}</span>
+								</div>
+								<div>
+									规则：<span class="font-medium">{{ p.ruleCount }}</span>
+								</div>
+								<div>
+									策略组：<span class="font-medium">{{ p.groups.join(', ') }}</span>
+								</div>
+							</div>
+							@if (p.warnings.length) {
+								<div class="text-sm text-muted">
+									警告：
+									<ul class="list-disc pl-5">
+										@for (w of p.warnings; track w) {
+											<li>{{ w }}</li>
+										}
+									</ul>
+								</div>
+							}
+							<pre class="pre-box">{{ p.yamlPreview }}</pre>
+						</div>
+					}
+				</div>
 			</div>
 			<div class="dialog-actions">
 				<button class="btn-secondary" type="button" [disabled]="publishing()" (click)="doPreview()">
@@ -659,4 +360,4 @@
 			</div>
 		</div>
 	</div>
-	}
+}

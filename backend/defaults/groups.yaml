@@ -10,6 +10,8 @@
 #   ALL / *              → 全部节点
 #   REGION:US            → 美国前缀节点（US-xxx）
 #   REGION:OTHER         → 非常用国家节点（primary=false 的地区）
+#   SOURCE:良心云        → 该订阅源全部节点（名称大小写不敏感；一源一组）
+#   SOURCE:id:3          → 按订阅源 ID（改名后仍稳定）
 #   DIRECT / REJECT      → Clash 引擎关键字
 #   其它字符串           → 其它策略组名或具体节点名
 #

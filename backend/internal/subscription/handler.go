@@ -176,12 +176,13 @@ func subscribeErrorMessage(err error) string {
 		return "token revoked"
 	case msg == "no published config":
 		return "no published config"
-	case strings.Contains(msg, "no proxies"):
-		return "no proxies available"
-	case strings.Contains(msg, "no usable proxy groups"):
-		return "no usable proxy groups"
-	case strings.Contains(msg, "no enabled rules"), strings.Contains(msg, "MATCH rule"):
-		return "invalid rules config"
+	case strings.Contains(msg, "no proxies"), strings.Contains(msg, "暂无可用节点"):
+		return "暂无可用节点，请先添加并刷新订阅源"
+	case strings.Contains(msg, "no usable proxy groups"), strings.Contains(msg, "没有可用策略组"):
+		return "没有可用策略组"
+	case strings.Contains(msg, "no enabled rules"), strings.Contains(msg, "没有启用的分流规则"),
+		strings.Contains(msg, "MATCH rule"), strings.Contains(msg, "MATCH"):
+		return "规则配置无效"
 	default:
 		if msg != "" {
 			return "config unavailable: " + msg

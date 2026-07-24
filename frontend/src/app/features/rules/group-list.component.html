@@ -1,0 +1,218 @@
+<div class="space-y-6">
+	<div class="flex flex-wrap items-start justify-between gap-3">
+		<div>
+			<h2 class="text-xl font-semibold">策略组</h2>
+			<p class="text-sm text-muted">
+				维护出口容器（成员 / 测速方式）。分流规则请在
+				<a routerLink="/rules" class="text-link">分流规则</a>
+				页按业务分类添加。
+			</p>
+			@if (draftStatusNote()) {
+				<p
+					class="mt-1 text-xs"
+					[class.text-amber-600]="draftDirty()"
+					[class.text-muted-2]="!draftDirty()"
+				>
+					{{ draftStatusNote() }}
+					@if (draftDirty()) {
+						<a routerLink="/rules" class="ml-2 text-link">去规则页发布</a>
+					}
+				</p>
+			}
+		</div>
+		<button class="btn-primary" type="button" (click)="openCreateGroup()">新增策略组</button>
+	</div>
+
+	<section class="card group-list-well space-y-3">
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<p class="text-sm text-muted-2">共 {{ groups().length }} 个策略组 · 被规则引用数见各卡片</p>
+		</div>
+
+		@for (g of groups(); track g.id) {
+			<div class="group-card">
+				<div class="group-card-head flex flex-wrap items-start justify-between gap-3 p-4">
+					<div class="min-w-0 flex-1">
+						<div class="flex flex-wrap items-center gap-2">
+							<span class="font-medium text-fg">{{ g.name }}</span>
+							@if (!g.enabled) {
+								<span class="badge-warn">已禁用</span>
+							}
+							<span class="badge-ok">{{ rulesOfGroup(g.name) }} 条规则引用</span>
+							<span [class]="groupTypeBadgeClass(g.type)" [title]="groupTypeTip(g.type)">{{
+								groupTypeText(g.type)
+							}}</span>
+							@if (g.type === 'url-test' || g.type === 'fallback') {
+								<span [class]="groupTypeBadgeClass(g.type)" title="测速间隔"
+									>{{ g.interval ?? defaultTestInterval }}s</span
+								>
+							}
+						</div>
+						<div class="mt-1.5 font-mono text-xs text-muted-2">
+							成员：{{ g.proxies.join(', ') || '（空）' }}
+							@if ((g.type === 'url-test' || g.type === 'fallback') && g.url) {
+								<span class="ml-2">· 测速 {{ g.url }}</span>
+							}
+						</div>
+					</div>
+					<div class="flex flex-wrap gap-2">
+						<button class="btn-secondary" type="button" (click)="openEditGroup(g)">编辑</button>
+						<button class="btn-danger-soft" type="button" (click)="removeGroup(g)">删除</button>
+					</div>
+				</div>
+			</div>
+		} @empty {
+			<p class="py-6 text-center text-sm text-muted">暂无策略组，请先新增</p>
+		}
+	</section>
+</div>
+
+@if (showGroupModal()) {
+	<div class="dialog-overlay" (click)="closeGroupModal()">
+		<div
+			class="dialog-panel dialog-panel-md"
+			role="dialog"
+			aria-modal="true"
+			(click)="$event.stopPropagation()"
+		>
+			<div class="dialog-header">
+				<button class="dialog-close" type="button" (click)="closeGroupModal()" title="关闭" aria-label="关闭">
+					<span class="dialog-close-x" aria-hidden="true">×</span>
+				</button>
+				<div class="dialog-header-text">
+					<h3 class="dialog-title">{{ editingGroupId == null ? '新增策略组' : '编辑策略组' }}</h3>
+					<p class="dialog-header-sub">组名会被规则引用；成员在发布时展开为实际节点</p>
+				</div>
+			</div>
+			<div class="dialog-body">
+				<label class="flex items-center gap-2 text-sm text-muted">
+					<input type="checkbox" [(ngModel)]="groupEnabled" />
+					启用此策略组
+					<app-field-tip [text]="tip.groupEnabled" />
+				</label>
+
+				<div class="mt-3 grid gap-3 sm:grid-cols-2">
+					<div>
+						<label class="field-label">
+							组名
+							<app-field-tip [text]="tip.groupName" />
+						</label>
+						<input class="w-full" [(ngModel)]="groupName" placeholder="例如 美国US、直连" />
+					</div>
+					<div>
+						<label class="field-label">
+							选择方式
+							<app-field-tip [text]="tip.groupType" />
+						</label>
+						<select class="w-full" [ngModel]="groupType" (ngModelChange)="onGroupTypeChange($event)">
+							@for (t of groupTypes; track t.value) {
+								<option [ngValue]="t.value">{{ t.text }}</option>
+							}
+						</select>
+					</div>
+				</div>
+
+				@if (needsTestParams()) {
+					<div class="mt-3 grid gap-3 sm:grid-cols-[1fr_8rem]">
+						<div>
+							<label class="field-label">
+								测速 URL
+								<app-field-tip [text]="tip.groupUrl" />
+							</label>
+							<input class="w-full font-mono text-xs" [(ngModel)]="groupUrl" [placeholder]="defaultTestURL" />
+						</div>
+						<div>
+							<label class="field-label">
+								测速间隔（秒）
+								<app-field-tip [text]="tip.groupInterval" />
+							</label>
+							<input class="w-full" type="number" min="30" step="30" [(ngModel)]="groupInterval" />
+						</div>
+					</div>
+				}
+
+				<div class="mt-3">
+					<label class="field-label">
+						成员
+						<app-field-tip [text]="tip.groupProxies" />
+					</label>
+					<div class="flex gap-2">
+						<input
+							class="min-w-0 flex-1"
+							[(ngModel)]="groupCustomMember"
+							placeholder="手动添加节点名 / SOURCE:源名 / REGION:XX / 组名"
+							(keydown.enter)="$event.preventDefault(); addCustomMember()"
+						/>
+						<button class="btn-secondary shrink-0" type="button" (click)="addCustomMember()">添加</button>
+					</div>
+					<div class="mt-2 space-y-3 panel-box">
+						<div>
+							<div class="mb-1.5 text-xs font-medium text-muted-2">预设</div>
+							<div class="flex flex-wrap gap-x-4 gap-y-2">
+								@for (p of memberPresets(); track p.value) {
+									<label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted">
+										<input
+											type="checkbox"
+											[checked]="isMemberSelected(p.value)"
+											(change)="toggleMember(p.value)"
+										/>
+										{{ p.text }}
+									</label>
+								}
+							</div>
+						</div>
+						@if (memberGroupOptions().length) {
+							<div>
+								<div class="mb-1.5 text-xs font-medium text-muted-2">其它策略组</div>
+								<div class="flex flex-wrap gap-x-4 gap-y-2">
+									@for (g of memberGroupOptions(); track g.id) {
+										<label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted">
+											<input
+												type="checkbox"
+												[checked]="isMemberSelected(g.name)"
+												(change)="toggleMember(g.name)"
+											/>
+											{{ g.name }}
+										</label>
+									}
+								</div>
+							</div>
+						}
+						@if (customMembers().length) {
+							<div>
+								<div class="mb-1.5 text-xs font-medium text-muted-2">自定义</div>
+								<div class="flex flex-wrap gap-2">
+									@for (m of customMembers(); track m) {
+										<span class="chip">
+											<span class="font-mono">{{ m }}</span>
+											<button
+												type="button"
+												class="text-muted hover:text-muted"
+												title="移除"
+												(click)="removeMember(m)"
+											>
+												×
+											</button>
+										</span>
+									}
+								</div>
+							</div>
+						}
+					</div>
+					@if (groupMembers.length) {
+						<p class="mt-2 font-mono text-xs text-muted-2">
+							已选 {{ groupMembers.length }} 项：{{ groupMembers.join(', ') }}
+						</p>
+					} @else {
+						<p class="mt-2 text-xs text-muted">尚未选择成员</p>
+					}
+				</div>
+			</div>
+			<div class="dialog-actions">
+				<button class="btn-secondary" type="button" (click)="closeGroupModal()">取消</button>
+				<button class="btn-primary" type="button" (click)="saveGroup()">
+					{{ editingGroupId == null ? '创建策略组' : '保存修改' }}
+				</button>
+			</div>
+		</div>
+	</div>
+}

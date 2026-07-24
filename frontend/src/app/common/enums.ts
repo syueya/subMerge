@@ -23,78 +23,27 @@ export function enumBadgeClass(
 }
 
 // --- Region ---
-// 地区码以 defaults/regions.yaml 为准；前端优先用 GET /regions 目录。
-// 下列常量仅作离线/首屏兜底，与后端目录大致对齐。
+// 地区目录只维护 backend/defaults/regions.yaml（经 GET /regions）。
+// 前端不再内置地区列表；展示名由 API 的 name 提供。
 
 export type Region = string;
 
-/** 自动识别失败时的回退地区（与后端 regioncatalog.FallbackCode 一致） */
+/** 自动识别失败时的回退地区（与后端 FallbackRegion 一致） */
 export const FALLBACK_REGION = 'UNKNOWN';
 
-export const Region = {
-	 UNKNOWN: 'UNKNOWN',
-	 US: 'US',
-	 PH: 'PH',
-	 JP: 'JP',
-	 HK: 'HK',
-	 SG: 'SG',
-	 TW: 'TW',
-} as const;
-
-/** 离线兜底选项；正式 UI 用 API 目录覆盖 */
-export const REGION_OPTIONS: readonly EnumOption[] = [
-	 { value: 'UNKNOWN', text: '未知 (UNKNOWN)' },
-	 { value: 'US', text: '美国 (US)' },
-	 { value: 'JP', text: '日本 (JP)' },
-	 { value: 'HK', text: '香港 (HK)' },
-	 { value: 'TW', text: '台湾 (TW)' },
-	 { value: 'SG', text: '新加坡 (SG)' },
-	 { value: 'KR', text: '韩国 (KR)' },
-	 { value: 'GB', text: '英国 (GB)' },
-	 { value: 'PH', text: '菲律宾 (PH)' },
-	 { value: 'TR', text: '土耳其 (TR)' },
-	 { value: 'DE', text: '德国 (DE)' },
-];
-
-/** 离线兜底中文名 */
-export const REGION_LABELS: Record<string, string> = {
-	UNKNOWN: '未知',
-	US: '美国',
-	PH: '菲律宾',
-	JP: '日本',
-	HK: '香港',
-	SG: '新加坡',
-	TW: '台湾',
-	KR: '韩国',
-	DE: '德国',
-	GB: '英国',
-	FR: '法国',
-	CA: '加拿大',
-	AU: '澳洲',
-	NL: '荷兰',
-	IN: '印度',
-	MY: '马来西亚',
-	TH: '泰国',
-	VN: '越南',
-	TR: '土耳其',
-	RU: '俄罗斯',
-	IT: '意大利',
-	BR: '巴西',
-MO: '澳门',
-		CN: '中国',
-		NG: '尼日利亚',
-		UA: '乌克兰',
-	};
-
+/** 地区展示名：优先用目录 labels；无则回退地区码本身 */
 export function regionLabel(code: string, labels?: Record<string, string>): string {
 	const c = String(code || '').toUpperCase();
-	const map = labels || REGION_LABELS;
-	return map[c] || c;
+	if (!c) return '';
+	const name = labels?.[c]?.trim();
+	return name || c;
 }
 
+/** 下拉/列表文案：美国 (US)；无中文名时仅码 */
 export function regionOptionText(code: string, name?: string): string {
 	const c = String(code || '').toUpperCase();
-	const n = (name || REGION_LABELS[c] || '').trim();
+	const n = (name || '').trim();
+	if (!c) return n;
 	if (!n || n === c) return c;
 	return `${n} (${c})`;
 }
