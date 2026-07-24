@@ -35,31 +35,6 @@ cd backend && go build -o ../bin/submerge .
 ./bin/submerge   # Windows: bin\submerge.exe
 ```
 
-## Docker
-
-先编产物，再打镜像（镜像内不编 Node/Go）：
-
-```bash
-cp .env.example .env
-
-cd frontend && npm ci && npm run build
-cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-  go build -ldflags="-s -w" -o ../bin/submerge-linux .
-docker compose build && docker compose up -d
-```
-
-| 路径 | 说明 |
-|------|------|
-| `/app/submerge` | 二进制 |
-| `/app/frontend/dist/submerge/browser` | 前端 |
-| `/app/data` | SQLite（volume `submerge-data`） |
-| `/app/log` | 日志（volume `submerge-log`） |
-
-```bash
-docker compose logs -f
-docker compose down       # 保留数据
-docker compose down -v    # 清空 volume
-```
 
 ## 主流程
 
