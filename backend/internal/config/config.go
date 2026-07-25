@@ -38,8 +38,12 @@ type Config struct {
 	// TrustedProxies 可信反向代理的 IP/CIDR 列表（如 Docker 网关、Nginx）。
 	// 仅当请求来自这些代理时才采信 X-Forwarded-For/X-Real-IP 得到真实客户端 IP，
 	// 否则用连接对端地址。留空=不信任任何代理（ClientIP 恒为对端地址）。
+	// 与 CookieSecure 独立：前者管「真实 IP」，后者管「会话 Cookie 是否仅 HTTPS」。
 	TrustedProxies []string
-	Version        string
+	// CookieSecure 会话 Cookie 是否带 Secure。默认 false，便于 http://IP:端口 登录；
+	// HTTPS 反代/公网请设 COOKIE_SECURE=true。不跟 APP_ENV、PUBLIC_BASE_URL 联动。
+	CookieSecure bool
+	Version      string
 	// LogOutput: console | file | both | none
 	LogOutput string
 	// LogDir 固定目录（不走环境变量）：backend/log 或 ./log，按日 submerge-YYYY-MM-DD.log
@@ -83,6 +87,11 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	// 默认 false：http://IP 可登录；HTTPS 部署显式 COOKIE_SECURE=true
+	cookieSecure, err := getBool("COOKIE_SECURE", false)
+	if err != nil {
+		return nil, err
+	}
 
 	// 数据 / 库 / 静态 / 日志目录一律按工作目录推导，不提供环境变量覆盖
 	// （避免 Docker/.env 再抄一遍路径；部署只需选对工作目录）
@@ -107,6 +116,7 @@ func Load() (*Config, error) {
 		RateLimitSub:    rateLimitSub,
 		CORSOrigins:     splitCSV(getEnv("CORS_ORIGINS", "http://localhost:4200")),
 		TrustedProxies:  splitCSV(getEnv("TRUSTED_PROXIES", "")),
+		CookieSecure:    cookieSecure,
 		// 版本 / 路径固定，不走环境变量
 		Version:          version.String(),
 		LogOutput:        logOutput,
@@ -260,4 +270,21 @@ func splitCSV(s string) []string {
 		}
 	}
 	return out
+}
+
+// getBool 解析布尔环境变量：true/1/yes/on 与 false/0/no/off（大小写不敏感）。
+// 未设置时用 def；非法值返回错误。
+func getBool(key string, def bool) (bool, error) {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return def, nil
+	}
+	switch strings.ToLower(v) {
+	case "1", "true", "yes", "on":
+		return true, nil
+	case "0", "false", "no", "off":
+		return false, nil
+	default:
+		return false, fmt.Errorf("%s must be true/false (or 1/0, yes/no, on/off)", key)
+	}
 }

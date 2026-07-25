@@ -60,10 +60,11 @@ Clash 规则行只含 `TYPE,payload,target`（`MATCH,target`），不含业务�
 ## 安全
 
 - 管理后台登录；上游 URL 加密存储；token 只存哈希
-- 生产 `APP_ENV=production` 时 Cookie 带 Secure（需 HTTPS）
-- 数据库与密钥不要放静态目录；Docker 用独立 volume
+- 会话 Cookie：HttpOnly + SameSite=Lax；是否 Secure 由 `COOKIE_SECURE` 控制（默认 `false`）
+- 数据库与密钥不要放静态目录；Docker 用独立 volume；管理端口勿裸暴露公网
 - `ENCRYPTION_KEY` 至少 32 字符（`openssl rand -hex 32`）；`PUBLIC_BASE_URL` 填对外访问根地址（生成订阅链接用）
-- `TRUSTED_PROXIES`：可信反代 IP/CIDR（逗号分隔）。无反代留空；经 Nginx/Docker 反代时填反代网段（如 `172.16.0.0/12`），否则限流与审计只会记到代理 IP
+- `TRUSTED_PROXIES`：可信反代 IP/CIDR。管限流/审计的真实客户端 IP；无反代留空
+- `COOKIE_SECURE`：`true` 时 Cookie 仅 HTTPS 发送。与 `TRUSTED_PROXIES` **独立**——HTTPS 反代通常两个都配；`http://IP` 访问保持默认 `false`
 
 ## 技术栈
 

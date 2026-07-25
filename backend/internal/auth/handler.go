@@ -55,8 +55,7 @@ func (h *Handler) Bootstrap(c *gin.Context) {
 		return
 	}
 	h.audit.Log(req.Username, "bootstrap", "auth", "admin created", c.ClientIP())
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("submerge_session", token, int(h.sessionTTL.Seconds()), "/", "", h.secureCookie, true)
+	h.setSessionCookie(c, token)
 	apiresp.OK(c, common.LoginResponse{User: user})
 }
 
@@ -81,16 +80,14 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 	h.audit.Log(req.Username, "login", "auth", "success", c.ClientIP())
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("submerge_session", token, int(h.sessionTTL.Seconds()), "/", "", h.secureCookie, true)
+	h.setSessionCookie(c, token)
 	apiresp.OK(c, common.LoginResponse{User: user})
 }
 
 func (h *Handler) Logout(c *gin.Context) {
 	token := bearerToken(c)
 	_ = h.svc.Logout(token)
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("submerge_session", "", -1, "/", "", h.secureCookie, true)
+	h.clearSessionCookie(c)
 	h.audit.Log(middleware.GetUsername(c), "logout", "auth", "", c.ClientIP())
 	apiresp.OK(c, map[string]bool{"success": true})
 }
@@ -171,4 +168,16 @@ func bearerToken(c *gin.Context) string {
 		return cookie
 	}
 	return ""
+}
+
+// setSessionCookie 写入会话 Cookie：HttpOnly + SameSite=Lax；
+// Secure 由 COOKIE_SECURE 控制（默认 false，HTTPS 部署设 true）。
+func (h *Handler) setSessionCookie(c *gin.Context, token string) {
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("submerge_session", token, int(h.sessionTTL.Seconds()), "/", "", h.secureCookie, true)
+}
+
+func (h *Handler) clearSessionCookie(c *gin.Context) {
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("submerge_session", "", -1, "/", "", h.secureCookie, true)
 }

@@ -15,6 +15,7 @@ EnvironmentFile=/opt/submerge/.env
 	#   ENCRYPTION_KEY=...（≥32 字符）
 	#   PUBLIC_BASE_URL=https://你的域名
 	#   TRUSTED_PROXIES=   # 无反代留空；有反代填 CIDR，如 172.16.0.0/12
+	#   COOKIE_SECURE=true # HTTPS 时 true；http://IP 用 false
 	#   SOURCE_REFRESH_INTERVAL=24
 	#   LOG_OUTPUT=both
 	#   LOG_RETENTION_DAYS=7

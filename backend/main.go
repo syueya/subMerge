@@ -100,7 +100,7 @@ func main() {
 
 	r := server.NewRouter(server.Deps{
 		Cfg:     cfg,
-		Auth:    auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.Env == "production"),
+		Auth:    auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.CookieSecure),
 		Source:  source.NewHandler(sourceSvc, auditSvc),
 		Rule:    rule.NewHandler(ruleSvc, auditSvc),
 		Publish: publish.NewHandler(publishSvc, auditSvc),

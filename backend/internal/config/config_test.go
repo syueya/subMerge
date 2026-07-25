@@ -148,3 +148,38 @@ func TestLoadLogRetentionZero(t *testing.T) {
 		t.Fatalf("got %d", cfg.LogRetentionDays)
 	}
 }
+
+func TestLoadCookieSecure(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
+	_ = os.Unsetenv("COOKIE_SECURE")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.CookieSecure {
+		t.Fatal("expected CookieSecure default false")
+	}
+
+	t.Setenv("COOKIE_SECURE", "true")
+	cfg, err = Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.CookieSecure {
+		t.Fatal("expected CookieSecure=true")
+	}
+
+	t.Setenv("COOKIE_SECURE", "0")
+	cfg, err = Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.CookieSecure {
+		t.Fatal("expected CookieSecure=false for 0")
+	}
+
+	t.Setenv("COOKIE_SECURE", "maybe")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected invalid COOKIE_SECURE to fail")
+	}
+}
