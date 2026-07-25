@@ -10,10 +10,11 @@ Type=simple
 WorkingDirectory=/opt/submerge
 ExecStart=/opt/submerge/bin/submerge
 EnvironmentFile=/opt/submerge/.env
-# .env 只需业务项，例如：
+	# .env 只需业务项，例如：
 	#   APP_ENV=production
 	#   ENCRYPTION_KEY=...（≥32 字符）
 	#   PUBLIC_BASE_URL=https://你的域名
+	#   TRUSTED_PROXIES=   # 无反代留空；有反代填 CIDR，如 172.16.0.0/12
 	#   SOURCE_REFRESH_INTERVAL=24
 	#   LOG_OUTPUT=both
 	#   LOG_RETENTION_DAYS=7
