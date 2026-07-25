@@ -79,15 +79,15 @@ func TestInferAndBackfillRuleCategories(t *testing.T) {
 	if got := inferRuleCategory("DOMAIN-SUFFIX", "deepseek.com", "直连", "AI-DeepSeek"); got != "国内AI" {
 		t.Fatalf("domestic AI: %q", got)
 	}
-if got := inferRuleCategory("MATCH", "", "日本JP", "默认走代理"); got != "系统分类" {
-			t.Fatalf("match: %q", got)
-		}
-		if got := inferRuleCategory("GEOSITE", "category-ads-all", "拒绝", "广告"); got != "系统分类" {
-			t.Fatalf("ads: %q", got)
-		}
-		if got := inferRuleCategory("GEOIP", "CN", "直连", "国内直连"); got != "系统分类" {
-			t.Fatalf("geoip cn: %q", got)
-		}
+	if got := inferRuleCategory("MATCH", "", "日本JP", "默认走代理"); got != "系统分类" {
+		t.Fatalf("match: %q", got)
+	}
+	if got := inferRuleCategory("GEOSITE", "category-ads-all", "拒绝", "广告"); got != "系统分类" {
+		t.Fatalf("ads: %q", got)
+	}
+	if got := inferRuleCategory("GEOIP", "CN", "直连", "国内直连"); got != "系统分类" {
+		t.Fatalf("geoip cn: %q", got)
+	}
 	if got := inferRuleCategory("DOMAIN", "pt.example.com", "直连", "馒头"); got != "" {
 		t.Fatalf("PT nickname should not invent category, got %q", got)
 	}

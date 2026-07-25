@@ -1,9 +1,11 @@
 package rule
 
 import (
+	"strings"
+
+	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/database"
 	"gorm.io/gorm"
-	"strings"
 )
 
 // SeedDefaults 初始化默认策略组与规则（仅空库）。
@@ -35,29 +37,29 @@ func (s *Service) SeedDefaults() error {
 			return nil
 		}
 		// 已有库轻量迁移：直连/拒绝/节点选择 + 国家组改名 + 规则挂组名 + 广告规则
-		if err := ensureNamedGroup(tx, "直连", "select", []string{"DIRECT"}, 0); err != nil {
+		if err := ensureNamedGroup(tx, common.GroupNameDirect, "select", []string{common.TargetDirect}, 0); err != nil {
 			return err
 		}
-		if err := ensureNamedGroup(tx, "拒绝", "select", []string{"REJECT"}, 1); err != nil {
+		if err := ensureNamedGroup(tx, common.GroupNameReject, "select", []string{common.TargetReject}, 1); err != nil {
 			return err
 		}
 		// 总选组（排在列表末尾）：订阅投影时规则目标组被剪掉后优先回退到此
-		if err := ensureNamedGroup(tx, "节点选择", "select", []string{"ALL"}, 100); err != nil {
+		if err := ensureNamedGroup(tx, common.GroupNameSelectAll, "select", []string{common.MemberTokenAll}, 100); err != nil {
 			return err
 		}
 		// 已有库若先前插在靠前位置，启动时挪到末尾
 		if err := tx.Model(&database.ProxyGroup{}).
-			Where("name = ?", "节点选择").
+			Where("name = ?", common.GroupNameSelectAll).
 			Update("sort_order", 100).Error; err != nil {
 			return err
 		}
 		// 规则 target：引擎关键字 → 策略组名
-		if err := tx.Model(&database.Rule{}).Where("target = ?", "DIRECT").
-			Update("target", "直连").Error; err != nil {
+		if err := tx.Model(&database.Rule{}).Where("target = ?", common.TargetDirect).
+			Update("target", common.GroupNameDirect).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&database.Rule{}).Where("target = ?", "REJECT").
-			Update("target", "拒绝").Error; err != nil {
+		if err := tx.Model(&database.Rule{}).Where("target = ?", common.TargetReject).
+			Update("target", common.GroupNameReject).Error; err != nil {
 			return err
 		}
 		// 旧短码国家组 → 「中文+码」（美国US…）；规则 target 同步
@@ -67,7 +69,7 @@ func (s *Service) SeedDefaults() error {
 		// 旧业务策略组名 → 美国US
 		for _, old := range []string{"AI", "流媒体", "电报", "PROXY", "OpenAI"} {
 			if err := tx.Model(&database.Rule{}).Where("target = ?", old).
-				Update("target", "美国US").Error; err != nil {
+				Update("target", common.GroupNameDefaultUS).Error; err != nil {
 				return err
 			}
 		}
@@ -76,14 +78,14 @@ func (s *Service) SeedDefaults() error {
 			if err := tx.Model(&database.Rule{}).
 				Where("type = ? AND target = ?", "MATCH", bad).
 				Updates(map[string]interface{}{
-					"target": "美国US",
+					"target": common.GroupNameDefaultUS,
 					"note":   "默认走代理",
 				}).Error; err != nil {
 				return err
 			}
 		}
 		// 补「其他国家」组（非常用地区节点）
-		if err := ensureNamedGroup(tx, "其他国家", "url-test", []string{"REGION:OTHER"}, 50); err != nil {
+		if err := ensureNamedGroup(tx, common.GroupNameOther, "url-test", []string{common.RegionTokenOther}, 50); err != nil {
 			return err
 		}
 		// 历史库：url-test/fallback 可能缺 url/interval（前端会显示 ?s）
@@ -221,7 +223,7 @@ func inferRuleCategory(typ, payload, target, note string) string {
 		return systemRuleCategory
 	}
 	if note == "AI" || strings.HasPrefix(note, "AI-") || strings.HasPrefix(note, "AI") {
-		if target == "直连" || target == "DIRECT" {
+		if target == common.GroupNameDirect || target == common.TargetDirect {
 			return "国内AI"
 		}
 		return "海外AI"
@@ -260,10 +262,11 @@ func ensureMatchIsLast(tx *gorm.DB) error {
 }
 
 // ensureSystemRuleOrder 固定系统规则匹配顺序：
-//   1) 广告 GEOSITE category-ads-all 最先
-//   2) 中间：其余业务规则
-//   3) 国内 GEOIP CN 倒数第二
-//   4) MATCH 兜底最后
+//  1. 广告 GEOSITE category-ads-all 最先
+//  2. 中间：其余业务规则
+//  3. 国内 GEOIP CN 倒数第二
+//  4. MATCH 兜底最后
+//
 // 历史库常见：GEOIP 被迁到 900、MATCH 停在 300+、广告不在最前；补域名后订阅会报 invalid rules。
 func ensureSystemRuleOrder(tx *gorm.DB) error {
 	var rows []database.Rule
@@ -349,7 +352,7 @@ func repairURLTestGroups(tx *gorm.DB) error {
 func migrateCountryGroupNames(tx *gorm.DB) error {
 	// code → 展示名（与 defaults/groups.yaml 一致）
 	renames := []struct{ old, neu string }{
-		{"US", "美国US"},
+		{"US", common.GroupNameDefaultUS},
 		{"JP", "日本JP"},
 		{"HK", "香港HK"},
 		{"TW", "台湾TW"},
@@ -418,7 +421,7 @@ func ensureSystemRules(tx *gorm.DB) error {
 			// 仍是「默认走直连/默认走代理」且目标为 直连/日本JP/PROXY/US → 对齐美国US
 			if err := tx.Model(&database.Rule{}).
 				Where("type = ?", "MATCH").
-				Where("target IN ?", []string{"直连", "DIRECT", "日本JP", "PROXY", "US"}).
+				Where("target IN ?", []string{common.GroupNameDirect, common.TargetDirect, "日本JP", "PROXY", "US"}).
 				Where("note IN ?", []string{"默认走直连", "默认走代理", ""}).
 				Updates(map[string]interface{}{
 					"target":   def.Target,

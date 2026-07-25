@@ -81,8 +81,8 @@ export class LoginComponent implements OnInit {
 			this.error.set('登录名仅限字母、数字、_ - .，最长 32');
 			return;
 		}
-		if (this.password.length < 8) {
-			this.error.set('密码至少 8 位');
+		if (this.password.length < 10) {
+			this.error.set('密码至少 10 位');
 			return;
 		}
 		if (this.password !== this.password2) {

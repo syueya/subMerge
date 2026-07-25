@@ -71,20 +71,20 @@ type Proxy struct {
 }
 
 // Rule 规则草稿
-	type Rule struct {
-		ID        uint   `gorm:"primaryKey"`
-		Type      string `gorm:"size:32;not null"`
-		Payload   string `gorm:"size:512"`
-		Target    string `gorm:"size:128;not null"`
-		Enabled   bool   `gorm:"not null;default:true"`
-		SortOrder int    `gorm:"not null;default:0;index"`
-		Note      string `gorm:"size:255"`
-		// Category 业务分类（仅面板分组，不写入 Clash）
-		Category  string `gorm:"size:64;index"`
-		CreatedAt time.Time
-		UpdatedAt time.Time
-		DeletedAt gorm.DeletedAt `gorm:"index"`
-	}
+type Rule struct {
+	ID        uint   `gorm:"primaryKey"`
+	Type      string `gorm:"size:32;not null"`
+	Payload   string `gorm:"size:512"`
+	Target    string `gorm:"size:128;not null"`
+	Enabled   bool   `gorm:"not null;default:true"`
+	SortOrder int    `gorm:"not null;default:0;index"`
+	Note      string `gorm:"size:255"`
+	// Category 业务分类（仅面板分组，不写入 Clash）
+	Category  string `gorm:"size:64;index"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+}
 
 // ProxyGroup 策略组草稿（Name 唯一；删除用硬删以便同名重建）
 type ProxyGroup struct {

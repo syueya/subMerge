@@ -3,10 +3,12 @@ package publish
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/submerge/submerge/backend/internal/regioncatalog"
 	"sort"
 	"strconv"
 	"strings"
+
+	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/regioncatalog"
 )
 
 // regionFromProxyName 从 "US-foo" / "jp-bar" 解析地区码
@@ -83,7 +85,7 @@ func proxySourceName(p map[string]interface{}) string {
 func refsWantProxies(refs []string) bool {
 	for _, r := range refs {
 		u := strings.ToUpper(strings.TrimSpace(r))
-		if u == "" || u == "DIRECT" || u == "REJECT" {
+		if u == "" || u == common.TargetDirect || u == common.TargetReject {
 			continue
 		}
 		return true
@@ -101,7 +103,7 @@ func isEngineOnlyMembers(expanded []string) bool {
 		if m == "" {
 			continue
 		}
-		if !strings.EqualFold(m, "DIRECT") && !strings.EqualFold(m, "REJECT") {
+		if !strings.EqualFold(m, common.TargetDirect) && !strings.EqualFold(m, common.TargetReject) {
 			return false
 		}
 	}
@@ -157,7 +159,7 @@ func expandRefs(
 		}
 		upper := strings.ToUpper(raw)
 		switch {
-		case upper == "ALL" || upper == "*" || upper == "REGION:*" || upper == "REGION:ALL":
+		case upper == common.MemberTokenAll || upper == "*" || upper == "REGION:*" || upper == common.RegionTokenAll:
 			for _, n := range allNames {
 				add(n)
 			}
@@ -180,8 +182,8 @@ func expandRefs(
 			for _, n := range bySourceName[strings.ToLower(spec)] {
 				add(n)
 			}
-		case strings.HasPrefix(upper, "REGION:"):
-			code := strings.TrimSpace(upper[len("REGION:"):])
+		case strings.HasPrefix(upper, common.RegionTokenPrefix):
+			code := strings.TrimSpace(upper[len(common.RegionTokenPrefix):])
 			if code == "" || code == "*" || code == "ALL" {
 				for _, n := range allNames {
 					add(n)

@@ -46,7 +46,7 @@ func (h *Handler) Bootstrap(c *gin.Context) {
 		case errors.Is(err, ErrSetupNotNeeded):
 			apiresp.Fail(c, http.StatusConflict, "setup_done", "admin already exists, please login")
 		case errors.Is(err, ErrWeakPassword):
-			apiresp.Fail(c, http.StatusBadRequest, "weak_password", "password must be at least 8 characters")
+			apiresp.Fail(c, http.StatusBadRequest, "weak_password", "password must be at least 10 characters and not a common weak password")
 		case errors.Is(err, ErrInvalidUsername):
 			apiresp.Fail(c, http.StatusBadRequest, "bad_username", "username: 1-32 letters, digits, _ - .")
 		default:
@@ -57,7 +57,7 @@ func (h *Handler) Bootstrap(c *gin.Context) {
 	h.audit.Log(req.Username, "bootstrap", "auth", "admin created", c.ClientIP())
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("submerge_session", token, int(h.sessionTTL.Seconds()), "/", "", h.secureCookie, true)
-	apiresp.OK(c, common.LoginResponse{Token: token, User: user})
+	apiresp.OK(c, common.LoginResponse{User: user})
 }
 
 func (h *Handler) Login(c *gin.Context) {
@@ -83,7 +83,7 @@ func (h *Handler) Login(c *gin.Context) {
 	h.audit.Log(req.Username, "login", "auth", "success", c.ClientIP())
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("submerge_session", token, int(h.sessionTTL.Seconds()), "/", "", h.secureCookie, true)
-	apiresp.OK(c, common.LoginResponse{Token: token, User: user})
+	apiresp.OK(c, common.LoginResponse{User: user})
 }
 
 func (h *Handler) Logout(c *gin.Context) {
@@ -118,7 +118,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, ErrWeakPassword) {
-			apiresp.Fail(c, http.StatusBadRequest, "weak_password", "password must be at least 8 characters")
+			apiresp.Fail(c, http.StatusBadRequest, "weak_password", "password must be at least 10 characters and not a common weak password")
 			return
 		}
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "change password failed")

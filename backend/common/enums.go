@@ -83,3 +83,32 @@ const (
 	ProxyGroupTypeFallback    ProxyGroupType = "fallback"
 	ProxyGroupTypeLoadBalance ProxyGroupType = "load-balance"
 )
+
+// Clash 引擎内建出口关键字（非策略组，写入 Clash 配置的保留字）。
+const (
+	TargetDirect = "DIRECT"
+	TargetReject = "REJECT"
+)
+
+// 内置策略组名。这些名字在三处强耦合，必须一致，否则发布时会静默降级：
+//   - defaults/groups.yaml   种子组定义
+//   - internal/rule          seed/migrate 创建组、系统规则 target
+//   - internal/publish       generator 校验 target 合法性与回退
+//
+// 例如 generator 找不到 GroupNameSelectAll 时会静默回退到 TargetDirect，
+// 导致所有规则目标落到直连而不报错。改名时请同步以上各处。
+const (
+	GroupNameDirect    = "直连"     // 仅含 DIRECT 的选择组
+	GroupNameReject    = "拒绝"     // 仅含 REJECT 的选择组
+	GroupNameSelectAll = "节点选择"   // 总选择组，也是规则 target 缺失时的回退组
+	GroupNameOther     = "其他国家"   // 非常用地区节点聚合组
+	GroupNameDefaultUS = "美国US"   // MATCH 兜底默认出口
+)
+
+// 策略组成员展开 token（写入 ProxyGroup.Proxies，由 generator 展开为实际节点）。
+const (
+	MemberTokenAll    = "ALL"          // 全部节点
+	RegionTokenPrefix = "REGION:"      // 地区前缀，如 REGION:US
+	RegionTokenAll    = "REGION:ALL"   // 全部节点（等价 REGION:*）
+	RegionTokenOther  = "REGION:OTHER" // 非常用地区节点聚合
+)

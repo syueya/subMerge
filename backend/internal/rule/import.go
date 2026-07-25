@@ -62,7 +62,7 @@ func parseBatchImportText(text, defaultType, defaultTarget, defaultNote, default
 		case len(parts) == 1:
 			// 仅 payload
 			if defaultTarget == "" {
-				errs = append(errs, fmt.Sprintf("第%d行：仅写匹配内容时需指定默认出口", lineNo))
+				errs = appendImportError(errs, fmt.Sprintf("第%d行：仅写匹配内容时需指定默认出口", lineNo))
 				continue
 			}
 			typ = defaultType
@@ -86,7 +86,7 @@ func parseBatchImportText(text, defaultType, defaultTarget, defaultNote, default
 					note = defaultNote
 				} else {
 					if defaultTarget == "" {
-						errs = append(errs, fmt.Sprintf("第%d行：缺少出口，且未设置默认出口", lineNo))
+						errs = appendImportError(errs, fmt.Sprintf("第%d行：缺少出口，且未设置默认出口", lineNo))
 						continue
 					}
 					payload = parts[2]
@@ -94,7 +94,7 @@ func parseBatchImportText(text, defaultType, defaultTarget, defaultNote, default
 					note = defaultNote
 				}
 			} else {
-				errs = append(errs, fmt.Sprintf("第%d行：格式应为 分类,类型,匹配内容,出口[,备注]", lineNo))
+				errs = appendImportError(errs, fmt.Sprintf("第%d行：格式应为 分类,类型,匹配内容,出口[,备注]", lineNo))
 				continue
 			}
 		case len(parts) == 4:
@@ -102,7 +102,7 @@ func parseBatchImportText(text, defaultType, defaultTarget, defaultNote, default
 			// 或 category,MATCH,,target / category,MATCH,target,note
 			category = parts[0]
 			if !isKnownRuleType(parts[1]) {
-				errs = append(errs, fmt.Sprintf("第%d行：未知规则类型 %q", lineNo, parts[1]))
+				errs = appendImportError(errs, fmt.Sprintf("第%d行：未知规则类型 %q", lineNo, parts[1]))
 				continue
 			}
 			typ = normalizeRuleType(parts[1])
@@ -127,7 +127,7 @@ func parseBatchImportText(text, defaultType, defaultTarget, defaultNote, default
 			// note 中若含逗号则 parts[4:] 拼回
 			category = parts[0]
 			if !isKnownRuleType(parts[1]) {
-				errs = append(errs, fmt.Sprintf("第%d行：未知规则类型 %q", lineNo, parts[1]))
+				errs = appendImportError(errs, fmt.Sprintf("第%d行：未知规则类型 %q", lineNo, parts[1]))
 				continue
 			}
 			typ = normalizeRuleType(parts[1])
@@ -162,7 +162,7 @@ func parseBatchImportText(text, defaultType, defaultTarget, defaultNote, default
 		}
 
 		if err := validateRule(typ, payload, target); err != nil {
-			errs = append(errs, fmt.Sprintf("第%d行：%s", lineNo, err.Error()))
+			errs = appendImportError(errs, fmt.Sprintf("第%d行：%s", lineNo, err.Error()))
 			continue
 		}
 
@@ -176,19 +176,6 @@ func parseBatchImportText(text, defaultType, defaultTarget, defaultNote, default
 		})
 	}
 	return ok, errs
-}
-
-// isKnownRuleType 是否为支持的 Clash 规则类型名
-func isKnownRuleType(s string) bool {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD",
-		"GEOSITE", "GEOIP", "IP-CIDR", "IP-CIDR6",
-		"SRC-IP-CIDR", "SRC-PORT", "DST-PORT",
-		"PROCESS-NAME", "PROCESS-PATH", "RULE-SET", "MATCH":
-		return true
-	default:
-		return false
-	}
 }
 
 func normalizeRuleType(s string) string {

@@ -29,12 +29,52 @@ func (s *Service) ListRules() (common.RuleListResponse, error) {
 	return common.RuleListResponse{Items: items}, nil
 }
 
+func (s *Service) validateRuleTarget(target string) error {
+	target = strings.TrimSpace(target)
+	if target == "" || target == common.TargetDirect || target == common.TargetReject {
+		if target == "" {
+			return fmt.Errorf("rule target required")
+		}
+		return nil
+	}
+	var count int64
+	if err := s.db.Model(&database.ProxyGroup{}).Where("name = ?", target).Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		var groups int64
+		if err := s.db.Model(&database.ProxyGroup{}).Count(&groups).Error; err != nil {
+			return err
+		}
+		if groups == 0 {
+			return nil
+		}
+		return fmt.Errorf("rule target %q does not reference an existing proxy group", target)
+	}
+	return nil
+}
+
+func (s *Service) validateRuleRequest(req common.UpsertRuleRequest) (string, string, string, error) {
+	typ := strings.ToUpper(strings.TrimSpace(req.Type))
+	payload := strings.TrimSpace(req.Payload)
+	target := strings.TrimSpace(req.Target)
+	if err := validateRuleFields(typ, payload, target, req.Note, req.Category); err != nil {
+		return "", "", "", err
+	}
+	if err := validateRule(typ, payload, target); err != nil {
+		return "", "", "", err
+	}
+	if err := s.validateRuleTarget(target); err != nil {
+		return "", "", "", err
+	}
+	return typ, payload, target, nil
+}
+
 func (s *Service) CreateRule(req common.UpsertRuleRequest) (common.Rule, error) {
-	if err := validateRule(req.Type, req.Payload, req.Target); err != nil {
+	typ, payload, target, err := s.validateRuleRequest(req)
+	if err != nil {
 		return common.Rule{}, err
 	}
-	typ := strings.TrimSpace(req.Type)
-	payload := strings.TrimSpace(req.Payload)
 	// 不允许再建第二条系统规则
 	if isSystemSeedRule(typ, payload) {
 		var n int64
@@ -60,7 +100,7 @@ func (s *Service) CreateRule(req common.UpsertRuleRequest) (common.Rule, error) 
 	}
 
 	var created database.Rule
-	err := s.db.Transaction(func(tx *gorm.DB) error {
+	err = s.db.Transaction(func(tx *gorm.DB) error {
 		// 插在国内 GEOIP / MATCH 之前（与批量导入一致）
 		order := 100
 		if req.SortOrder != nil {
@@ -83,7 +123,7 @@ func (s *Service) CreateRule(req common.UpsertRuleRequest) (common.Rule, error) 
 		row := database.Rule{
 			Type:      typ,
 			Payload:   payload,
-			Target:    strings.TrimSpace(req.Target),
+			Target:    target,
 			Enabled:   enabled,
 			SortOrder: order,
 			Note:      strings.TrimSpace(req.Note),
@@ -114,6 +154,12 @@ func (s *Service) UpdateRule(id uint, req common.UpsertRuleRequest) (common.Rule
 		if err := validateRule(row.Type, row.Payload, req.Target); err != nil {
 			return common.Rule{}, err
 		}
+		if err := validateRuleFields(row.Type, row.Payload, req.Target, req.Note, systemRuleCategory); err != nil {
+			return common.Rule{}, err
+		}
+		if err := s.validateRuleTarget(req.Target); err != nil {
+			return common.Rule{}, err
+		}
 		row.Target = strings.TrimSpace(req.Target)
 		row.Note = strings.TrimSpace(req.Note)
 		row.Category = systemRuleCategory
@@ -127,18 +173,19 @@ func (s *Service) UpdateRule(id uint, req common.UpsertRuleRequest) (common.Rule
 		return toRule(row), nil
 	}
 
-	if err := validateRule(req.Type, req.Payload, req.Target); err != nil {
+	typ, payload, target, err := s.validateRuleRequest(req)
+	if err != nil {
 		return common.Rule{}, err
 	}
 	// 业务规则不可改成「第二条」系统规则身份
-	newType := strings.TrimSpace(req.Type)
-	newPayload := strings.TrimSpace(req.Payload)
+	newType := typ
+	newPayload := payload
 	if isSystemSeedRule(newType, newPayload) {
 		return common.Rule{}, fmt.Errorf("不可将业务规则改为系统规则（广告/国内/兜底由系统托管）")
 	}
 	row.Type = newType
 	row.Payload = newPayload
-	row.Target = strings.TrimSpace(req.Target)
+	row.Target = target
 	row.Note = strings.TrimSpace(req.Note)
 	row.Category = strings.TrimSpace(req.Category)
 	if req.Enabled != nil {
@@ -170,6 +217,9 @@ func (s *Service) DeleteRule(id uint) error {
 }
 
 func (s *Service) ReorderRules(ids []uint) error {
+	if len(ids) > maxReorderIDs {
+		return fmt.Errorf("too many orderedIds; maximum is %d", maxReorderIDs)
+	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var rows []database.Rule
 		if err := tx.Order("sort_order asc, id asc").Find(&rows).Error; err != nil {

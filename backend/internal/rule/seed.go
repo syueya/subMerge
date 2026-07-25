@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/defaults"
 	"github.com/submerge/submerge/backend/internal/database"
 	"gopkg.in/yaml.v3"
@@ -20,27 +21,27 @@ type seedRulesFile struct {
 }
 
 type seedGroup struct {
-		Name     string   `yaml:"name"`
-		Type     string   `yaml:"type"`
-		Proxies  []string `yaml:"proxies"`
-		Enabled  *bool    `yaml:"enabled"`
-		// SortOrder 可选；省略则按 YAML 列表顺序自动编号
-		SortOrder *int   `yaml:"sortOrder"`
-		URL       string `yaml:"url"`
-		Interval  *int   `yaml:"interval"`
-	}
+	Name    string   `yaml:"name"`
+	Type    string   `yaml:"type"`
+	Proxies []string `yaml:"proxies"`
+	Enabled *bool    `yaml:"enabled"`
+	// SortOrder 可选；省略则按 YAML 列表顺序自动编号
+	SortOrder *int   `yaml:"sortOrder"`
+	URL       string `yaml:"url"`
+	Interval  *int   `yaml:"interval"`
+}
 
 type seedRule struct {
-			Type    string `yaml:"type"`
-			Payload string `yaml:"payload"`
-			Target  string `yaml:"target"`
-			Enabled *bool  `yaml:"enabled"`
-			// SortOrder 可选；省略则按 YAML 列表顺序自动编号（Clash 匹配顺序）
-			SortOrder *int   `yaml:"sortOrder"`
-			Note      string `yaml:"note"`
-			// Category 业务分类（面板分组，不进 Clash）
-			Category  string `yaml:"category"`
-		}
+	Type    string `yaml:"type"`
+	Payload string `yaml:"payload"`
+	Target  string `yaml:"target"`
+	Enabled *bool  `yaml:"enabled"`
+	// SortOrder 可选；省略则按 YAML 列表顺序自动编号（Clash 匹配顺序）
+	SortOrder *int   `yaml:"sortOrder"`
+	Note      string `yaml:"note"`
+	// Category 业务分类（面板分组，不进 Clash）
+	Category string `yaml:"category"`
+}
 
 func loadSeedDefaults() (groups []database.ProxyGroup, rules []database.Rule, err error) {
 	groups, err = loadSeedGroups()
@@ -68,7 +69,7 @@ func systemRuleDefs() []database.Rule {
 		{
 			Type:     "GEOSITE",
 			Payload:  "category-ads-all",
-			Target:   "拒绝",
+			Target:   common.GroupNameReject,
 			Enabled:  true,
 			Note:     "广告",
 			Category: systemRuleCategory,
@@ -76,7 +77,7 @@ func systemRuleDefs() []database.Rule {
 		{
 			Type:     "GEOIP",
 			Payload:  "CN",
-			Target:   "直连",
+			Target:   common.GroupNameDirect,
 			Enabled:  true,
 			Note:     "国内直连",
 			Category: systemRuleCategory,
@@ -84,7 +85,7 @@ func systemRuleDefs() []database.Rule {
 		{
 			Type:     "MATCH",
 			Payload:  "",
-			Target:   "美国US",
+			Target:   common.GroupNameDefaultUS,
 			Enabled:  true,
 			Note:     "默认走代理",
 			Category: systemRuleCategory,
@@ -154,22 +155,22 @@ func loadSeedGroups() ([]database.ProxyGroup, error) {
 			proxies = []string{}
 		}
 		// 列表顺序即面板排列；显式 sortOrder 可覆盖
-			order := i
-			if g.SortOrder != nil {
-				order = *g.SortOrder
-			}
-			out = append(out, database.ProxyGroup{
-				Name:      name,
-				Type:      typ,
-				Proxies:   mustJSON(proxies),
-				URL:       g.URL,
-				Interval:  g.Interval,
-				Enabled:   enabled,
-				SortOrder: order,
-			})
+		order := i
+		if g.SortOrder != nil {
+			order = *g.SortOrder
 		}
-		return out, nil
+		out = append(out, database.ProxyGroup{
+			Name:      name,
+			Type:      typ,
+			Proxies:   mustJSON(proxies),
+			URL:       g.URL,
+			Interval:  g.Interval,
+			Enabled:   enabled,
+			SortOrder: order,
+		})
 	}
+	return out, nil
+}
 
 // loadSeedRules 只读业务默认（backend/defaults/rules.yaml）。
 // 系统规则（广告 / 国内 GEOIP / MATCH）不在此文件，由 systemRuleDefs + ensureSystemRules 托管。

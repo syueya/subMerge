@@ -52,17 +52,17 @@ type ProxyNode struct {
 }
 
 // Rule 分流规则
-	type Rule struct {
-		ID        uint     `json:"id"`
-		Type      RuleType `json:"type"`
-		Payload   string   `json:"payload"`
-		Target    string   `json:"target"`
-		Enabled   bool     `json:"enabled"`
-		SortOrder int      `json:"sortOrder"`
-		Note      string   `json:"note,omitempty"`
-		// Category 业务分类（仅面板；不进 Clash）
-		Category  string   `json:"category,omitempty"`
-	}
+type Rule struct {
+	ID        uint     `json:"id"`
+	Type      RuleType `json:"type"`
+	Payload   string   `json:"payload"`
+	Target    string   `json:"target"`
+	Enabled   bool     `json:"enabled"`
+	SortOrder int      `json:"sortOrder"`
+	Note      string   `json:"note,omitempty"`
+	// Category 业务分类（仅面板；不进 Clash）
+	Category string `json:"category,omitempty"`
+}
 
 // ProxyGroup 策略组
 type ProxyGroup struct {
@@ -77,67 +77,67 @@ type ProxyGroup struct {
 }
 
 // ShareToken 分享令牌
-	// SourceIDs 为空表示该链接包含全部启用订阅源；非空则仅包含所列源的节点
-	// GroupMode 控制策略组投影：auto / all / custom
-	type ShareToken struct {
-		ID           uint        `json:"id"`
-		Name         string      `json:"name"`
-		Token        string      `json:"token,omitempty"`
-		TokenMasked  string      `json:"tokenMasked"`
-		Status       TokenStatus `json:"status"`
-		// SourceIDs 允许的订阅源；空数组 = 全部源
-		SourceIDs []uint `json:"sourceIds"`
-		// SourceNames 与 SourceIDs 对应的源名称（列表展示用；已删除的源会标为已失效）
-		SourceNames []string `json:"sourceNames,omitempty"`
-		// GroupMode auto=按节点剪空组；all=尽量保留模板组；custom=仅 groupNames
-		GroupMode TokenGroupMode `json:"groupMode"`
-		// GroupNames custom 模式下的策略组白名单；其它模式可为空
-		GroupNames   []string `json:"groupNames,omitempty"`
-		AccessCount  int64    `json:"accessCount"`
-		LastAccessAt *string  `json:"lastAccessAt,omitempty"`
-		CreatedAt    string   `json:"createdAt"`
-		UpdatedAt    string   `json:"updatedAt"`
-		SubscribeURL string   `json:"subscribeUrl,omitempty"`
-	}
+// SourceIDs 为空表示该链接包含全部启用订阅源；非空则仅包含所列源的节点
+// GroupMode 控制策略组投影：auto / all / custom
+type ShareToken struct {
+	ID          uint        `json:"id"`
+	Name        string      `json:"name"`
+	Token       string      `json:"token,omitempty"`
+	TokenMasked string      `json:"tokenMasked"`
+	Status      TokenStatus `json:"status"`
+	// SourceIDs 允许的订阅源；空数组 = 全部源
+	SourceIDs []uint `json:"sourceIds"`
+	// SourceNames 与 SourceIDs 对应的源名称（列表展示用；已删除的源会标为已失效）
+	SourceNames []string `json:"sourceNames,omitempty"`
+	// GroupMode auto=按节点剪空组；all=尽量保留模板组；custom=仅 groupNames
+	GroupMode TokenGroupMode `json:"groupMode"`
+	// GroupNames custom 模式下的策略组白名单；其它模式可为空
+	GroupNames   []string `json:"groupNames,omitempty"`
+	AccessCount  int64    `json:"accessCount"`
+	LastAccessAt *string  `json:"lastAccessAt,omitempty"`
+	CreatedAt    string   `json:"createdAt"`
+	UpdatedAt    string   `json:"updatedAt"`
+	SubscribeURL string   `json:"subscribeUrl,omitempty"`
+}
 
 // Release 发布版本
-	type Release struct {
-		ID          uint          `json:"id"`
-		Version     int           `json:"version"`
-		Status      ReleaseStatus `json:"status"`
-		Note        string        `json:"note,omitempty"`
-		ProxyCount  int           `json:"proxyCount"`
-		RuleCount   int           `json:"ruleCount"`
-		ConfigHash  string        `json:"configHash"`
-		PublishedAt *string       `json:"publishedAt,omitempty"`
-		CreatedAt   string        `json:"createdAt"`
-		CreatedBy   string        `json:"createdBy"`
-	}
+type Release struct {
+	ID          uint          `json:"id"`
+	Version     int           `json:"version"`
+	Status      ReleaseStatus `json:"status"`
+	Note        string        `json:"note,omitempty"`
+	ProxyCount  int           `json:"proxyCount"`
+	RuleCount   int           `json:"ruleCount"`
+	ConfigHash  string        `json:"configHash"`
+	PublishedAt *string       `json:"publishedAt,omitempty"`
+	CreatedAt   string        `json:"createdAt"`
+	CreatedBy   string        `json:"createdBy"`
+}
 
-	// ReleaseRuleLine 发布配置中的单条规则（从 YAML 解析，便于历史查看/匹配测试）
-	type ReleaseRuleLine struct {
-		Type    string `json:"type"`
-		Payload string `json:"payload,omitempty"`
-		Target  string `json:"target"`
-		Raw     string `json:"raw"`
-	}
+// ReleaseRuleLine 发布配置中的单条规则（从 YAML 解析，便于历史查看/匹配测试）
+type ReleaseRuleLine struct {
+	Type    string `json:"type"`
+	Payload string `json:"payload,omitempty"`
+	Target  string `json:"target"`
+	Raw     string `json:"raw"`
+}
 
-	// ReleaseDetail 发布版本详情（含完整 YAML 与规则列表）
-	type ReleaseDetail struct {
-		Release
-		ConfigYAML string            `json:"configYaml"`
-		Rules      []ReleaseRuleLine `json:"rules"`
-		Groups     []string          `json:"groups"`
-	}
+// ReleaseDetail 发布版本详情（含完整 YAML 与规则列表）
+type ReleaseDetail struct {
+	Release
+	ConfigYAML string            `json:"configYaml"`
+	Rules      []ReleaseRuleLine `json:"rules"`
+	Groups     []string          `json:"groups"`
+}
 
-	// ReleasePreview 发布预览
-	type ReleasePreview struct {
-		ProxyCount  int      `json:"proxyCount"`
-		RuleCount   int      `json:"ruleCount"`
-		Groups      []string `json:"groups"`
-		YAMLPreview string   `json:"yamlPreview"`
-		Warnings    []string `json:"warnings"`
-	}
+// ReleasePreview 发布预览
+type ReleasePreview struct {
+	ProxyCount  int      `json:"proxyCount"`
+	RuleCount   int      `json:"ruleCount"`
+	Groups      []string `json:"groups"`
+	YAMLPreview string   `json:"yamlPreview"`
+	Warnings    []string `json:"warnings"`
+}
 
 // AdminUser 管理员
 type AdminUser struct {

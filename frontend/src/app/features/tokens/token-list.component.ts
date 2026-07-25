@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
 	TOKEN_GROUP_MODE_OPTIONS,
@@ -154,52 +154,74 @@ export class TokenListComponent implements OnInit {
 		return new Set(this.sourceList().map((s) => s.id));
 	}
 
-	setCreateAll(all: boolean): void {
-		this.createAllSources.set(all);
-		if (all) {
-			// 全部源：展开列表并全部勾选
-			this.createSourceIds.set(this.allSourceIdSet());
-		} else {
-			// 取消全部源：保留当前勾选，便于再微调；若此前是全选则仍全选
-			if (this.createSourceIds().size === 0) {
-				this.createSourceIds.set(this.allSourceIdSet());
-			}
+	// --- 源勾选：create/edit 共用的底层逻辑（参数化 signal，避免两套复制） ---
+
+	/** 切换「全部源」：勾全部；取消时若当前空则回退全选，便于微调 */
+	private setAllSources(allFlag: WritableSignal<boolean>, ids: WritableSignal<Set<number>>, all: boolean): void {
+		allFlag.set(all);
+		if (all || ids().size === 0) {
+			ids.set(this.allSourceIdSet());
 		}
 	}
 
-	toggleCreateSource(id: number, checked: boolean): void {
-		const next = new Set(this.createSourceIds());
+	/** 勾选单个源；勾满全部时自动回到「全部源」状态 */
+	private toggleSource(
+		allFlag: WritableSignal<boolean>,
+		ids: WritableSignal<Set<number>>,
+		id: number,
+		checked: boolean,
+	): void {
+		const next = new Set(ids());
 		if (checked) next.add(id);
 		else next.delete(id);
-		this.createSourceIds.set(next);
+		ids.set(next);
 
 		const allIds = this.sourceList().map((s) => s.id);
-		const isAll =
-			allIds.length > 0 && allIds.every((sid) => next.has(sid)) && next.size === allIds.length;
-		this.createAllSources.set(isAll);
+		allFlag.set(allIds.length > 0 && next.size === allIds.length && allIds.every((sid) => next.has(sid)));
+	}
+
+	/** 全部源模式下一律显示为勾选 */
+	private isSourceChecked(allFlag: WritableSignal<boolean>, ids: WritableSignal<Set<number>>, id: number): boolean {
+		return allFlag() || ids().has(id);
+	}
+
+	// --- 策略组勾选：create/edit 共用 ---
+
+	/** 切到 custom 且尚未选组时，默认勾选启用中的策略组 */
+	private applyGroupMode(names: WritableSignal<Set<string>>, mode: TokenGroupMode): void {
+		if (mode === 'custom' && names().size === 0) {
+			names.set(new Set(this.groupList().filter((g) => g.enabled).map((g) => g.name)));
+		}
+	}
+
+	private toggleGroup(names: WritableSignal<Set<string>>, name: string, checked: boolean): void {
+		const next = new Set(names());
+		if (checked) next.add(name);
+		else next.delete(name);
+		names.set(next);
+	}
+
+	// --- create 视图：薄封装转发到共用逻辑 ---
+
+	setCreateAll(all: boolean): void {
+		this.setAllSources(this.createAllSources, this.createSourceIds, all);
+	}
+
+	toggleCreateSource(id: number, checked: boolean): void {
+		this.toggleSource(this.createAllSources, this.createSourceIds, id, checked);
 	}
 
 	isCreateSourceChecked(id: number): boolean {
-		// 全部源模式下列表全部显示为勾选
-		if (this.createAllSources()) return true;
-		return this.createSourceIds().has(id);
+		return this.isSourceChecked(this.createAllSources, this.createSourceIds, id);
 	}
 
 	setCreateGroupMode(mode: TokenGroupMode): void {
 		this.createGroupMode.set(mode);
-		if (mode === 'custom' && this.createGroupNames().size === 0) {
-			// 默认勾选启用中的策略组，方便再微调
-			this.createGroupNames.set(
-				new Set(this.groupList().filter((g) => g.enabled).map((g) => g.name)),
-			);
-		}
+		this.applyGroupMode(this.createGroupNames, mode);
 	}
 
 	toggleCreateGroup(name: string, checked: boolean): void {
-		const next = new Set(this.createGroupNames());
-		if (checked) next.add(name);
-		else next.delete(name);
-		this.createGroupNames.set(next);
+		this.toggleGroup(this.createGroupNames, name, checked);
 	}
 
 	isCreateGroupChecked(name: string): boolean {
@@ -276,45 +298,24 @@ export class TokenListComponent implements OnInit {
 	}
 
 	setEditAll(all: boolean): void {
-		this.editAllSources.set(all);
-		if (all) {
-			this.editSourceIds.set(this.allSourceIdSet());
-		} else if (this.editSourceIds().size === 0) {
-			this.editSourceIds.set(this.allSourceIdSet());
-		}
+		this.setAllSources(this.editAllSources, this.editSourceIds, all);
 	}
 
 	toggleEditSource(id: number, checked: boolean): void {
-		const next = new Set(this.editSourceIds());
-		if (checked) next.add(id);
-		else next.delete(id);
-		this.editSourceIds.set(next);
-
-		const allIds = this.sourceList().map((s) => s.id);
-		const isAll =
-			allIds.length > 0 && allIds.every((sid) => next.has(sid)) && next.size === allIds.length;
-		this.editAllSources.set(isAll);
+		this.toggleSource(this.editAllSources, this.editSourceIds, id, checked);
 	}
 
 	isEditSourceChecked(id: number): boolean {
-		if (this.editAllSources()) return true;
-		return this.editSourceIds().has(id);
+		return this.isSourceChecked(this.editAllSources, this.editSourceIds, id);
 	}
 
 	setEditGroupMode(mode: TokenGroupMode): void {
 		this.editGroupMode.set(mode);
-		if (mode === 'custom' && this.editGroupNames().size === 0) {
-			this.editGroupNames.set(
-				new Set(this.groupList().filter((g) => g.enabled).map((g) => g.name)),
-			);
-		}
+		this.applyGroupMode(this.editGroupNames, mode);
 	}
 
 	toggleEditGroup(name: string, checked: boolean): void {
-		const next = new Set(this.editGroupNames());
-		if (checked) next.add(name);
-		else next.delete(name);
-		this.editGroupNames.set(next);
+		this.toggleGroup(this.editGroupNames, name, checked);
 	}
 
 	isEditGroupChecked(name: string): boolean {

@@ -76,7 +76,7 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
- token: string;
+ // 会话令牌改由 HttpOnly cookie 承载，不再出现在响应体中
  user: AdminUser;
 }
 
@@ -147,8 +147,10 @@ export interface RefreshSourceResult {
 		skipped: number;
 		parseDropped?: Record<string, number>;
 		filterDropped?: Record<string, number>;
-		/** 被过滤掉的上游节点名（完整列表） */
+		/** 被过滤掉的上游节点名样本，最多返回 1000 条 */
 		filteredNames?: string[];
+		/** 因响应上限未返回的过滤节点名数量 */
+		filteredNamesOmitted?: number;
 		parseDroppedNames?: string[];
 		regionCounts?: Record<string, number>;
 	}

@@ -3,12 +3,12 @@ package publish
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"strings"
+
+	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/database"
 	"gopkg.in/yaml.v3"
-	"sort"
-	"strings"
 )
 
 // Generator 生成 Clash Meta 配置
@@ -64,155 +64,21 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 		return nil, fmt.Errorf("no proxies available; refresh sources first")
 	}
 
-	// 按节点名前缀收集各地区节点，例如 US-xxx / JP-xxx / HK-xxx
-	byRegion := map[string][]string{}
-	// 按订阅源收集：SOURCE:名称 / SOURCE:id:N 展开用
-	bySourceName := map[string][]string{} // key = lower(name)
-	bySourceID := map[uint][]string{}
-	sourceNameByID := map[uint]string{}
-	allNames := make([]string, 0, len(in.Proxies))
-	seenName := map[string]struct{}{}
-	dupDropped := 0
-	for _, p := range in.Proxies {
-		name, _ := p["name"].(string)
-		name = strings.TrimSpace(name)
-		if name == "" {
-			continue
-		}
-		if _, ok := seenName[name]; ok {
-			dupDropped++
-			continue
-		}
-		seenName[name] = struct{}{}
-		allNames = append(allNames, name)
-		if region, ok := regionFromProxyName(name); ok {
-			byRegion[region] = append(byRegion[region], name)
-		}
-		if sid, ok := proxySourceID(p); ok {
-			bySourceID[sid] = append(bySourceID[sid], name)
-			if sn := proxySourceName(p); sn != "" {
-				sourceNameByID[sid] = sn
-				key := strings.ToLower(sn)
-				bySourceName[key] = append(bySourceName[key], name)
-			}
-		} else if sn := proxySourceName(p); sn != "" {
-			key := strings.ToLower(sn)
-			bySourceName[key] = append(bySourceName[key], name)
-		}
-	}
-	if dupDropped > 0 {
-		warnings = append(warnings, fmt.Sprintf("dropped %d duplicate proxy name(s); check source name suffixes", dupDropped))
-	}
+	// 阶段 1：按地区 / 订阅源建立节点索引，供策略组成员展开使用
+	idx := indexProxies(in.Proxies)
+	warnings = append(warnings, idx.warnings...)
 
-	if len(byRegion) == 0 {
-		warnings = append(warnings, "no region-prefixed proxies found (expected NAME like US-node / JP-node)")
-	} else {
-		regions := make([]string, 0, len(byRegion))
-		for r := range byRegion {
-			regions = append(regions, r)
-		}
-		sort.Strings(regions)
-		warnings = append(warnings, "available regions: "+strings.Join(regions, ", "))
-	}
-	if len(bySourceName) > 0 || len(bySourceID) > 0 {
-		// 展示名优先用原始大小写；按名称排序保证 hash 稳定
-		labels := make([]string, 0, len(bySourceName)+len(bySourceID))
-		seenLabel := map[string]struct{}{}
-		for id, sn := range sourceNameByID {
-			label := fmt.Sprintf("%s(id:%d)", sn, id)
-			if _, ok := seenLabel[label]; !ok {
-				seenLabel[label] = struct{}{}
-				labels = append(labels, label)
-			}
-		}
-		for key := range bySourceName {
-			// 无 id 映射时补 lower key
-			found := false
-			for _, sn := range sourceNameByID {
-				if strings.ToLower(sn) == key {
-					found = true
-					break
-				}
-			}
-			if !found {
-				if _, ok := seenLabel[key]; !ok {
-					seenLabel[key] = struct{}{}
-					labels = append(labels, key)
-				}
-			}
-		}
-		sort.Strings(labels)
-		warnings = append(warnings, "available sources: "+strings.Join(labels, ", "))
-	}
-
-	// 策略组投影：按 GroupMode 决定空组/白名单行为
+	// 阶段 2：策略组投影（按 GroupMode 决定空组/白名单行为）
 	mode := resolveGroupMode(in)
-	allowSet := map[string]struct{}{}
-	if mode == "custom" {
-		for _, n := range in.AllowedGroups {
-			n = strings.TrimSpace(n)
-			if n != "" {
-				allowSet[n] = struct{}{}
-			}
-		}
-	}
-	// 全量发布（auto 且无源过滤语义）时，规则目标缺失应硬失败；
-	// 投影场景（auto 剪组 / all 占位 / custom）规则目标缺失：
-	//   优先回退「节点选择」，否则 DIRECT。
-	// 约定：Publish 全量 build 用 GroupMode="" → auto，且期望严格规则校验。
-	// 订阅投影显式传 auto/all/custom。为区分「全量严格」与「投影 auto」，
-	// 用 Projected 标志… 简化：仅当 GroupMode 为空且 !Lenient 时严格；
-	// 显式 auto/all/custom 均允许规则回退。
+	// 全量发布（GroupMode 为空且非 Lenient）时规则目标缺失应硬失败；
+	// 投影场景（auto 剪组 / all 占位 / custom）规则目标缺失时回退。
 	strictRules := strings.TrimSpace(in.GroupMode) == "" && !in.Lenient
 
-	groupNames := make([]string, 0, len(in.Groups))
-	groupSet := map[string]struct{}{
-		"DIRECT": {},
-		"REJECT": {},
-	}
-	proxyGroups := make([]map[string]interface{}, 0, len(in.Groups))
-	for _, grp := range in.Groups {
-		name := strings.TrimSpace(grp.Name)
-		if name == "" {
-			continue
-		}
-		if mode == "custom" {
-			if _, ok := allowSet[name]; !ok {
-				continue
-			}
-		}
-		var refs []string
-		_ = json.Unmarshal([]byte(grp.Proxies), &refs)
-		expanded := expandRefs(refs, byRegion, bySourceName, bySourceID, allNames)
-		// 空地区组：展开后无成员，或本应有节点/地区引用却只剩 DIRECT/REJECT
-		// （「直连」「拒绝」这类本身只有 DIRECT/REJECT 的组会保留）
-		if isEmptyProjectedGroup(refs, expanded) {
-			switch mode {
-			case "all":
-				warnings = append(warnings,
-					fmt.Sprintf("proxy group %q empty after filter; fallback to DIRECT", name))
-				expanded = []string{"DIRECT"}
-			default: // auto / custom：剪掉空组
-				warnings = append(warnings,
-					fmt.Sprintf("proxy group %q skipped: empty after expansion", name))
-				continue
-			}
-		}
-		item := map[string]interface{}{
-			"name":    name,
-			"type":    grp.Type,
-			"proxies": expanded,
-		}
-		if grp.URL != "" {
-			item["url"] = grp.URL
-		}
-		if grp.Interval != nil {
-			item["interval"] = *grp.Interval
-		}
-		proxyGroups = append(proxyGroups, item)
-		groupNames = append(groupNames, name)
-		groupSet[name] = struct{}{}
-	}
+	proj := projectGroups(in.Groups, mode, in.AllowedGroups, idx)
+	warnings = append(warnings, proj.warnings...)
+	proxyGroups := proj.groups
+	groupNames := proj.groupNames
+	groupSet := proj.groupSet
 	if len(proxyGroups) == 0 {
 		return nil, fmt.Errorf("no usable proxy groups after expansion; add nodes or fix REGION:xx refs")
 	}
@@ -221,14 +87,14 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 	ruleLines := make([]string, 0, len(in.Rules))
 	hasMatch := false
 	// 投影场景下缺失目标的优先回退：节点选择 → DIRECT
-	const fallbackProxyGroup = "节点选择"
+	const fallbackProxyGroup = common.GroupNameSelectAll
 	for _, r := range in.Rules {
 		target := strings.TrimSpace(r.Target)
 		if _, ok := groupSet[target]; !ok {
 			if strictRules {
 				return nil, fmt.Errorf("rule target %q not found in proxy-groups/DIRECT/REJECT", target)
 			}
-			fallback := "DIRECT"
+			fallback := common.TargetDirect
 			if _, ok := groupSet[fallbackProxyGroup]; ok {
 				fallback = fallbackProxyGroup
 			}
@@ -274,8 +140,8 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 		for _, g := range groupNames {
 			alive[g] = struct{}{}
 		}
-		alive["DIRECT"] = struct{}{}
-		alive["REJECT"] = struct{}{}
+		alive[common.TargetDirect] = struct{}{}
+		alive[common.TargetReject] = struct{}{}
 		for _, g := range proxyGroups {
 			refs, _ := g["proxies"].([]string)
 			if refs == nil {
@@ -294,7 +160,7 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 				}
 			}
 			if len(filtered) == 0 {
-				filtered = []string{"DIRECT"}
+				filtered = []string{common.TargetDirect}
 			}
 			g["proxies"] = filtered
 		}

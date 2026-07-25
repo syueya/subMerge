@@ -3,7 +3,6 @@ package source
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -15,23 +14,14 @@ func parseVlessURI(raw string) (map[string]interface{}, error) {
 	}
 	uuid := u.User.Username()
 	host := u.Hostname()
-	port := 443
-	if p := u.Port(); p != "" {
-		n, err := strconv.Atoi(p)
-		if err != nil || n < 1 || n > 65535 {
-			return nil, fmt.Errorf("vless invalid port")
-		}
-		port = n
+	port, err := parsePortOr443(u, "vless")
+	if err != nil {
+		return nil, err
 	}
 	if host == "" || uuid == "" {
 		return nil, fmt.Errorf("vless missing host/uuid")
 	}
-	name := strings.TrimSpace(u.Fragment)
-	if name == "" {
-		name = fmt.Sprintf("vless-%s-%d", host, port)
-	} else if unesc, err := url.QueryUnescape(name); err == nil {
-		name = strings.TrimSpace(unesc)
-	}
+	name := fragmentName(u, "vless", host, port)
 	q := u.Query()
 	m := map[string]interface{}{
 		"name":   name,

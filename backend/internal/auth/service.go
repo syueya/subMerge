@@ -36,6 +36,44 @@ func NewService(db *gorm.DB, sessionTTL time.Duration) *Service {
 	return &Service{db: db, sessionTTL: sessionTTL}
 }
 
+// minPasswordLen 口令最小长度
+const minPasswordLen = 10
+
+// weakPasswords 常见弱口令黑名单（小写比较），拒绝明显易猜的口令。
+var weakPasswords = map[string]struct{}{
+	"password":      {},
+	"password1":     {},
+	"password123":   {},
+	"12345678":      {},
+	"123456789":     {},
+	"1234567890":    {},
+	"qwertyuiop":    {},
+	"admin123":      {},
+	"administrator": {},
+	"changeme123":   {},
+	"letmein123":    {},
+	"iloveyou123":   {},
+}
+
+// validatePassword 校验口令强度：长度下限 + 常见弱口令黑名单。
+func validatePassword(password string) error {
+	if len(password) < minPasswordLen {
+		return ErrWeakPassword
+	}
+	if _, ok := weakPasswords[strings.ToLower(strings.TrimSpace(password))]; ok {
+		return ErrWeakPassword
+	}
+	return nil
+}
+
+// PurgeExpiredSessions 硬删所有已过期会话，防止无限堆积。
+func (s *Service) PurgeExpiredSessions() (int64, error) {
+	res := s.db.Unscoped().
+		Where("expires_at <= ?", time.Now()).
+		Delete(&database.Session{})
+	return res.RowsAffected, res.Error
+}
+
 // NeedsSetup 库中是否还没有管理员
 func (s *Service) NeedsSetup() (bool, error) {
 	var count int64
@@ -51,8 +89,8 @@ func (s *Service) Bootstrap(username, password, displayName string) (token strin
 	if err := validateUsername(username); err != nil {
 		return "", user, err
 	}
-	if len(password) < 8 {
-		return "", user, ErrWeakPassword
+	if err := validatePassword(password); err != nil {
+		return "", user, err
 	}
 	displayName = strings.TrimSpace(displayName)
 	if displayName == "" {
@@ -157,8 +195,8 @@ func (s *Service) Logout(token string) error {
 
 // ChangePassword 修改密码并清除全部会话（需重新登录）
 func (s *Service) ChangePassword(adminID uint, oldPassword, newPassword string) error {
-	if len(newPassword) < 8 {
-		return ErrWeakPassword
+	if err := validatePassword(newPassword); err != nil {
+		return err
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var admin database.Admin

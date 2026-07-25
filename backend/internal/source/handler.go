@@ -92,7 +92,7 @@ func (h *Handler) Create(c *gin.Context) {
 }
 
 func (h *Handler) Update(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -133,7 +133,7 @@ func (h *Handler) Update(c *gin.Context) {
 }
 
 func (h *Handler) Delete(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -152,6 +152,10 @@ func (h *Handler) BatchDelete(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
 		return
 	}
+	if err := validateSourceBatchIDs(req.IDs); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	if len(req.IDs) == 0 {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "ids required")
 		return
@@ -166,7 +170,7 @@ func (h *Handler) BatchDelete(c *gin.Context) {
 }
 
 func (h *Handler) Refresh(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -208,7 +212,7 @@ func (h *Handler) ListProxies(c *gin.Context) {
 }
 
 func (h *Handler) UpdateProxy(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -237,6 +241,10 @@ func (h *Handler) BatchUpdateProxies(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
 		return
 	}
+	if err := validateSourceBatchIDs(req.IDs); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	if len(req.IDs) == 0 {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "ids required")
 		return
@@ -250,11 +258,6 @@ func (h *Handler) BatchUpdateProxies(c *gin.Context) {
 	apiresp.OK(c, map[string]int{"updated": n})
 }
 
-func parseID(c *gin.Context) (uint, error) {
-	n, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	return uint(n), err
-}
-
 func normalizeRegion(raw string) (string, bool) {
 	r := strings.ToUpper(strings.TrimSpace(raw))
 	if !regionCodeRe.MatchString(r) {
@@ -264,12 +267,5 @@ func normalizeRegion(raw string) (string, bool) {
 }
 
 func isClientFilterErr(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "excludeNameRegex") ||
-		strings.Contains(msg, "includeNameRegex") ||
-		strings.Contains(msg, "invalid exclude") ||
-		strings.Contains(msg, "invalid include")
+	return errors.Is(err, ErrInvalidFilter)
 }

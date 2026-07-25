@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
-	"github.com/submerge/submerge/backend/internal/apiresp"
 	"gorm.io/gorm"
 )
 
 const (
-	ContextAdminID   = "adminID"
-	ContextUsername  = "username"
-	HeaderAuth       = "Authorization"
+	ContextAdminID  = "adminID"
+	ContextUsername = "username"
+	HeaderAuth      = "Authorization"
 )
 
 // AuthRequired 校验会话 token

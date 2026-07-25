@@ -37,16 +37,16 @@ func TestSubscribeResponseIsNotCacheable(t *testing.T) {
 	invalid := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(invalid)
 	ctx.Params = gin.Params{{Key: "token", Value: "not-a-real-token"}}
-		h.Subscribe(ctx)
-		if invalid.Code != 403 {
-			t.Fatalf("invalid token status = %d", invalid.Code)
-		}
-		if body := invalid.Body.String(); body != "invalid token" {
-			t.Fatalf("invalid token body = %q, want invalid token", body)
-		}
-		if invalid.Header().Get("Cache-Control") != "no-store" {
-			t.Fatalf("invalid response cache control = %q", invalid.Header().Get("Cache-Control"))
-		}
+	h.Subscribe(ctx)
+	if invalid.Code != 403 {
+		t.Fatalf("invalid token status = %d", invalid.Code)
+	}
+	if body := invalid.Body.String(); body != "invalid token" {
+		t.Fatalf("invalid token body = %q, want invalid token", body)
+	}
+	if invalid.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("invalid response cache control = %q", invalid.Header().Get("Cache-Control"))
+	}
 
 	token := "subscription-test-token"
 	if err := db.Create(&database.ShareToken{

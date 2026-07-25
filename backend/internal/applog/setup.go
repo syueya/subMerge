@@ -78,7 +78,7 @@ func Setup(outputMode, logDir string, retentionDays int) error {
 		return err
 	}
 
-	mode := normalizeOutput(outputMode)
+	mode := NormalizeOutput(outputMode)
 	if (mode == "file" || mode == "both") && strings.TrimSpace(logDir) == "" {
 		return fmt.Errorf("log dir is required when LOG_OUTPUT=%s", mode)
 	}
@@ -301,7 +301,9 @@ func (w *dailyWriter) rotate(now time.Time) error {
 	return nil
 }
 
-func normalizeOutput(raw string) string {
+// NormalizeOutput 归一化日志输出目标：console | file | both | none。
+// 供 config 复用，保证两处解析规则一致。
+func NormalizeOutput(raw string) string {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "", "console", "stdout", "stderr", "std":
 		return "console"

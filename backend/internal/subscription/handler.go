@@ -56,7 +56,7 @@ func (h *Handler) Create(c *gin.Context) {
 }
 
 func (h *Handler) Update(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -68,11 +68,8 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 	item, err := h.svc.Update(id, req)
 	if err != nil {
-		msg := err.Error()
-		if strings.Contains(msg, "source ids not found") ||
-			strings.Contains(msg, "group names not found") ||
-			strings.Contains(msg, "custom group mode") {
-			apiresp.Fail(c, http.StatusBadRequest, "bad_request", msg)
+		if errors.Is(err, ErrInvalidTokenConfig) {
+			apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 			return
 		}
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "update token failed")
@@ -84,7 +81,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 // Revoke 作废但保留记录（可再生成）
 func (h *Handler) Revoke(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -99,7 +96,7 @@ func (h *Handler) Revoke(c *gin.Context) {
 }
 
 func (h *Handler) Regenerate(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -115,7 +112,7 @@ func (h *Handler) Regenerate(c *gin.Context) {
 
 // Delete 永久删除（硬删）；作废请用 Revoke
 func (h *Handler) Delete(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -184,14 +181,6 @@ func subscribeErrorMessage(err error) string {
 		strings.Contains(msg, "MATCH rule"), strings.Contains(msg, "MATCH"):
 		return "规则配置无效"
 	default:
-		if msg != "" {
-			return "config unavailable: " + msg
-		}
-		return "forbidden"
+		return "config unavailable"
 	}
-}
-
-func parseID(c *gin.Context) (uint, error) {
-	n, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	return uint(n), err
 }

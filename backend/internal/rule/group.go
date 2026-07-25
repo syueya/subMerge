@@ -1,8 +1,6 @@
 package rule
 
 import (
-	"strings"
-
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/database"
 	"gorm.io/gorm"
@@ -21,6 +19,10 @@ func (s *Service) ListGroups() (common.ProxyGroupListResponse, error) {
 }
 
 func (s *Service) CreateGroup(req common.UpsertProxyGroupRequest) (common.ProxyGroup, error) {
+	req, err := normalizeGroupRequest(req)
+	if err != nil {
+		return common.ProxyGroup{}, err
+	}
 	enabled := true
 	if req.Enabled != nil {
 		enabled = *req.Enabled
@@ -33,7 +35,7 @@ func (s *Service) CreateGroup(req common.UpsertProxyGroupRequest) (common.ProxyG
 		req.Proxies = []string{}
 	}
 	row := database.ProxyGroup{
-		Name:      strings.TrimSpace(req.Name),
+		Name:      req.Name,
 		Type:      req.Type,
 		Proxies:   mustJSON(req.Proxies),
 		URL:       req.URL,
@@ -48,11 +50,15 @@ func (s *Service) CreateGroup(req common.UpsertProxyGroupRequest) (common.ProxyG
 }
 
 func (s *Service) UpdateGroup(id uint, req common.UpsertProxyGroupRequest) (common.ProxyGroup, error) {
+	req, err := normalizeGroupRequest(req)
+	if err != nil {
+		return common.ProxyGroup{}, err
+	}
 	var row database.ProxyGroup
 	if err := s.db.First(&row, id).Error; err != nil {
 		return common.ProxyGroup{}, err
 	}
-	row.Name = strings.TrimSpace(req.Name)
+	row.Name = req.Name
 	row.Type = req.Type
 	if req.Proxies == nil {
 		req.Proxies = []string{}

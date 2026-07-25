@@ -12,6 +12,12 @@ var infoNamePattern = regexp.MustCompile(
 	`(?i)剩余流量|套餐到期|流量|到期|过期|官网|电报|重置|距离下次|消耗|续费|客服|公告|测试|过滤掉|过滤了|已过滤|到期时间|可用流量|套餐流量|距离.*重置`,
 )
 
+// IsInfoNodeName 判断节点名是否为机场「说明/统计」类假节点（非线路）。
+// 供刷新流程直接判定，避免对 AssessProxy 返回文案做字符串匹配。
+func IsInfoNodeName(name string) bool {
+	return infoNamePattern.MatchString(strings.TrimSpace(name))
+}
+
 // AssessProxy 判断节点是否正常，并给出原因（展示用，不改库）
 func AssessProxy(name, region, typ, server string, port int) (ok bool, issue string) {
 	name = strings.TrimSpace(name)
@@ -22,7 +28,7 @@ func AssessProxy(name, region, typ, server string, port int) (ok bool, issue str
 	if name == "" {
 		return false, "缺少名称"
 	}
-	if infoNamePattern.MatchString(name) {
+	if IsInfoNodeName(name) {
 		return false, "疑似信息节点（非线路）"
 	}
 	if typ == "" {

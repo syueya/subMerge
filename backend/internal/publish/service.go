@@ -1,18 +1,20 @@
 package publish
 
 import (
-		"fmt"
-		"strings"
-		"sync"
-		"time"
+	"fmt"
+	"strings"
+	"sync"
+	"time"
 
-		common "github.com/submerge/submerge/backend/common"
-		"github.com/submerge/submerge/backend/internal/database"
-		"github.com/submerge/submerge/backend/internal/rule"
-		"github.com/submerge/submerge/backend/internal/source"
-		"gopkg.in/yaml.v3"
-		"gorm.io/gorm"
-	)
+	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/database"
+	"github.com/submerge/submerge/backend/internal/rule"
+	"github.com/submerge/submerge/backend/internal/source"
+	"gopkg.in/yaml.v3"
+	"gorm.io/gorm"
+)
+
+const maxReleaseHistory = 50
 
 // Service 发布服务
 type Service struct {
@@ -58,51 +60,51 @@ func (s *Service) Publish(note, actor string) (common.PublishResponse, error) {
 }
 
 // List 发布历史
-	func (s *Service) List() (common.ReleaseListResponse, error) {
-		var rows []database.Release
-		if err := s.db.Order("version desc").Limit(50).Find(&rows).Error; err != nil {
-			return common.ReleaseListResponse{}, err
-		}
-		items := make([]common.Release, 0, len(rows))
-		for _, r := range rows {
-			items = append(items, toRelease(r))
-		}
-		return common.ReleaseListResponse{Items: items}, nil
+func (s *Service) List() (common.ReleaseListResponse, error) {
+	var rows []database.Release
+	if err := s.db.Order("version desc").Limit(50).Find(&rows).Error; err != nil {
+		return common.ReleaseListResponse{}, err
 	}
-
-	// Get 发布版本详情（完整 YAML + 解析出的规则/策略组名）
-	func (s *Service) Get(id uint) (common.ReleaseDetail, error) {
-		var row database.Release
-		if err := s.db.First(&row, id).Error; err != nil {
-			return common.ReleaseDetail{}, err
-		}
-		rules, groups := parseReleaseYAML(row.ConfigYAML)
-		return common.ReleaseDetail{
-			Release:    toRelease(row),
-			ConfigYAML: row.ConfigYAML,
-			Rules:      rules,
-			Groups:     groups,
-		}, nil
+	items := make([]common.Release, 0, len(rows))
+	for _, r := range rows {
+		items = append(items, toRelease(r))
 	}
+	return common.ReleaseListResponse{Items: items}, nil
+}
 
-	// CurrentPublished 当前生效的已发布版本详情；无则 RecordNotFound
-	func (s *Service) CurrentPublished() (common.ReleaseDetail, error) {
-		var row database.Release
-		if err := s.db.Where("status = ?", string(common.ReleaseStatusPublished)).
-			Order("version desc").First(&row).Error; err != nil {
-			return common.ReleaseDetail{}, err
-		}
-		rules, groups := parseReleaseYAML(row.ConfigYAML)
-		return common.ReleaseDetail{
-			Release:    toRelease(row),
-			ConfigYAML: row.ConfigYAML,
-			Rules:      rules,
-			Groups:     groups,
-		}, nil
+// Get 发布版本详情（完整 YAML + 解析出的规则/策略组名）
+func (s *Service) Get(id uint) (common.ReleaseDetail, error) {
+	var row database.Release
+	if err := s.db.First(&row, id).Error; err != nil {
+		return common.ReleaseDetail{}, err
 	}
+	rules, groups := parseReleaseYAML(row.ConfigYAML)
+	return common.ReleaseDetail{
+		Release:    toRelease(row),
+		ConfigYAML: row.ConfigYAML,
+		Rules:      rules,
+		Groups:     groups,
+	}, nil
+}
 
-	// Rollback 回滚到指定版本
-	func (s *Service) Rollback(id uint, actor string) (common.Release, error) {
+// CurrentPublished 当前生效的已发布版本详情；无则 RecordNotFound
+func (s *Service) CurrentPublished() (common.ReleaseDetail, error) {
+	var row database.Release
+	if err := s.db.Where("status = ?", string(common.ReleaseStatusPublished)).
+		Order("version desc").First(&row).Error; err != nil {
+		return common.ReleaseDetail{}, err
+	}
+	rules, groups := parseReleaseYAML(row.ConfigYAML)
+	return common.ReleaseDetail{
+		Release:    toRelease(row),
+		ConfigYAML: row.ConfigYAML,
+		Rules:      rules,
+		Groups:     groups,
+	}, nil
+}
+
+// Rollback 回滚到指定版本
+func (s *Service) Rollback(id uint, actor string) (common.Release, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -152,44 +154,61 @@ func (s *Service) createPublishedRelease(res *BuildResult, note, actor string) (
 			PublishedAt: &now,
 			CreatedBy:   actor,
 		}
-		return tx.Create(&release).Error
+		if err := tx.Create(&release).Error; err != nil {
+			return err
+		}
+		return pruneReleaseHistory(tx)
 	})
 	return release, err
 }
 
-	// CurrentYAML 当前已发布配置（全部启用源）
-	func (s *Service) CurrentYAML() (string, error) {
-		return s.CurrentYAMLForToken(nil, string(common.TokenGroupModeAuto), nil)
+func pruneReleaseHistory(tx *gorm.DB) error {
+	var keep []database.Release
+	if err := tx.Order("version desc").Limit(maxReleaseHistory).Find(&keep).Error; err != nil {
+		return err
+	}
+	if len(keep) < maxReleaseHistory {
+		return nil
+	}
+	cutoff := keep[len(keep)-1].Version
+	return tx.Unscoped().Where("status = ? AND version < ?",
+		string(common.ReleaseStatusRolledBack), cutoff).
+		Delete(&database.Release{}).Error
+}
+
+// CurrentYAML 当前已发布配置（全部启用源）
+func (s *Service) CurrentYAML() (string, error) {
+	return s.CurrentYAMLForToken(nil, string(common.TokenGroupModeAuto), nil)
+}
+
+// CurrentYAMLForSources 按订阅源过滤；策略组默认 auto 投影。
+func (s *Service) CurrentYAMLForSources(sourceIDs []uint) (string, error) {
+	return s.CurrentYAMLForToken(sourceIDs, string(common.TokenGroupModeAuto), nil)
+}
+
+// CurrentYAMLForToken 令牌投影：源过滤 + 策略组模式。
+// - 全部源且 auto：直接返回已发布快照（稳定、可回滚）
+// - 指定源 / all / custom：即时 build（规则/组取当前启用草稿 + 节点按源过滤）
+func (s *Service) CurrentYAMLForToken(sourceIDs []uint, groupMode string, groupNames []string) (string, error) {
+	mode := string(common.NormalizeTokenGroupMode(common.TokenGroupMode(groupMode)))
+	// 至少应有一个已发布版本，避免未发布时对外下发草稿
+	var pub database.Release
+	if err := s.db.Where("status = ?", string(common.ReleaseStatusPublished)).
+		Order("version desc").First(&pub).Error; err != nil {
+		return "", err
 	}
 
-	// CurrentYAMLForSources 按订阅源过滤；策略组默认 auto 投影。
-	func (s *Service) CurrentYAMLForSources(sourceIDs []uint) (string, error) {
-		return s.CurrentYAMLForToken(sourceIDs, string(common.TokenGroupModeAuto), nil)
+	useSnapshot := len(sourceIDs) == 0 && mode == string(common.TokenGroupModeAuto)
+	if useSnapshot {
+		return pub.ConfigYAML, nil
 	}
 
-	// CurrentYAMLForToken 令牌投影：源过滤 + 策略组模式。
-	// - 全部源且 auto：直接返回已发布快照（稳定、可回滚）
-	// - 指定源 / all / custom：即时 build（规则/组取当前启用草稿 + 节点按源过滤）
-	func (s *Service) CurrentYAMLForToken(sourceIDs []uint, groupMode string, groupNames []string) (string, error) {
-		mode := string(common.NormalizeTokenGroupMode(common.TokenGroupMode(groupMode)))
-		// 至少应有一个已发布版本，避免未发布时对外下发草稿
-		var pub database.Release
-		if err := s.db.Where("status = ?", string(common.ReleaseStatusPublished)).
-			Order("version desc").First(&pub).Error; err != nil {
-			return "", err
-		}
-
-		useSnapshot := len(sourceIDs) == 0 && mode == string(common.TokenGroupModeAuto)
-		if useSnapshot {
-			return pub.ConfigYAML, nil
-		}
-
-		res, err := s.buildForToken(sourceIDs, mode, groupNames)
-		if err != nil {
-			return "", err
-		}
-		return res.YAML, nil
+	res, err := s.buildForToken(sourceIDs, mode, groupNames)
+	if err != nil {
+		return "", err
 	}
+	return res.YAML, nil
+}
 
 // DraftStatus 比较当前草稿与已发布配置是否一致
 func (s *Service) DraftStatus() (common.DraftStatusResponse, error) {
@@ -236,110 +255,110 @@ func toPreview(res *BuildResult) common.ReleasePreview {
 	}
 }
 
-	func (s *Service) build() (*BuildResult, error) {
-		// 全量发布：GroupMode 空 = 严格规则校验 + auto 剪空组
-		return s.buildForToken(nil, "", nil)
-	}
+func (s *Service) build() (*BuildResult, error) {
+	// 全量发布：GroupMode 空 = 严格规则校验 + auto 剪空组
+	return s.buildForToken(nil, "", nil)
+}
 
-	func (s *Service) buildForSources(sourceIDs []uint) (*BuildResult, error) {
-		return s.buildForToken(sourceIDs, string(common.TokenGroupModeAuto), nil)
-	}
+func (s *Service) buildForSources(sourceIDs []uint) (*BuildResult, error) {
+	return s.buildForToken(sourceIDs, string(common.TokenGroupModeAuto), nil)
+}
 
-	// buildForToken 按源与策略组模式生成配置
-	func (s *Service) buildForToken(sourceIDs []uint, groupMode string, groupNames []string) (*BuildResult, error) {
-		proxies, err := s.source.EnabledProxiesBySourceIDs(sourceIDs)
-		if err != nil {
-			return nil, err
-		}
-		groups, err := s.rule.EnabledGroups()
-		if err != nil {
-			return nil, err
-		}
-		rules, err := s.rule.EnabledRules()
-		if err != nil {
-			return nil, err
-		}
-		return s.gen.Build(BuildInput{
-			Proxies:       proxies,
-			Groups:        groups,
-			Rules:         rules,
-			GroupMode:     groupMode,
-			AllowedGroups: groupNames,
-		})
+// buildForToken 按源与策略组模式生成配置
+func (s *Service) buildForToken(sourceIDs []uint, groupMode string, groupNames []string) (*BuildResult, error) {
+	proxies, err := s.source.EnabledProxiesBySourceIDs(sourceIDs)
+	if err != nil {
+		return nil, err
 	}
+	groups, err := s.rule.EnabledGroups()
+	if err != nil {
+		return nil, err
+	}
+	rules, err := s.rule.EnabledRules()
+	if err != nil {
+		return nil, err
+	}
+	return s.gen.Build(BuildInput{
+		Proxies:       proxies,
+		Groups:        groups,
+		Rules:         rules,
+		GroupMode:     groupMode,
+		AllowedGroups: groupNames,
+	})
+}
 
 func toRelease(r database.Release) common.Release {
-		out := common.Release{
-			ID:         r.ID,
-			Version:    r.Version,
-			Status:     common.ReleaseStatus(r.Status),
-			Note:       r.Note,
-			ProxyCount: r.ProxyCount,
-			RuleCount:  r.RuleCount,
-			ConfigHash: r.ConfigHash,
-			CreatedAt:  r.CreatedAt.UTC().Format(time.RFC3339),
-			CreatedBy:  r.CreatedBy,
-		}
-		if r.PublishedAt != nil {
-			s := r.PublishedAt.UTC().Format(time.RFC3339)
-			out.PublishedAt = &s
-		}
-		return out
+	out := common.Release{
+		ID:         r.ID,
+		Version:    r.Version,
+		Status:     common.ReleaseStatus(r.Status),
+		Note:       r.Note,
+		ProxyCount: r.ProxyCount,
+		RuleCount:  r.RuleCount,
+		ConfigHash: r.ConfigHash,
+		CreatedAt:  r.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedBy:  r.CreatedBy,
 	}
+	if r.PublishedAt != nil {
+		s := r.PublishedAt.UTC().Format(time.RFC3339)
+		out.PublishedAt = &s
+	}
+	return out
+}
 
-	// parseReleaseYAML 从已发布 YAML 抽出 rules / proxy-groups 名（查看历史、匹配测试用）
-	func parseReleaseYAML(yamlText string) (rules []common.ReleaseRuleLine, groups []string) {
-		rules = []common.ReleaseRuleLine{}
-		groups = []string{}
-		if strings.TrimSpace(yamlText) == "" {
-			return rules, groups
-		}
-		var doc map[string]interface{}
-		if err := yaml.Unmarshal([]byte(yamlText), &doc); err != nil {
-			return rules, groups
-		}
-		if rawGroups, ok := doc["proxy-groups"].([]interface{}); ok {
-			for _, g := range rawGroups {
-				m, ok := g.(map[string]interface{})
-				if !ok {
-					continue
-				}
-				name := strings.TrimSpace(fmt.Sprint(m["name"]))
-				if name != "" && name != "<nil>" {
-					groups = append(groups, name)
-				}
-			}
-		}
-		if rawRules, ok := doc["rules"].([]interface{}); ok {
-			for _, r := range rawRules {
-				line := strings.TrimSpace(fmt.Sprint(r))
-				if line == "" || line == "<nil>" {
-					continue
-				}
-				rules = append(rules, parseRuleLine(line))
-			}
-		}
+// parseReleaseYAML 从已发布 YAML 抽出 rules / proxy-groups 名（查看历史、匹配测试用）
+func parseReleaseYAML(yamlText string) (rules []common.ReleaseRuleLine, groups []string) {
+	rules = []common.ReleaseRuleLine{}
+	groups = []string{}
+	if strings.TrimSpace(yamlText) == "" {
 		return rules, groups
 	}
-
-	func parseRuleLine(raw string) common.ReleaseRuleLine {
-		parts := strings.Split(raw, ",")
-		out := common.ReleaseRuleLine{Raw: raw}
-		if len(parts) == 0 {
-			return out
-		}
-		out.Type = strings.TrimSpace(parts[0])
-		if strings.EqualFold(out.Type, "MATCH") {
-			if len(parts) >= 2 {
-				out.Target = strings.TrimSpace(parts[1])
+	var doc map[string]interface{}
+	if err := yaml.Unmarshal([]byte(yamlText), &doc); err != nil {
+		return rules, groups
+	}
+	if rawGroups, ok := doc["proxy-groups"].([]interface{}); ok {
+		for _, g := range rawGroups {
+			m, ok := g.(map[string]interface{})
+			if !ok {
+				continue
 			}
-			return out
+			name := strings.TrimSpace(fmt.Sprint(m["name"]))
+			if name != "" && name != "<nil>" {
+				groups = append(groups, name)
+			}
 		}
-		if len(parts) >= 3 {
-			out.Payload = strings.TrimSpace(parts[1])
-			out.Target = strings.TrimSpace(parts[2])
-		} else if len(parts) == 2 {
+	}
+	if rawRules, ok := doc["rules"].([]interface{}); ok {
+		for _, r := range rawRules {
+			line := strings.TrimSpace(fmt.Sprint(r))
+			if line == "" || line == "<nil>" {
+				continue
+			}
+			rules = append(rules, parseRuleLine(line))
+		}
+	}
+	return rules, groups
+}
+
+func parseRuleLine(raw string) common.ReleaseRuleLine {
+	parts := strings.Split(raw, ",")
+	out := common.ReleaseRuleLine{Raw: raw}
+	if len(parts) == 0 {
+		return out
+	}
+	out.Type = strings.TrimSpace(parts[0])
+	if strings.EqualFold(out.Type, "MATCH") {
+		if len(parts) >= 2 {
 			out.Target = strings.TrimSpace(parts[1])
 		}
 		return out
 	}
+	if len(parts) >= 3 {
+		out.Payload = strings.TrimSpace(parts[1])
+		out.Target = strings.TrimSpace(parts[2])
+	} else if len(parts) == 2 {
+		out.Target = strings.TrimSpace(parts[1])
+	}
+	return out
+}

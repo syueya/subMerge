@@ -32,7 +32,7 @@ cd frontend && npm start   # http://localhost:4200 → API :8080
 ```bash
 cd frontend && npm ci && npm run build
 cd backend && go build -o ../bin/submerge .
-./bin/submerge   # Windows: bin\submerge.exe
+../bin/submerge   # Windows: ..\bin\submerge.exe
 ```
 
 
@@ -74,7 +74,12 @@ submerge/
 ├── backend/          Go 服务、defaults/、data/、log/
 ├── frontend/         Angular 面板
 ├── bin/              编译产物（gitignore）
-├── Dockerfile
-├── docker-compose.yml
-└── .env.example
+├── .env.example
+└── （Docker 部署文件见同级 docker-public/docker-submerge/）
 ```
+
+Docker 部署文件：
+
+- `docker-public/docker-submerge/Dockerfile`
+- `docker-public/docker-submerge/docker-compose.yaml`
+- `docker-public/.github/workflows/submerge-build.yml`

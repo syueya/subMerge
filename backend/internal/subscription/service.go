@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -15,6 +16,10 @@ import (
 	"github.com/submerge/submerge/backend/internal/source"
 	"gorm.io/gorm"
 )
+
+// ErrInvalidTokenConfig 令牌配置非法（源 ID / 策略组名不存在，或 custom 模式缺组名）。
+// handler 用 errors.Is 判定为客户端错误（400），而非字符串匹配错误消息。
+var ErrInvalidTokenConfig = errors.New("invalid token config")
 
 // Service 分享令牌与订阅下发
 type Service struct {
@@ -372,7 +377,7 @@ func (s *Service) normalizeSourceIDs(ids []uint) ([]uint, error) {
 		return nil, err
 	}
 	if int(count) != len(clean) {
-		return nil, fmt.Errorf("one or more source ids not found")
+		return nil, fmt.Errorf("%w: one or more source ids not found", ErrInvalidTokenConfig)
 	}
 	sort.Slice(clean, func(i, j int) bool { return clean[i] < clean[j] })
 	return clean, nil
@@ -434,14 +439,14 @@ func (s *Service) normalizeGroupNames(mode common.TokenGroupMode, names []string
 		clean = append(clean, n)
 	}
 	if len(clean) == 0 {
-		return nil, fmt.Errorf("custom group mode requires at least one group name")
+		return nil, fmt.Errorf("%w: custom group mode requires at least one group name", ErrInvalidTokenConfig)
 	}
 	var count int64
 	if err := s.db.Model(&database.ProxyGroup{}).Where("name IN ?", clean).Count(&count).Error; err != nil {
 		return nil, err
 	}
 	if int(count) != len(clean) {
-		return nil, fmt.Errorf("one or more group names not found")
+		return nil, fmt.Errorf("%w: one or more group names not found", ErrInvalidTokenConfig)
 	}
 	sort.Strings(clean)
 	return clean, nil

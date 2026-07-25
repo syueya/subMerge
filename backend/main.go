@@ -44,7 +44,12 @@ func main() {
 		applog.Fatalf("database: %v", err)
 	}
 
-	box, err := crypto.NewBox(cfg.EncryptionKey)
+	// argon2id 强派生需要持久化盐（首次运行生成，0600 权限，存于数据目录）
+	salt, err := crypto.LoadOrCreateSalt(filepath.Join(cfg.DataDir, "crypto.salt"))
+	if err != nil {
+		applog.Fatalf("crypto salt: %v", err)
+	}
+	box, err := crypto.NewBoxWithSalt(cfg.EncryptionKey, salt)
 	if err != nil {
 		applog.Fatalf("crypto: %v", err)
 	}
@@ -62,20 +67,36 @@ func main() {
 	if err := ruleSvc.SeedDefaults(); err != nil {
 		applog.Fatalf("seed rules: %v", err)
 	}
-		publishSvc := publish.NewService(db, sourceSvc, ruleSvc)
-		subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
+	publishSvc := publish.NewService(db, sourceSvc, ruleSvc)
+	subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
 
-		// 启动后异步拉一次全部启用源，再按间隔定时刷新；首次发布由用户在面板完成
-		go func() {
-			// 略延迟，避免与 HTTP 启动争抢
-			time.Sleep(3 * time.Second)
+	// 启动后异步拉一次全部启用源，再按间隔定时刷新；首次发布由用户在面板完成
+	go func() {
+		// 略延迟，避免与 HTTP 启动争抢
+		time.Sleep(3 * time.Second)
+		sourceSvc.RefreshAll()
+		ticker := time.NewTicker(cfg.RefreshInterval)
+		defer ticker.Stop()
+		for range ticker.C {
 			sourceSvc.RefreshAll()
-			ticker := time.NewTicker(cfg.RefreshInterval)
-			defer ticker.Stop()
-			for range ticker.C {
-				sourceSvc.RefreshAll()
+		}
+	}()
+
+	// 定期清理过期会话，避免 sessions 表无限堆积
+	go func() {
+		if n, err := authSvc.PurgeExpiredSessions(); err != nil {
+			applog.Warn("purge expired sessions: %v", err)
+		} else if n > 0 {
+			applog.Info("purged %d expired sessions", n)
+		}
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			if _, err := authSvc.PurgeExpiredSessions(); err != nil {
+				applog.Warn("purge expired sessions: %v", err)
 			}
-		}()
+		}
+	}()
 
 	r := server.NewRouter(server.Deps{
 		Cfg:     cfg,

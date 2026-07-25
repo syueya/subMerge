@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/submerge/submerge/backend/internal/applog"
 	"github.com/submerge/submerge/backend/version"
 )
 
@@ -34,7 +35,11 @@ type Config struct {
 	RateLimitLogin     int
 	RateLimitSub       int
 	CORSOrigins        []string
-	Version            string
+	// TrustedProxies 可信反向代理的 IP/CIDR 列表（如 Docker 网关、Nginx）。
+	// 仅当请求来自这些代理时才采信 X-Forwarded-For/X-Real-IP 得到真实客户端 IP，
+	// 否则用连接对端地址。留空=不信任任何代理（ClientIP 恒为对端地址）。
+	TrustedProxies []string
+	Version        string
 	// LogOutput: console | file | both | none
 	LogOutput string
 	// LogDir 固定目录（不走环境变量）：backend/log 或 ./log，按日 submerge-YYYY-MM-DD.log
@@ -79,34 +84,35 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-		// 数据 / 库 / 静态 / 日志目录一律按工作目录推导，不提供环境变量覆盖
-		// （避免 Docker/.env 再抄一遍路径；部署只需选对工作目录）
-		dataDir := defaultDataDir()
-		logOutput := normalizeLogOutput(getEnv("LOG_OUTPUT", "console"))
+	// 数据 / 库 / 静态 / 日志目录一律按工作目录推导，不提供环境变量覆盖
+	// （避免 Docker/.env 再抄一遍路径；部署只需选对工作目录）
+	dataDir := defaultDataDir()
+	logOutput := applog.NormalizeOutput(getEnv("LOG_OUTPUT", "console"))
 
-		cfg := &Config{
-			Env:                getEnv("APP_ENV", "development"),
-			HTTPAddr:           getEnv("HTTP_ADDR", ":8080"),
-			PublicBaseURL:      strings.TrimRight(getEnv("PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
-			DataDir:            dataDir,
-			DBPath:             filepath.Join(dataDir, "submerge.db"),
-			StaticDir:          defaultStaticDir(),
-			EncryptionKey:      getEnv("ENCRYPTION_KEY", ""),
-			SessionTTL:         sessionTTL,
-			SourceFetchTimeout: sourceTimeout,
-			SourceMaxBytes:     sourceMaxBytes,
-			// 默认见 DefaultSourceFetchUA；SOURCE_FETCH_UA 可覆盖
-			SourceFetchUA:   getEnv("SOURCE_FETCH_UA", DefaultSourceFetchUA),
-			RefreshInterval: refreshInterval,
-			RateLimitLogin:  rateLimitLogin,
-			RateLimitSub:    rateLimitSub,
-			CORSOrigins:     splitCSV(getEnv("CORS_ORIGINS", "http://localhost:4200")),
-			// 版本 / 路径固定，不走环境变量
-			Version:          version.String(),
-			LogOutput:        logOutput,
-			LogDir:           defaultLogDir(),
-			LogRetentionDays: logRetentionDays,
-		}
+	cfg := &Config{
+		Env:                getEnv("APP_ENV", "development"),
+		HTTPAddr:           getEnv("HTTP_ADDR", ":8080"),
+		PublicBaseURL:      strings.TrimRight(getEnv("PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
+		DataDir:            dataDir,
+		DBPath:             filepath.Join(dataDir, "submerge.db"),
+		StaticDir:          defaultStaticDir(),
+		EncryptionKey:      getEnv("ENCRYPTION_KEY", ""),
+		SessionTTL:         sessionTTL,
+		SourceFetchTimeout: sourceTimeout,
+		SourceMaxBytes:     sourceMaxBytes,
+		// 默认见 DefaultSourceFetchUA；SOURCE_FETCH_UA 可覆盖
+		SourceFetchUA:   getEnv("SOURCE_FETCH_UA", DefaultSourceFetchUA),
+		RefreshInterval: refreshInterval,
+		RateLimitLogin:  rateLimitLogin,
+		RateLimitSub:    rateLimitSub,
+		CORSOrigins:     splitCSV(getEnv("CORS_ORIGINS", "http://localhost:4200")),
+		TrustedProxies:  splitCSV(getEnv("TRUSTED_PROXIES", "")),
+		// 版本 / 路径固定，不走环境变量
+		Version:          version.String(),
+		LogOutput:        logOutput,
+		LogDir:           defaultLogDir(),
+		LogRetentionDays: logRetentionDays,
+	}
 
 	if len(cfg.EncryptionKey) < 32 {
 		return nil, fmt.Errorf("ENCRYPTION_KEY must be at least 32 characters")
@@ -124,37 +130,37 @@ func getEnv(key, def string) string {
 	return def
 }
 
-	// defaultDataDir 按当前工作目录选择（不依赖环境变量）：
-	//   - 项目根（存在 backend/ 子目录）→ ./backend/data
-	//   - backend/ 内（go run .）或已编译二进制（Docker WORKDIR=/app）→ ./data
-	func defaultDataDir() string {
-		if isDir("backend") && (fileExists("backend/go.mod") || isDir("backend/internal")) {
-			return filepath.Clean("./backend/data")
-		}
-		// cd backend && go run .  /  Docker 等二进制部署
-		return filepath.Clean("./data")
+// defaultDataDir 按当前工作目录选择（不依赖环境变量）：
+//   - 项目根（存在 backend/ 子目录）→ ./backend/data
+//   - backend/ 内（go run .）或已编译二进制（Docker WORKDIR=/app）→ ./data
+func defaultDataDir() string {
+	if isDir("backend") && (fileExists("backend/go.mod") || isDir("backend/internal")) {
+		return filepath.Clean("./backend/data")
 	}
+	// cd backend && go run .  /  Docker 等二进制部署
+	return filepath.Clean("./data")
+}
 
-	// defaultLogDir 与 data 同策略（不提供 LOG_DIR 环境变量）：
-	//   - 项目根 → ./backend/log
-	//   - backend/ 内 / 已编译二进制 → ./log
-	func defaultLogDir() string {
-		if isDir("backend") && (fileExists("backend/go.mod") || isDir("backend/internal")) {
-			return filepath.Clean("./backend/log")
-		}
-		return filepath.Clean("./log")
+// defaultLogDir 与 data 同策略（不提供 LOG_DIR 环境变量）：
+//   - 项目根 → ./backend/log
+//   - backend/ 内 / 已编译二进制 → ./log
+func defaultLogDir() string {
+	if isDir("backend") && (fileExists("backend/go.mod") || isDir("backend/internal")) {
+		return filepath.Clean("./backend/log")
 	}
+	return filepath.Clean("./log")
+}
 
-	// defaultStaticDir 相对工作目录；Docker 将静态资源放在 ./frontend/dist/submerge/browser
-	func defaultStaticDir() string {
-		if isDir("frontend/dist/submerge/browser") {
-			return filepath.Clean("./frontend/dist/submerge/browser")
-		}
-		if isDir("../frontend/dist/submerge/browser") {
-			return filepath.Clean("../frontend/dist/submerge/browser")
-		}
+// defaultStaticDir 相对工作目录；Docker 将静态资源放在 ./frontend/dist/submerge/browser
+func defaultStaticDir() string {
+	if isDir("frontend/dist/submerge/browser") {
 		return filepath.Clean("./frontend/dist/submerge/browser")
 	}
+	if isDir("../frontend/dist/submerge/browser") {
+		return filepath.Clean("../frontend/dist/submerge/browser")
+	}
+	return filepath.Clean("./frontend/dist/submerge/browser")
+}
 
 func isDir(p string) bool {
 	st, err := os.Stat(p)
@@ -254,20 +260,4 @@ func splitCSV(s string) []string {
 		}
 	}
 	return out
-}
-
-// normalizeLogOutput 归一化日志输出目标
-func normalizeLogOutput(raw string) string {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "", "console", "stdout", "stderr", "std":
-		return "console"
-	case "file":
-		return "file"
-	case "both", "all", "console+file", "file+console":
-		return "both"
-	case "none", "off", "disable", "disabled":
-		return "none"
-	default:
-		return "console"
-	}
 }

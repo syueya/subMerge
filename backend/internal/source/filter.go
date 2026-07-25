@@ -1,6 +1,7 @@
 package source
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -9,6 +10,10 @@ import (
 	"github.com/submerge/submerge/backend/defaults"
 	"gopkg.in/yaml.v3"
 )
+
+// ErrInvalidFilter 过滤配置非法（正则编译失败）。
+// handler 用 errors.Is 判定为客户端错误（400），而非字符串匹配。
+var ErrInvalidFilter = errors.New("invalid filter config")
 
 // FilterOptions 节点过滤选项
 type FilterOptions struct {
@@ -86,14 +91,14 @@ func CompileFilter(opts FilterOptions) (*CompiledFilter, error) {
 	if s := strings.TrimSpace(opts.ExcludeNameRegex); s != "" {
 		re, err := regexp.Compile("(?i)" + s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid excludeNameRegex: %w", err)
+			return nil, fmt.Errorf("%w: excludeNameRegex: %v", ErrInvalidFilter, err)
 		}
 		cf.excludeName = re
 	}
 	if s := strings.TrimSpace(opts.IncludeNameRegex); s != "" {
 		re, err := regexp.Compile("(?i)" + s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid includeNameRegex: %w", err)
+			return nil, fmt.Errorf("%w: includeNameRegex: %v", ErrInvalidFilter, err)
 		}
 		cf.includeName = re
 	}
@@ -104,7 +109,7 @@ func CompileFilter(opts FilterOptions) (*CompiledFilter, error) {
 func (cf *CompiledFilter) ShouldKeep(p ParsedProxy) (keep bool, reason string) {
 	server := strings.ToLower(strings.TrimSpace(p.Server))
 	if _, blocked := cf.servers[server]; blocked {
-		return false, "server blocked: " + p.Server
+		return false, "server_blocked"
 	}
 	if cf.excludeName != nil && cf.excludeName.MatchString(p.Name) {
 		return false, "name excluded"

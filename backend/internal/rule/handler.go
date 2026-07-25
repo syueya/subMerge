@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/middleware"
-	"github.com/submerge/submerge/backend/internal/apiresp"
-	common "github.com/submerge/submerge/backend/common"
 )
 
 // Handler 规则 HTTP
@@ -56,6 +56,10 @@ func (h *Handler) BatchImportRules(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "text required")
 		return
 	}
+	if err := validateBatchImportText(req.Text); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	res, err := h.svc.BatchImportRules(req)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
@@ -67,7 +71,7 @@ func (h *Handler) BatchImportRules(c *gin.Context) {
 }
 
 func (h *Handler) UpdateRule(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -90,6 +94,10 @@ func (h *Handler) BatchUpdateRulesTarget(c *gin.Context) {
 	var req common.BatchUpdateRulesTargetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+		return
+	}
+	if err := validateBatchIDs(req.IDs, maxBatchIDs); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
 	if len(req.IDs) == 0 {
@@ -116,6 +124,10 @@ func (h *Handler) BatchUpdateRulesEnabled(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
 		return
 	}
+	if err := validateBatchIDs(req.IDs, maxBatchIDs); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	if len(req.IDs) == 0 {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "ids required")
 		return
@@ -138,6 +150,10 @@ func (h *Handler) BatchUpdateRulesCategory(c *gin.Context) {
 	var req common.BatchUpdateRulesCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+		return
+	}
+	if err := validateBatchIDs(req.IDs, maxBatchIDs); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
 	if len(req.IDs) == 0 {
@@ -164,6 +180,10 @@ func (h *Handler) BatchDeleteRules(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
 		return
 	}
+	if err := validateBatchIDs(req.IDs, maxBatchIDs); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	if len(req.IDs) == 0 {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "ids required")
 		return
@@ -179,7 +199,7 @@ func (h *Handler) BatchDeleteRules(c *gin.Context) {
 }
 
 func (h *Handler) DeleteRule(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -231,7 +251,7 @@ func (h *Handler) CreateGroup(c *gin.Context) {
 }
 
 func (h *Handler) UpdateGroup(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -251,7 +271,7 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 }
 
 func (h *Handler) DeleteGroup(c *gin.Context) {
-	id, err := parseID(c)
+	id, err := apiresp.ParseID(c)
 	if err != nil {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
 		return
@@ -263,9 +283,4 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 	}
 	h.audit.Log(middleware.GetUsername(c), "delete_group", "proxy_group", strconv.FormatUint(uint64(id), 10), c.ClientIP())
 	apiresp.OK(c, map[string]bool{"success": true})
-}
-
-func parseID(c *gin.Context) (uint, error) {
-	n, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	return uint(n), err
 }

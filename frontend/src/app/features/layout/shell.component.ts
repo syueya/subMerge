@@ -192,8 +192,8 @@ nav = [
 				void this.dialog.error('请填写当前密码');
 				return;
 			}
-			if (this.formNewPassword.length < 8) {
-				void this.dialog.error('新密码至少 8 位');
+			if (this.formNewPassword.length < 10) {
+				void this.dialog.error('新密码至少 10 位');
 				return;
 			}
 			if (this.formNewPassword !== this.formNewPassword2) {

@@ -1,7 +1,6 @@
 package source
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -65,141 +64,67 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 		return s.failRefresh(row, err)
 	}
 
-	// 过滤 + 地区识别 + 源名称后缀
-	type prepared struct {
-		name        string
-		region      string
-		typ         string
-		server      string
-		port        int
-		fingerprint string
-		rawJSON     string
-	}
-	kept := make([]prepared, 0, len(proxies))
-	skipped := 0
-	filterDropped := map[string]int{}
-	// 完整过滤明细（供 API 弹窗 + 服务端日志；不再抽样截断）
-	filteredNames := make([]string, 0, 16)
-	regionCounts := map[string]int{}
-	// 识别方式统计：flag / keyword / prefix / fixed / fallback
-	detectMethodCounts := map[string]int{}
-	// 样本日志（避免节点过多刷屏）
-	const maxDetectSamples = 40
-	detectSamples := make([]string, 0, maxDetectSamples)
-	fallbackSamples := make([]string, 0, 20)
-	usedNames := map[string]struct{}{}
 	mode := normalizeRegionMode(row.RegionMode)
-	sourceName := row.Name
-
 	applog.Info("[refresh] source id=%d name=%q mode=%s defaultRegion=%s upstreamBytes=%d ua=%q",
 		row.ID, row.Name, mode, row.Region, len(body), s.userAgent)
 
-	for _, p := range proxies {
-		// 始终丢弃明显信息节点（即使该源过滤规则是旧的）
-		if ok, issue := AssessProxy(p.Name, "", p.Type, p.Server, p.Port); !ok && strings.Contains(issue, "信息节点") {
-			skipped++
-			filterDropped["info_node"]++
-			label := strings.TrimSpace(p.Name)
-			if label == "" {
-				label = "(无名称)"
-			}
-			label = label + " [信息节点]"
-			filteredNames = append(filteredNames, label)
-			applog.Debug("[refresh] filter drop source id=%d name=%q reason=info_node type=%s server=%s port=%d",
-				row.ID, p.Name, p.Type, p.Server, p.Port)
-			continue
-		}
-		if ok, reason := filter.ShouldKeep(p); !ok {
-			skipped++
-			if reason == "" {
-				reason = "filtered"
-			}
-			filterDropped[reason]++
-			label := strings.TrimSpace(p.Name)
-			if label == "" {
-				label = "(无名称)"
-			}
-			if reason != "" && reason != "name excluded" {
-				label = label + " [" + reason + "]"
-			}
-			filteredNames = append(filteredNames, label)
-			applog.Debug("[refresh] filter drop source id=%d name=%q reason=%q type=%s server=%s port=%d",
-				row.ID, p.Name, reason, p.Type, p.Server, p.Port)
-			continue
-		}
-
-		resolved := ResolveRegionDetailed(p.Name, mode, row.Region)
-		region := resolved.Region
-		if region == "" {
-			region = strings.ToUpper(strings.TrimSpace(row.Region))
-			resolved.UsedFallback = true
-		}
-
-		// 统计识别方式
-		methodKey := resolved.Detect.Method
-		if resolved.UsedFallback {
-			methodKey = "fallback"
-		}
-		detectMethodCounts[methodKey]++
-		regionCounts[region]++
-
-		// 逐节点样本：原名 → 地区 (方式:命中) → 最终名
-		if len(detectSamples) < maxDetectSamples {
-			matchInfo := resolved.Detect.Method
-			if resolved.Detect.Matched != "" {
-				matchInfo = resolved.Detect.Method + ":" + resolved.Detect.Matched
-			}
-			if resolved.UsedFallback {
-				matchInfo = "fallback→" + region
-			}
-			namePreview := uniqueProxyName(FormatProxyName(p.Name, region, sourceName), map[string]struct{}{})
-			detectSamples = append(detectSamples, fmt.Sprintf("%q → %s (%s) → %q",
-				p.Name, region, matchInfo, namePreview))
-		}
-		if resolved.UsedFallback && len(fallbackSamples) < 20 {
-			fallbackSamples = append(fallbackSamples, p.Name)
-		}
-
-		name := uniqueProxyName(FormatProxyName(p.Name, region, sourceName), usedNames)
-		usedNames[name] = struct{}{}
-
-		raw := map[string]interface{}{}
-		for k, v := range p.Raw {
-			raw[k] = v
-		}
-		raw["name"] = name
-		rawJSON, err := json.Marshal(raw)
-		if err != nil {
-			return s.failRefresh(row, err)
-		}
-		// 指纹基于身份字段，不含展示名，避免改名后丢失 enabled
-		fpProxy := p
-		kept = append(kept, prepared{
-			name:        name,
-			region:      region,
-			typ:         p.Type,
-			server:      p.Server,
-			port:        p.Port,
-			fingerprint: ProxyFingerprint(fpProxy),
-			rawJSON:     string(rawJSON),
-		})
+	// 过滤 + 地区识别 + 改名去重（无 DB 副作用）
+	stats, err := prepareProxies(row.ID, row.Name, mode, row.Region, proxies, filter)
+	if err != nil {
+		return s.failRefresh(row, err)
 	}
-
-	if len(kept) == 0 {
+	if len(stats.kept) == 0 {
 		return s.failRefresh(row, fmt.Errorf(
 			"no proxies left after filtering (upstream=%d parsed=%d skipped=%d parseDropped=%v filter=%v)",
-			parseStats.Total, parseStats.Valid, skipped, parseStats.Dropped, filterDropped,
+			parseStats.Total, parseStats.Valid, stats.skipped, parseStats.Dropped, stats.filterDropped,
 		))
 	}
 
-	// 地区自动识别汇总日志
-	logRegionDetectSummary(row.ID, row.Name, mode, row.Region,
-		len(kept), regionCounts, detectMethodCounts, detectSamples, fallbackSamples)
+	// 事务重写节点 + 更新源状态/流量；失败保留旧快照
+	oldCount, err := s.persistRefresh(&row, stats.kept, body, fetched.UserInfo)
+	if err != nil {
+		return s.failRefresh(row, err)
+	}
 
+	view, err := s.toView(row)
+	if err != nil {
+		return common.RefreshSourceResponse{}, err
+	}
+	applog.Info("[refresh] ok source id=%d name=%q kept=%d removed=%d skipped=%d upstream=%d parsed=%d filterDropped=%v",
+		row.ID, row.Name, len(stats.kept), oldCount, stats.skipped, parseStats.Total, parseStats.Valid, stats.filterDropped)
+	if len(stats.filteredNames) > 0 {
+		applog.Info("[refresh] filtered source id=%d name=%q total=%d samples=%d omitted=%d reasons=%v",
+			row.ID, row.Name, stats.filteredTotal, len(stats.filteredNames),
+			stats.filteredTotal-len(stats.filteredNames), stats.filterDropped)
+	}
+
+	return common.RefreshSourceResponse{
+		Source:               view,
+		UpstreamTotal:        parseStats.Total,
+		Parsed:               parseStats.Valid,
+		Added:                len(stats.kept),
+		Removed:              oldCount,
+		Skipped:              stats.skipped,
+		ParseDropped:         parseStats.Dropped,
+		FilterDropped:        stats.filterDropped,
+		FilteredNames:        stats.filteredNames,
+		FilteredNamesOmitted: stats.filteredTotal - len(stats.filteredNames),
+		RegionCounts:         stats.regionCounts,
+	}, nil
+}
+
+// persistRefresh 在单事务里整批重写某源的节点并更新源状态/流量。
+// 返回被替换掉的旧节点数量（用于统计 removed）。保留旧节点的 enabled 状态。
+func (s *Service) persistRefresh(
+	row *database.Source,
+	kept []preparedProxy,
+	body []byte,
+	userInfo SubscriptionUserInfo,
+) (int, error) {
 	// 旧节点 fingerprint → enabled，用于保留用户禁用状态
 	var oldProxies []database.Proxy
 	if err := s.db.Where("source_id = ?", row.ID).Find(&oldProxies).Error; err != nil {
-		return s.failRefresh(row, fmt.Errorf("load existing proxies: %w", err))
+		return 0, fmt.Errorf("load existing proxies: %w", err)
 	}
 	oldEnabled := map[string]bool{}
 	for _, op := range oldProxies {
@@ -209,7 +134,7 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 	}
 	oldCount := len(oldProxies)
 
-	err = s.db.Transaction(func(tx *gorm.DB) error {
+	err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Unscoped().Where("source_id = ?", row.ID).Delete(&database.Proxy{}).Error; err != nil {
 			return err
 		}
@@ -238,47 +163,23 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 		row.LastError = ""
 		row.SnapshotYAML = string(body)
 		// 有 userinfo 头则覆盖；无头则清零，避免展示过期残留
-		if fetched.UserInfo.HasAny() {
-			row.TrafficUpload = fetched.UserInfo.Upload
-			row.TrafficDownload = fetched.UserInfo.Download
-			row.TrafficTotal = fetched.UserInfo.Total
-			row.TrafficExpire = fetched.UserInfo.Expire
+		if userInfo.HasAny() {
+			row.TrafficUpload = userInfo.Upload
+			row.TrafficDownload = userInfo.Download
+			row.TrafficTotal = userInfo.Total
+			row.TrafficExpire = userInfo.Expire
 		} else {
 			row.TrafficUpload = 0
 			row.TrafficDownload = 0
 			row.TrafficTotal = 0
 			row.TrafficExpire = 0
 		}
-		return tx.Save(&row).Error
+		return tx.Save(row).Error
 	})
 	if err != nil {
-		return s.failRefresh(row, err)
+		return 0, err
 	}
-
-	view, err := s.toView(row)
-	if err != nil {
-		return common.RefreshSourceResponse{}, err
-	}
-	applog.Info("[refresh] ok source id=%d name=%q kept=%d removed=%d skipped=%d upstream=%d parsed=%d filterDropped=%v",
-		row.ID, row.Name, len(kept), oldCount, skipped, parseStats.Total, parseStats.Valid, filterDropped)
-	if len(filteredNames) > 0 {
-		// 完整过滤列表单独汇总一行，便于对照弹窗/排查
-		applog.Info("[refresh] filtered-all source id=%d name=%q count=%d list=%s",
-			row.ID, row.Name, len(filteredNames), strings.Join(filteredNames, " | "))
-	}
-
-	return common.RefreshSourceResponse{
-		Source:        view,
-		UpstreamTotal: parseStats.Total,
-		Parsed:        parseStats.Valid,
-		Added:         len(kept),
-		Removed:       oldCount,
-		Skipped:       skipped,
-		ParseDropped:  parseStats.Dropped,
-		FilterDropped: filterDropped,
-		FilteredNames: filteredNames,
-		RegionCounts:  regionCounts,
-	}, nil
+	return oldCount, nil
 }
 
 // ResetStuckRefresh 启动时把残留的 running 状态复位为 failed。

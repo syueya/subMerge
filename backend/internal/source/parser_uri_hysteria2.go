@@ -3,7 +3,6 @@ package source
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -18,23 +17,14 @@ func parseHysteria2URI(raw string) (map[string]interface{}, error) {
 		password = u.User.Username()
 	}
 	host := u.Hostname()
-	port := 443
-	if p := u.Port(); p != "" {
-		n, err := strconv.Atoi(p)
-		if err != nil || n < 1 || n > 65535 {
-			return nil, fmt.Errorf("hysteria2 invalid port")
-		}
-		port = n
+	port, err := parsePortOr443(u, "hysteria2")
+	if err != nil {
+		return nil, err
 	}
 	if host == "" || password == "" {
 		return nil, fmt.Errorf("hysteria2 missing host/password")
 	}
-	name := strings.TrimSpace(u.Fragment)
-	if name == "" {
-		name = fmt.Sprintf("hy2-%s-%d", host, port)
-	} else if unesc, err := url.QueryUnescape(name); err == nil {
-		name = strings.TrimSpace(unesc)
-	}
+	name := fragmentName(u, "hy2", host, port)
 	q := u.Query()
 	m := map[string]interface{}{
 		"name":     name,

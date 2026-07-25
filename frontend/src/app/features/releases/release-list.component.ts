@@ -13,7 +13,7 @@ import {
 import { MatchableRule } from '../../common/rule-match';
 	import { RuleMatchDialogComponent } from '../../common/rule-match-dialog/rule-match-dialog.component';
 	import { DialogService } from '../../common/dialog/dialog.service';
-	import { localizeBuildError } from '../../common/format';
+	import { draftStatusNote } from '../../common/format';
 	import { ReleaseService } from './release.service';
 
 @Component({
@@ -52,15 +52,7 @@ export class ReleaseListComponent implements OnInit {
 		this.svc.draftStatus().subscribe({
 			next: (s) => {
 				this.draftDirty.set(!!s.dirty);
-if (s.buildError) {
-						this.draftNote.set(`草稿无法生成：${localizeBuildError(s.buildError)}`);
-					} else if (!s.hasPublished) {
-					this.draftNote.set('尚未发布，订阅链接暂无内容');
-				} else if (s.dirty) {
-					this.draftNote.set(`草稿相对 v${s.publishedVersion || '?'} 有未发布更改`);
-				} else {
-					this.draftNote.set(`当前生效 v${s.publishedVersion || '?'}，与草稿一致`);
-				}
+				this.draftNote.set(draftStatusNote(s));
 			},
 			error: () => {
 				this.draftDirty.set(false);

@@ -13,7 +13,7 @@ import { MatchableRule } from '../../common/rule-match';
 import { RuleMatchDialogComponent } from '../../common/rule-match-dialog/rule-match-dialog.component';
 import { DialogService } from '../../common/dialog/dialog.service';
 import { FieldTipComponent } from '../../common/field-tip/field-tip.component';
-import { localizeBuildError } from '../../common/format';
+import { draftStatusNote } from '../../common/format';
 import { ReleaseService } from '../releases/release.service';
 import { RuleService } from './rule.service';
 import { BatchImportModalComponent } from './batch-import-modal.component';
@@ -116,15 +116,7 @@ export class RuleEditorComponent implements OnInit {
 		this.releaseSvc.draftStatus().subscribe({
 			next: (s) => {
 				this.draftDirty.set(!!s.dirty);
-				if (s.buildError) {
-					this.draftStatusNote.set(`草稿暂无法生成：${localizeBuildError(s.buildError)}`);
-				} else if (!s.hasPublished) {
-					this.draftStatusNote.set('尚未发布过配置，订阅链接在发布后才会有内容');
-				} else if (s.dirty) {
-					this.draftStatusNote.set(`有未发布更改（当前生效 v${s.publishedVersion || '?'}）`);
-				} else {
-					this.draftStatusNote.set(`已与 v${s.publishedVersion || '?'} 一致`);
-				}
+				this.draftStatusNote.set(draftStatusNote(s));
 			},
 			error: () => {
 				this.draftDirty.set(false);

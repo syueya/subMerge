@@ -20,10 +20,11 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-// LoginResponse 登录响应
+// LoginResponse 登录响应。
+// 会话令牌只通过 HttpOnly Cookie（submerge_session）下发，不放进响应体，
+// 避免前端存入 localStorage 被 XSS 窃取。
 type LoginResponse struct {
-	Token string    `json:"token"`
-	User  AdminUser `json:"user"`
+	User AdminUser `json:"user"`
 }
 
 // SetupStatusResponse 是否需要首次创建管理员
@@ -34,14 +35,14 @@ type SetupStatusResponse struct {
 // BootstrapRequest 首次创建管理员（仅空库）
 type BootstrapRequest struct {
 	Username    string `json:"username" binding:"required"`
-	Password    string `json:"password" binding:"required,min=8"`
+	Password    string `json:"password" binding:"required,min=10"`
 	DisplayName string `json:"displayName"`
 }
 
 // ChangePasswordRequest 修改密码
 type ChangePasswordRequest struct {
 	OldPassword string `json:"oldPassword" binding:"required"`
-	NewPassword string `json:"newPassword" binding:"required,min=8"`
+	NewPassword string `json:"newPassword" binding:"required,min=10"`
 }
 
 // UpdateProfileRequest 更新个人资料（登录名 / 昵称 / 头像）
@@ -119,8 +120,10 @@ type RefreshSourceResponse struct {
 	ParseDropped map[string]int `json:"parseDropped,omitempty"`
 	// FilterDropped 过滤阶段丢弃原因 → 数量
 	FilterDropped map[string]int `json:"filterDropped,omitempty"`
-	// FilteredNames 被过滤掉的上游节点名（完整列表；含信息节点与规则排除）
+	// FilteredNames 被过滤掉的上游节点名（最多返回 1000 条）
 	FilteredNames []string `json:"filteredNames,omitempty"`
+	// FilteredNamesOmitted 因响应上限未返回的过滤节点名数量
+	FilteredNamesOmitted int `json:"filteredNamesOmitted,omitempty"`
 	// ParseDroppedNames 解析失败的条目摘要（最多 20 条）
 	ParseDroppedNames []string       `json:"parseDroppedNames,omitempty"`
 	RegionCounts      map[string]int `json:"regionCounts,omitempty"`
@@ -161,30 +164,32 @@ type RuleListResponse struct {
 }
 
 // UpsertRuleRequest 创建/更新规则
-	type UpsertRuleRequest struct {
-		Type      string `json:"type" binding:"required"`
-		Payload   string `json:"payload"`
-		Target    string `json:"target" binding:"required"`
-		Enabled   *bool  `json:"enabled"`
-		SortOrder *int   `json:"sortOrder"`
-		Note      string `json:"note"`
-		// Category 业务分类（面板分组）
-		Category  string `json:"category"`
-	}
+type UpsertRuleRequest struct {
+	Type      string `json:"type" binding:"required"`
+	Payload   string `json:"payload"`
+	Target    string `json:"target" binding:"required"`
+	Enabled   *bool  `json:"enabled"`
+	SortOrder *int   `json:"sortOrder"`
+	Note      string `json:"note"`
+	// Category 业务分类（面板分组）
+	Category string `json:"category"`
+}
 
-	// BatchImportRulesRequest 批量导入规则（文本一行一条）
-	// 每行格式：
-	//   category,TYPE,payload,target[,note]
-	//   或仅 payload（用 defaultType / defaultTarget / defaultNote / defaultCategory）
-	// 空行与 # 注释忽略。新规则插在 GEOIP CN / MATCH 之前。
-	type BatchImportRulesRequest struct {
-		Text            string `json:"text" binding:"required"`
-		DefaultType     string `json:"defaultType"`
-		DefaultTarget   string `json:"defaultTarget"`
-		DefaultNote     string `json:"defaultNote"`
-		DefaultCategory string `json:"defaultCategory"`
-		Enabled         *bool  `json:"enabled"`
-	}
+// BatchImportRulesRequest 批量导入规则（文本一行一条）
+// 每行格式：
+//
+//	category,TYPE,payload,target[,note]
+//	或仅 payload（用 defaultType / defaultTarget / defaultNote / defaultCategory）
+//
+// 空行与 # 注释忽略。新规则插在 GEOIP CN / MATCH 之前。
+type BatchImportRulesRequest struct {
+	Text            string `json:"text" binding:"required"`
+	DefaultType     string `json:"defaultType"`
+	DefaultTarget   string `json:"defaultTarget"`
+	DefaultNote     string `json:"defaultNote"`
+	DefaultCategory string `json:"defaultCategory"`
+	Enabled         *bool  `json:"enabled"`
+}
 
 // BatchImportRulesResponse 批量导入结果
 type BatchImportRulesResponse struct {
@@ -200,47 +205,47 @@ type ReorderRulesRequest struct {
 }
 
 // BatchUpdateRulesTargetRequest 批量修改规则目标出口
-	type BatchUpdateRulesTargetRequest struct {
-		IDs    []uint `json:"ids" binding:"required"`
-		Target string `json:"target" binding:"required"`
-	}
+type BatchUpdateRulesTargetRequest struct {
+	IDs    []uint `json:"ids" binding:"required"`
+	Target string `json:"target" binding:"required"`
+}
 
-	// BatchUpdateRulesTargetResponse 批量改出口结果
-	type BatchUpdateRulesTargetResponse struct {
-		Updated int `json:"updated"`
-	}
+// BatchUpdateRulesTargetResponse 批量改出口结果
+type BatchUpdateRulesTargetResponse struct {
+	Updated int `json:"updated"`
+}
 
-	// BatchUpdateRulesEnabledRequest 批量启用/禁用规则
-	type BatchUpdateRulesEnabledRequest struct {
-		IDs     []uint `json:"ids" binding:"required"`
-		Enabled bool   `json:"enabled"`
-	}
+// BatchUpdateRulesEnabledRequest 批量启用/禁用规则
+type BatchUpdateRulesEnabledRequest struct {
+	IDs     []uint `json:"ids" binding:"required"`
+	Enabled bool   `json:"enabled"`
+}
 
-	// BatchUpdateRulesEnabledResponse 批量启用/禁用结果
-	type BatchUpdateRulesEnabledResponse struct {
-		Updated int `json:"updated"`
-	}
+// BatchUpdateRulesEnabledResponse 批量启用/禁用结果
+type BatchUpdateRulesEnabledResponse struct {
+	Updated int `json:"updated"`
+}
 
-	// BatchUpdateRulesCategoryRequest 批量修改规则业务分类
-	type BatchUpdateRulesCategoryRequest struct {
-		IDs      []uint `json:"ids" binding:"required"`
-		Category string `json:"category"`
-	}
+// BatchUpdateRulesCategoryRequest 批量修改规则业务分类
+type BatchUpdateRulesCategoryRequest struct {
+	IDs      []uint `json:"ids" binding:"required"`
+	Category string `json:"category"`
+}
 
-	// BatchUpdateRulesCategoryResponse 批量改分类结果
-	type BatchUpdateRulesCategoryResponse struct {
-		Updated int `json:"updated"`
-	}
+// BatchUpdateRulesCategoryResponse 批量改分类结果
+type BatchUpdateRulesCategoryResponse struct {
+	Updated int `json:"updated"`
+}
 
-	// BatchDeleteRulesRequest 批量删除规则
-	type BatchDeleteRulesRequest struct {
-		IDs []uint `json:"ids" binding:"required"`
-	}
+// BatchDeleteRulesRequest 批量删除规则
+type BatchDeleteRulesRequest struct {
+	IDs []uint `json:"ids" binding:"required"`
+}
 
-	// BatchDeleteRulesResponse 批量删除结果
-	type BatchDeleteRulesResponse struct {
-		Deleted int `json:"deleted"`
-	}
+// BatchDeleteRulesResponse 批量删除结果
+type BatchDeleteRulesResponse struct {
+	Deleted int `json:"deleted"`
+}
 
 // ProxyGroupListResponse 策略组列表
 type ProxyGroupListResponse struct {
@@ -264,24 +269,24 @@ type TokenListResponse struct {
 }
 
 // CreateTokenRequest 创建令牌
-	// SourceIDs 可选；省略或空数组 = 全部订阅源；非空则仅分享所列源
-	// GroupMode 默认 auto；custom 时用 GroupNames 白名单
-	type CreateTokenRequest struct {
-		Name       string         `json:"name" binding:"required"`
-		SourceIDs  []uint         `json:"sourceIds"`
-		GroupMode  TokenGroupMode `json:"groupMode"`
-		GroupNames []string       `json:"groupNames"`
-	}
+// SourceIDs 可选；省略或空数组 = 全部订阅源；非空则仅分享所列源
+// GroupMode 默认 auto；custom 时用 GroupNames 白名单
+type CreateTokenRequest struct {
+	Name       string         `json:"name" binding:"required"`
+	SourceIDs  []uint         `json:"sourceIds"`
+	GroupMode  TokenGroupMode `json:"groupMode"`
+	GroupNames []string       `json:"groupNames"`
+}
 
-	// UpdateTokenRequest 更新令牌
-	// SourceIDs 传非 nil 指针时更新允许源列表（可为空数组表示改回全部）
-	type UpdateTokenRequest struct {
-		Name       *string         `json:"name"`
-		Status     *TokenStatus    `json:"status"`
-		SourceIDs  *[]uint         `json:"sourceIds"`
-		GroupMode  *TokenGroupMode `json:"groupMode"`
-		GroupNames *[]string       `json:"groupNames"`
-	}
+// UpdateTokenRequest 更新令牌
+// SourceIDs 传非 nil 指针时更新允许源列表（可为空数组表示改回全部）
+type UpdateTokenRequest struct {
+	Name       *string         `json:"name"`
+	Status     *TokenStatus    `json:"status"`
+	SourceIDs  *[]uint         `json:"sourceIds"`
+	GroupMode  *TokenGroupMode `json:"groupMode"`
+	GroupNames *[]string       `json:"groupNames"`
+}
 
 // ReleaseListResponse 发布列表
 type ReleaseListResponse struct {

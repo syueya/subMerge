@@ -3,9 +3,35 @@ package source
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 )
+
+// parsePortOr443 解析 URL 端口，缺省 443；越界返回错误（proto 仅用于错误信息）。
+func parsePortOr443(u *url.URL, proto string) (int, error) {
+	p := u.Port()
+	if p == "" {
+		return 443, nil
+	}
+	n, err := strconv.Atoi(p)
+	if err != nil || n < 1 || n > 65535 {
+		return 0, fmt.Errorf("%s invalid port", proto)
+	}
+	return n, nil
+}
+
+// fragmentName 取 URL fragment 作节点名（URL 解码），为空时用 "<prefix>-<host>-<port>" 兜底。
+func fragmentName(u *url.URL, prefix, host string, port int) string {
+	name := strings.TrimSpace(u.Fragment)
+	if name == "" {
+		return fmt.Sprintf("%s-%s-%d", prefix, host, port)
+	}
+	if unesc, err := url.QueryUnescape(name); err == nil {
+		return strings.TrimSpace(unesc)
+	}
+	return name
+}
 
 func firstNonEmpty(vals ...string) string {
 	for _, v := range vals {

@@ -11,7 +11,13 @@ import (
 // BatchImportRules 批量导入规则（一行一条），插在 GEOIP CN / MATCH 之前。
 // 解析错误不阻断整批：合法行照常写入，错误汇总返回。
 func (s *Service) BatchImportRules(req common.BatchImportRulesRequest) (common.BatchImportRulesResponse, error) {
+	if err := validateBatchImportText(req.Text); err != nil {
+		return common.BatchImportRulesResponse{}, err
+	}
 	parsed, parseErrs := parseBatchImportText(req.Text, req.DefaultType, req.DefaultTarget, req.DefaultNote, req.DefaultCategory)
+	if len(parseErrs) > maxImportErrors {
+		parseErrs = parseErrs[:maxImportErrors]
+	}
 	res := common.BatchImportRulesResponse{
 		Errors: parseErrs,
 		Items:  []common.Rule{},
@@ -55,13 +61,13 @@ func (s *Service) BatchImportRules(req common.BatchImportRulesRequest) (common.B
 		for i, p := range parsed {
 			if isSystemSeedRule(p.Type, p.Payload) {
 				skipped++
-				res.Errors = append(res.Errors, fmt.Sprintf("第%d行：系统规则由程序托管，已跳过", p.LineNo))
+				res.Errors = appendImportError(res.Errors, fmt.Sprintf("第%d行：系统规则由程序托管，已跳过", p.LineNo))
 				continue
 			}
 			key := strings.ToUpper(p.Type) + "\x00" + strings.ToLower(p.Payload) + "\x00" + p.Target
 			if _, dup := seen[key]; dup {
 				skipped++
-				res.Errors = append(res.Errors, fmt.Sprintf("第%d行：已存在，已跳过", p.LineNo))
+				res.Errors = appendImportError(res.Errors, fmt.Sprintf("第%d行：已存在，已跳过", p.LineNo))
 				continue
 			}
 			row := database.Rule{
@@ -114,8 +120,17 @@ func uniqRuleIDs(ids []uint) []uint {
 // BatchUpdateRulesTarget 批量修改规则目标出口（仅改 target，类型/匹配/顺序不变）
 func (s *Service) BatchUpdateRulesTarget(ids []uint, target string) (int, error) {
 	target = strings.TrimSpace(target)
+	if err := validateBatchIDs(ids, maxBatchIDs); err != nil {
+		return 0, err
+	}
 	if target == "" {
 		return 0, fmt.Errorf("rule target required")
+	}
+	if err := s.validateRuleTarget(target); err != nil {
+		return 0, err
+	}
+	if err := validateTextField("rule target", target, maxRuleTargetLen); err != nil {
+		return 0, err
 	}
 	uniq := uniqRuleIDs(ids)
 	if len(uniq) == 0 {
@@ -130,6 +145,9 @@ func (s *Service) BatchUpdateRulesTarget(ids []uint, target string) (int, error)
 
 // BatchUpdateRulesEnabled 批量启用/禁用
 func (s *Service) BatchUpdateRulesEnabled(ids []uint, enabled bool) (int, error) {
+	if err := validateBatchIDs(ids, maxBatchIDs); err != nil {
+		return 0, err
+	}
 	uniq := uniqRuleIDs(ids)
 	if len(uniq) == 0 {
 		return 0, nil
@@ -144,6 +162,12 @@ func (s *Service) BatchUpdateRulesEnabled(ids []uint, enabled bool) (int, error)
 // BatchUpdateRulesCategory 批量修改业务分类（允许空字符串表示未分类；跳过系统规则）
 func (s *Service) BatchUpdateRulesCategory(ids []uint, category string) (int, error) {
 	category = strings.TrimSpace(category)
+	if err := validateBatchIDs(ids, maxBatchIDs); err != nil {
+		return 0, err
+	}
+	if err := validateTextField("rule category", category, maxRuleCategoryLen); err != nil {
+		return 0, err
+	}
 	uniq := uniqRuleIDs(ids)
 	if len(uniq) == 0 {
 		return 0, nil
@@ -162,6 +186,9 @@ func (s *Service) BatchUpdateRulesCategory(ids []uint, category string) (int, er
 
 // BatchDeleteRules 批量删除规则（系统规则跳过不删）
 func (s *Service) BatchDeleteRules(ids []uint) (int, error) {
+	if err := validateBatchIDs(ids, maxBatchIDs); err != nil {
+		return 0, err
+	}
 	uniq := uniqRuleIDs(ids)
 	if len(uniq) == 0 {
 		return 0, nil

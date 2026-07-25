@@ -3,7 +3,6 @@ package source
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -18,23 +17,14 @@ func parseTrojanURI(raw string) (map[string]interface{}, error) {
 		password = u.User.Username()
 	}
 	host := u.Hostname()
-	port := 443
-	if p := u.Port(); p != "" {
-		n, err := strconv.Atoi(p)
-		if err != nil || n < 1 || n > 65535 {
-			return nil, fmt.Errorf("trojan invalid port")
-		}
-		port = n
+	port, err := parsePortOr443(u, "trojan")
+	if err != nil {
+		return nil, err
 	}
 	if host == "" || password == "" {
 		return nil, fmt.Errorf("trojan missing host/password")
 	}
-	name := strings.TrimSpace(u.Fragment)
-	if name == "" {
-		name = fmt.Sprintf("trojan-%s-%d", host, port)
-	} else if unesc, err := url.QueryUnescape(name); err == nil {
-		name = strings.TrimSpace(unesc)
-	}
+	name := fragmentName(u, "trojan", host, port)
 	q := u.Query()
 	m := map[string]interface{}{
 		"name":     name,

@@ -9,6 +9,7 @@ export type RefreshResultLike = {
 	parseDropped?: Record<string, number>;
 	filterDropped?: Record<string, number>;
 	filteredNames?: string[];
+	filteredNamesOmitted?: number;
 	regionCounts?: Record<string, number>;
 };
 
@@ -57,9 +58,10 @@ export function formatRefreshMsg(res: RefreshResultLike, title: string): string 
 	});
 	if (filterDrop) lines.push(`过滤 ${filterDrop}`);
 	const names = res.filteredNames || [];
+	const omitted = res.filteredNamesOmitted ?? 0;
 	if (names.length) {
-		// 完整列出（与后端日志一致）；名称本身含「过滤掉N条」时是机场信息节点，不是本系统又滤了 N 条
-		lines.push(`过滤明细（共 ${names.length} 条，完整）：`);
+		const suffix = omitted > 0 ? `，另有 ${omitted} 条未显示` : '';
+		lines.push(`过滤明细（显示 ${names.length} 条${suffix}）：`);
 		for (const n of names) {
 			lines.push(`· ${n}`);
 		}

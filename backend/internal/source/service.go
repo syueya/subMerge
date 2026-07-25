@@ -233,8 +233,30 @@ func (s *Service) Delete(id uint) error {
 	})
 }
 
+const maxSourceBatchIDs = 1000
+
+func validateSourceBatchIDs(ids []uint) error {
+	seen := make(map[uint]struct{}, len(ids))
+	for _, id := range ids {
+		if id == 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		if len(seen) > maxSourceBatchIDs {
+			return fmt.Errorf("too many ids; maximum is %d", maxSourceBatchIDs)
+		}
+	}
+	return nil
+}
+
 // DeleteMany 批量删除订阅源及其节点
 func (s *Service) DeleteMany(ids []uint) (int, error) {
+	if err := validateSourceBatchIDs(ids); err != nil {
+		return 0, err
+	}
 	if len(ids) == 0 {
 		return 0, nil
 	}
@@ -301,6 +323,9 @@ func (s *Service) UpdateProxy(id uint, enabled bool) (common.ProxyNode, error) {
 
 // BatchUpdateProxies 批量更新启用状态
 func (s *Service) BatchUpdateProxies(ids []uint, enabled bool) (int, error) {
+	if err := validateSourceBatchIDs(ids); err != nil {
+		return 0, err
+	}
 	if len(ids) == 0 {
 		return 0, nil
 	}

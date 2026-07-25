@@ -3,9 +3,10 @@ package rule
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/database"
-	"strings"
 )
 
 // ruleIdentity 用于判断「是否已有同一条默认规则」：type + payload（忽略大小写）
@@ -48,14 +49,59 @@ func resolveInsertAnchor(existing []database.Rule) (anchor int, hasAnchor bool) 
 	return anchor, true
 }
 
-func validateRule(typ, payload, target string) error {
-	if strings.TrimSpace(typ) == "" {
-		return fmt.Errorf("rule type required")
+const (
+	maxRuleTypeLen     = 32
+	maxRulePayloadLen  = 512
+	maxRuleTargetLen   = 128
+	maxRuleNoteLen     = 255
+	maxRuleCategoryLen = 64
+)
+
+func validateRuleFields(typ, payload, target, note, category string) error {
+	typ = strings.ToUpper(strings.TrimSpace(typ))
+	if !isKnownRuleType(typ) {
+		return fmt.Errorf("unknown rule type %q", strings.TrimSpace(typ))
 	}
-	if strings.TrimSpace(target) == "" {
+	if len([]rune(typ)) > maxRuleTypeLen {
+		return fmt.Errorf("rule type too long")
+	}
+	if len([]rune(strings.TrimSpace(payload))) > maxRulePayloadLen {
+		return fmt.Errorf("rule payload too long")
+	}
+	if len([]rune(strings.TrimSpace(target))) > maxRuleTargetLen {
+		return fmt.Errorf("rule target too long")
+	}
+	if len([]rune(strings.TrimSpace(note))) > maxRuleNoteLen {
+		return fmt.Errorf("rule note too long")
+	}
+	if len([]rune(strings.TrimSpace(category))) > maxRuleCategoryLen {
+		return fmt.Errorf("rule category too long")
+	}
+	return nil
+}
+
+func isKnownRuleType(s string) bool {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "GEOSITE", "GEOIP",
+		"IP-CIDR", "IP-CIDR6", "SRC-IP-CIDR", "SRC-PORT", "DST-PORT",
+		"PROCESS-NAME", "PROCESS-PATH", "RULE-SET", "MATCH":
+		return true
+	default:
+		return false
+	}
+}
+
+func validateRule(typ, payload, target string) error {
+	typ = strings.ToUpper(strings.TrimSpace(typ))
+	payload = strings.TrimSpace(payload)
+	target = strings.TrimSpace(target)
+	if err := validateRuleFields(typ, payload, target, "", ""); err != nil {
+		return err
+	}
+	if target == "" {
 		return fmt.Errorf("rule target required")
 	}
-	if typ != string(common.RuleTypeMatch) && strings.TrimSpace(payload) == "" {
+	if typ != string(common.RuleTypeMatch) && payload == "" {
 		return fmt.Errorf("payload required for type %s", typ)
 	}
 	return nil
