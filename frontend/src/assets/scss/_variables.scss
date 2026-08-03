@@ -1,0 +1,74 @@
+// =============================================================================
+// 全局变量
+// 作用：字体、侧边栏尺寸、语义色、阴影、圆角等基础 token。
+// 注意：颜色尽量引用 Material CSS 变量（--mat-sys-*），便于主题切换。
+// =============================================================================
+// font
+$font-family: '-apple-system, "Noto Sans", "Helvetica Neue", Helvetica, "Nimbus Sans L", Arial, "Liberation Sans", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", "Source Han Sans CN", "Microsoft YaHei", "Wenquanyi Micro Hei", "WenQuanYi Zen Hei", "ST Heiti", SimHei, "WenQuanYi Zen Hei Sharp", sans-serif' !default;
+
+// light color variable
+$cardshadow: rgb(145 158 171 / 30%) 0px 0px 2px 0px, rgb(145 158 171 / 12%) 0px 12px 24px -4px;
+
+// Dark color variable
+$darkcardshadow: rgba(145, 158, 171, 0.3) 0px 0px 2px 0px, rgba(145, 158, 171, 0.02) 0px 12px 24px -4px;
+
+// Sidenav
+$sidenav-desktop: 240px !default;
+$sidenav-mini: 72px !default;
+// 顶栏已移除；页面列表高度用 calc(100vh - xxx) 时不再预留 header 高度
+
+//BorderColor
+$borderColor: var(--mat-sys-outline-variant);
+$borderformColor: var(--mat-sys-outline-variant);
+
+// custom
+$primary: var(--mat-sys-primary);
+$primary-fixed-dim: var(--mat-sys-primary-fixed-dim);
+$secondary: var(--mat-sys-secondary);
+$secondary-fixed-dim: var(--mat-sys-secondary-fixed-dim);
+$accent: var(--mat-sys-secondary);
+$accent-fixed-dim: var(--mat-sys-secondary-fixed-dim);
+$error: var(--mat-sys-error);
+$error-fixed-dim: var(--mat-sys-error-fixed-dim);
+$warning: #ffae1f;
+$success: #13deb9;
+$white: #ffffff;
+
+
+$light: var(--mat-sys-surface-bright);
+$light-primary: var(--mat-sys-primary-fixed-dim);
+$light-secondary: var(--mat-sys-secondary-fixed-dim);
+$light-accent: var(--mat-sys-secondary-fixed-dim);
+$light-error: var(--mat-sys-error-fixed-dim);
+$light-warning: #ffe8c0;
+$light-success: #e0f4ee;
+
+// layout
+$boxedWidth: 1200px;
+$border-radius: 7px;
+
+$card-spacer: 16px;
+
+$text-color: var(--mat-sys-on-background);
+
+$dark-text-secondary: rgba(255, 255, 255, 0.67);
+$dark-body-bg: #141a21;
+
+$text-main: #2a3547;
+$text-second: #616876;
+
+
+
+:root {
+    --tblr-text-main: #{$text-main};
+    --tblr-text-second: #{$text-second};
+    --tblr-text-white: #{$white};
+    --tblr-light: #{$light};
+    --tblr-primary: #{$primary};
+    --tblr-light-primary: #{$primary-fixed-dim};
+    --tblr-warning: #{$warning};
+    --tblr-light-warning: #{$light-warning};
+    --tblr-error: #{$error};
+    --tblr-light-success: #{$light-success};
+    --tblr-success: #{$success};
+}

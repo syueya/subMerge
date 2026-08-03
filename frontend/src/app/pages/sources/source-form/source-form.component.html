@@ -1,0 +1,135 @@
+<cm-dialog-header [modalTitle]="isUpdate ? '编辑订阅源' : '新增订阅源'"></cm-dialog-header>
+
+<form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
+  <div mat-dialog-content class="mat-subtitle-2 lh-16">
+    <p class="text-muted f-s-12 m-b-16">
+      {{ isUpdate ? '保存后不会自动拉取；改过滤/地区后建议手动拉取' : '保存后会自动拉取一次上游节点' }}
+    </p>
+
+    <div class="row">
+      <cm-form-field class="col-24 col-md-12" [help]="tip.name">
+        <mat-label>名称<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <input matInput type="text" formControlName="name" placeholder="例如：良心机场" />
+          <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24 col-md-12" [help]="tip.regionMode">
+        <mat-label>地区模式<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select formControlName="regionMode">
+            <mat-option value="auto">自动识别</mat-option>
+            <mat-option value="fixed">固定地区</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24" [help]="tip.region">
+        <mat-label>
+          {{ regionMode === 'auto' ? '回退地区' : '地区' }}
+          <cm-required-mark class="m-l-4"></cm-required-mark>
+        </mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select formControlName="region">
+            @if (regionMode === 'auto') {
+              @for (r of autoRegionOptions(); track r.code) {
+                <mat-option [value]="r.code">{{ regionOptionLabel(r) }}</mat-option>
+              }
+            } @else {
+              @for (r of fixedRegionOptions(); track r.code) {
+                <mat-option [value]="r.code">{{ regionOptionLabel(r) }}</mat-option>
+              }
+            }
+          </mat-select>
+        </mat-form-field>
+        <p class="f-s-12 text-muted m-t-0 m-b-12">
+          @if (regionMode === 'auto') {
+            默认「未知 (UNKNOWN)」。能认出 🇯🇵/香港 等时用识别结果；认不出才加此前缀。
+          } @else {
+            该源全部节点都会加此前缀（如 HK-xxx）。
+          }
+        </p>
+      </cm-form-field>
+
+      <cm-form-field class="col-24" [help]="tip.url">
+        <mat-label>
+          订阅 URL
+          @if (!isUpdate) {
+            <cm-required-mark class="m-l-4"></cm-required-mark>
+          }
+        </mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <input
+            matInput
+            type="text"
+            formControlName="url"
+            [placeholder]="isUpdate ? '留空表示不修改 URL' : 'https://...'"
+          />
+          <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24" [help]="tip.enabled">
+        <mat-label>启用</mat-label>
+        <div class="m-b-16">
+          <mat-slide-toggle formControlName="enabled" color="primary">启用此订阅源</mat-slide-toggle>
+        </div>
+      </cm-form-field>
+    </div>
+
+    <div class="m-b-8">
+      <button mat-stroked-button color="primary" type="button" (click)="showAdvanced = !showAdvanced">
+        {{ showAdvanced ? '收起过滤规则' : '展开过滤规则' }}
+      </button>
+    </div>
+
+    @if (showAdvanced) {
+      <div class="row m-t-12">
+        <cm-form-field class="col-24" [help]="tip.excludeName">
+          <mat-label>排除名称（正则）</mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <textarea matInput rows="3" formControlName="excludeNameRegex"></textarea>
+          </mat-form-field>
+        </cm-form-field>
+
+        <cm-form-field class="col-24" [help]="tip.excludeServers">
+          <mat-label>排除服务器</mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input matInput formControlName="excludeServers" />
+          </mat-form-field>
+        </cm-form-field>
+
+        <cm-form-field class="col-24" [help]="tip.includeName">
+          <mat-label>仅包含名称（可选白名单正则）</mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input matInput formControlName="includeNameRegex" placeholder="例如：日本|香港|JP|HK" />
+          </mat-form-field>
+        </cm-form-field>
+      </div>
+    }
+  </div>
+</form>
+
+<div class="m-b-16">
+  <mat-divider></mat-divider>
+</div>
+
+<div mat-dialog-actions class="text-right p-24 p-t-0">
+  <button mat-stroked-button color="primary" type="button" mat-dialog-close>取消</button>
+  <button
+    mat-flat-button
+    color="primary"
+    type="button"
+    [disabled]="isSubmitting"
+    (click.debounceTime)="submit()"
+  >
+    @if (isSubmitting) {
+      处理中...
+    } @else if (isUpdate) {
+      保存
+    } @else {
+      保存并拉取
+    }
+  </button>
+</div>

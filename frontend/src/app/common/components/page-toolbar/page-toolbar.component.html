@@ -1,0 +1,13 @@
+<mat-card class="cardWithShadow page-toolbar">
+  <mat-card-content>
+    <div class="page-toolbar__row">
+      <div class="page-toolbar__left">
+        <div class="page-toolbar__title">{{ title }}</div>
+        <ng-content select="[pageToolbarExtra]"></ng-content>
+      </div>
+      <div class="page-toolbar__actions">
+        <ng-content></ng-content>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

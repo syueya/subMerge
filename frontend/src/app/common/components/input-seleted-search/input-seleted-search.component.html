@@ -1,0 +1,83 @@
+<!-- <mat-label *ngIf="placeholder">{{placeholder}}</mat-label> -->
+<mat-select
+  no-space
+  #select
+  [multiple]="multiple"
+  panelClass="input-select-search-panel"
+  [placeholder]="placeholder"
+  [formControl]="selectCtrl"
+  (openedChange)="selectOpendChange($event)"
+  (selectionChange)="userSelectionChange($event)"
+>
+  @if (customSelectTrigger) {
+    <mat-select-trigger>
+      <ng-container *ngTemplateOutlet="triggerRenderTemplate; context: { $implicit: selectItem }"> </ng-container>
+    </mat-select-trigger>
+  } @else {
+    <mat-select-trigger>
+      @if (multiple) {
+        <!-- 多选显示文本 -->
+        @if (isAllSelectedFromAllData()) {
+          <!-- 全选时显示全选 -->
+          全部
+        } @else {
+          <!-- 未全选是，选择逗号分隔的选项文本 -->
+          @if (value && value.length > 0) {
+            {{ transformValues() }}
+          } @else if (!value || value.length === 0) {
+            {{ placeholder }}
+          }
+        }
+      } @else {
+        <!-- 单选文本 -->
+        {{ selectItem ? selectItem[renderProp] : placeholder }}
+      }
+    </mat-select-trigger>
+  }
+
+  <!-- 搜索表单 -->
+  <!-- <mat-form-field class="input-full-width strack-by-top" floatLabel="never"> -->
+  @if (showSearch) {
+    <div class="search-header strack-by-top">
+      <input #search_input matInput [formControl]="searchCtrl" class="search-input strack-by-top" type="text" autocomplete="off" (keydown)="searchKeydownHandle($event)" />
+      @if (!searchCtrl.value) {
+        <i-tabler class="icon-20 search-icon" name="search"></i-tabler>
+      }
+    </div>
+  }
+  @if (showEmptyOption && !multiple) {
+    <mat-option [value]="null">--</mat-option>
+  }
+
+  <!-- </mat-form-field> -->
+  @for (item of selectData; track trackByItemId($index, item)) {
+    <mat-option
+      tabindex="-1"
+      [value]="item[valueProp]"
+      [disabled]="disabledIds.includes(item[valueProp]) || getDynamicDisabledIds().includes(item[valueProp])"
+      [cmHide]="!searchRes.includes(item)"
+    >
+      <!-- 如果已提供自定义的render -->
+      @if (optionRender) {
+        <ng-container *ngTemplateOutlet="optionRender; context: { $implicit: item }"></ng-container>
+      } @else {
+        <!-- 默认渲染内容 -->
+        {{ item[this.renderProp] }}
+      }
+    </mat-option>
+  }
+
+  @if (multiple) {
+    <div class="search-footer strack-by-bottom" fxLayout="row" fxLayoutAlign="start center">
+      <mat-checkbox
+        color="primary"
+        [checked]="isAllSelected()"
+        [indeterminate]="!isAllSelected() && hasSelected()"
+        [disabled]="allOptionValue !== null && isSelectAllDisabled()"
+        (change)="isAllSelected() ? deselectAll() : selectAll()"
+      >
+        全选
+      </mat-checkbox>
+    </div>
+  }
+</mat-select>

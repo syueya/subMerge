@@ -1,0 +1,52 @@
+// =============================================================================
+// 主题色板
+// 作用：通过 html.xxx_theme 切换主色 / 次色。
+// 当前默认：blue_theme（见 app/config.ts 的 activeTheme）。
+// 说明：customizer 已移除，但色板保留，便于后续设置页或本地配置切换。
+// =============================================================================
+html.aqua_theme {
+  --mat-sys-primary: rgb(0, 116, 186);
+  --mat-sys-primary-fixed-dim: rgb(230, 241, 247);
+  --mat-sys-secondary: rgb(71, 215, 188);
+  --mat-sys-secondary-fixed-dim: rgb(230, 245, 242);
+  --mat-sys-tertiary: rgb(71, 215, 188);
+}
+
+html.blue_theme {
+  --mat-sys-primary: rgb(93, 135, 255);
+  --mat-sys-primary-fixed-dim: rgb(230, 235, 255);
+  --mat-sys-secondary: rgb(68, 183, 247);
+  --mat-sys-secondary-fixed-dim: rgb(230, 242, 255);
+}
+
+html.cyan_theme {
+  --mat-sys-primary: rgb(0, 185, 192);
+  --mat-sys-primary-fixed-dim: rgb(38, 197, 202);
+  --mat-sys-secondary: rgb(244, 139, 108);
+  --mat-sys-secondary-fixed-dim: rgb(246, 154, 127);
+  --mat-sys-tertiary: rgb(244, 139, 108);
+}
+
+html.green_theme {
+  --mat-sys-primary: rgb(6, 118, 154);
+  --mat-sys-primary-fixed-dim: rgb(43, 137, 171);
+  --mat-sys-secondary: rgb(195, 208, 70);
+  --mat-sys-secondary-fixed-dim: rgb(204, 217, 94);
+  --mat-sys-tertiary: rgb(195, 208, 70);
+}
+
+html.orange_theme {
+  --mat-sys-primary: rgb(250, 137, 107);
+  --mat-sys-primary-fixed-dim: rgb(251, 153, 127);
+  --mat-sys-secondary: rgb(0, 127, 180);
+  --mat-sys-secondary-fixed-dim: rgb(38, 145, 191);  
+  --mat-sys-error-fixed-dim: rgb(254, 236, 238);
+}
+
+html.purple_theme {
+  --mat-sys-primary: rgb(110, 53, 183);
+  --mat-sys-primary-fixed-dim: rgb(130, 81, 194);
+  --mat-sys-secondary: rgb(139, 200, 206);
+  --mat-sys-secondary-fixed-dim: rgb(155, 208, 215);  
+  --mat-sys-tertiary: rgb(139, 200, 206);
+}

@@ -50,6 +50,11 @@ type Config struct {
 	LogDir string
 	// LogRetentionDays 日志保留天数；默认 7，0 表示不自动清理
 	LogRetentionDays int
+	GeoDir           string
+	GeoIPURL         string
+	GeoSiteURL       string
+	MetaDBURL        string
+	ASNURL           string
 }
 
 // Load 从环境变量加载配置
@@ -122,6 +127,11 @@ func Load() (*Config, error) {
 		LogOutput:        logOutput,
 		LogDir:           defaultLogDir(),
 		LogRetentionDays: logRetentionDays,
+		GeoDir:           defaultGeoDir(),
+		GeoIPURL:         getEnv("GEOIP_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat"),
+		GeoSiteURL:       getEnv("GEOSITE_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"),
+		MetaDBURL:        getEnv("GEODB_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb"),
+		ASNURL:           getEnv("GEOASN_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"),
 	}
 
 	if len(cfg.EncryptionKey) < 32 {
@@ -170,6 +180,16 @@ func defaultStaticDir() string {
 		return filepath.Clean("../frontend/dist/submerge/browser")
 	}
 	return filepath.Clean("./frontend/dist/submerge/browser")
+}
+
+func defaultGeoDir() string {
+	if isDir("backend/defaults/geo") {
+		return filepath.Clean("./backend/defaults/geo")
+	}
+	if isDir("defaults/geo") {
+		return filepath.Clean("./defaults/geo")
+	}
+	return filepath.Clean("./backend/defaults/geo")
 }
 
 func isDir(p string) bool {

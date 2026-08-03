@@ -1,0 +1,140 @@
+// =============================================================================
+// 24 栅格系统
+// 作用：.row / .col-* / .col-md-* 等响应式分栏，表单与列表筛选区复用。
+// =============================================================================
+@use "sass:map";
+@use "sass:math";
+
+$grid-columns: 24 !default;
+$grid-gutter: 30px !default;
+
+$breakpoints: (
+  xsmall: 0,
+  small:  600px,
+  medium: 960px,
+  large:  1280px,
+  xlarge: 1700px,
+  xxlarge: 2100px,
+  xxxlarge: 3000px
+) !default;
+
+$breakpoint-infixs: (
+  xsmall: '',
+  small: 'sm',
+  medium: 'md',
+  large: 'lg',
+  xlarge: 'xl',
+  xxlarge: 'xxl',
+  xxxlarge: 'xxxl'
+) !default;
+
+@function bp($name, $breakpoints: $breakpoints) {
+  $min: map.get($breakpoints, $name);
+
+  @return $min;
+}
+
+// Media of at least the minimum breakpoint width.
+@mixin bp-gt($name, $breakpoints: $breakpoints) {
+  $min: bp($name, $breakpoints);
+
+  @if $min {
+    @media (min-width: $min) {
+      @content;
+    }
+  }
+  @else {
+    @content;
+  }
+}
+
+// Media of at most the maximum breakpoint width.
+@mixin bp-lt($name, $breakpoints: $breakpoints) {
+  $max: bp($name, $breakpoints) - 1px;
+
+  @if $max {
+    @media (max-width: $max) {
+      @content;
+    }
+  }
+  @else {
+    @content;
+  }
+}
+
+@mixin make-grid-columns($i: 1, $list: '.col') {
+  @each $breakpoint, $infix in $breakpoint-infixs {
+    @if $infix != '' {
+      $infix: '-#{$infix}';
+    }
+
+    @if ($infix != '') {
+      $list: '#{$list}, .col#{$infix}';
+    }
+
+    @for $i from 1 through $grid-columns {
+      $list: '#{$list}, .col#{$infix}-#{$i}';
+    }
+  }
+
+  #{$list} {
+    position: relative;
+    width: 100%;
+    padding-right: $grid-gutter * .5;
+    padding-left: $grid-gutter * .5;
+  }
+}
+
+@mixin loop-grid-columns($columns: $grid-columns, $breakpoint-infix: '') {
+  $infix: '';
+  @if $breakpoint-infix != '' {
+    $infix: '-#{$breakpoint-infix}';
+  }
+
+  .col#{$infix} {
+    flex-basis: 0;
+    flex-grow: 1;
+    max-width: 100%;
+  }
+
+  @for $i from 1 through $columns {
+    .col#{$infix}-#{$i} {
+      flex: 0 0 math.percentage(math.div($i, $columns));
+      max-width: math.percentage(math.div($i, $columns));
+    }
+
+    .offset#{$infix}-#{$i} {
+      margin-left: math.percentage(math.div($i, $columns));
+    }
+  }
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: $grid-gutter * -.5;
+  margin-left: $grid-gutter * -.5;
+}
+
+.no-gutters {
+  margin-right: 0;
+  margin-left: 0;
+
+  > .col,
+  > [class*='col-'] {
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+@include make-grid-columns();
+
+@each $breakpoint, $infix in $breakpoint-infixs {
+  @if ($breakpoint== 'xsmall') {
+    @include loop-grid-columns($grid-columns, $infix);
+  } @else {
+    @include bp-gt($breakpoint) {
+      @include loop-grid-columns($grid-columns, $infix);
+    }
+  }
+}

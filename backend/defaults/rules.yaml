@@ -1,127 +1,48 @@
-# 空库默认分流规则（backend/defaults/）——业务默认规则的唯一来源。
-# 空库：整表写入；已有库启动时只「补缺」（YAML 有、库中 type+payload 没有才插入），不覆盖用户已改出口。
 # 策略组见 groups.yaml（仅 直连 / 拒绝 / 各国）。
 #
 # 本文件只维护业务规则（AI / 流媒体 / PT…）。以下三条由代码固定生成，不要写进本文件：
 #   广告 GEOSITE category-ads-all → 拒绝（最前，系统分类）
 #   国内 GEOIP CN → 直连（倒数第二，系统分类）
 #   MATCH 兜底 → 美国US（最后，系统分类）
-#
-# 面向大陆用户的业务默认出口（可按机场线路再改）：
-#   AI / Netflix 等需解锁 → 美国US
-#   YouTube / 开发(GitHub·Docker) / 多数国外站 → 日本JP（延迟通常优于美西）
-#   电报 / 社交 → 香港HK
-#
-# 顺序 = 本文件列表顺序（命中即停），seed 时自动编号，无需写 sortOrder。
-# 字段顺序：category 放最前（面板分组显眼）；个人域名请在面板「批量导入」添加（不会写回此文件）。
 
 rules:
+  # ========== 代理集 ==========
+  - { category: 常用, type: DOMAIN, payload: hub.dockerhub.com, target: 日本JP, enabled: true, note: Docker }
+  - { category: 常用, type: DOMAIN, payload: tvdb.com, target: 日本JP, enabled: true, note: TVDB }
+  - { category: 常用, type: DOMAIN, payload: thetvdb.com, target: 日本JP, enabled: true, note: TVDB }
+  - { category: 常用, type: DOMAIN-SUFFIX, payload: omdbapi.com, target: 日本JP, enabled: true, note: OMDb }
+  - { category: 常用, type: DOMAIN, payload: giffgaff.com, target: 直连, enabled: true, note: GG卡 }
+  - { category: 常用, type: DOMAIN-REGEX, payload: '^[0-9]{6}\.xyz$', target: 直连, enabled: true, note: 6位xyz域名 }
 
-  # ========== 海外 AI ==========
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: openai.com, target: 美国US, enabled: true, note: AI-OpenAI }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: chatgpt.com, target: 美国US, enabled: true, note: AI-ChatGPT }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: oaistatic.com, target: 美国US, enabled: true, note: AI-ChatGPT静态 }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: oaiusercontent.com, target: 美国US, enabled: true, note: AI-ChatGPT内容 }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: anthropic.com, target: 美国US, enabled: true, note: AI-Anthropic }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: claude.ai, target: 美国US, enabled: true, note: AI-Claude }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: x.ai, target: 美国US, enabled: true, note: AI-xAI }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: grok.com, target: 美国US, enabled: true, note: AI-Grok }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: googleapis.com, target: 美国US, enabled: true, note: AI-GoogleAPI }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: gemini.google.com, target: 美国US, enabled: true, note: AI-Gemini }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: cursor.com, target: 美国US, enabled: true, note: AI-Cursor }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: cursor.sh, target: 美国US, enabled: true, note: AI-Cursor }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: perplexity.ai, target: 美国US, enabled: true, note: AI-Perplexity }
-  - { category: 海外AI, type: DOMAIN-SUFFIX, payload: copilot.microsoft.com, target: 美国US, enabled: true, note: AI-Copilot }
 
-  # ========== 国内 AI ==========
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: zhipuai.cn, target: 直连, enabled: true, note: AI-智谱 }
-  - { category: 国内AI, type: DOMAIN, payload: zcode.z.ai, target: 直连, enabled: true, note: AI-智谱 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: bigmodel.cn, target: 直连, enabled: true, note: AI-智谱开放平台 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: chatglm.cn, target: 直连, enabled: true, note: AI-ChatGLM }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: deepseek.com, target: 直连, enabled: true, note: AI-DeepSeek }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: moonshot.cn, target: 直连, enabled: true, note: AI-月之暗面 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: kimi.com, target: 直连, enabled: true, note: AI-Kimi }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: tongyi.aliyun.com, target: 直连, enabled: true, note: AI-通义千问 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: dashscope.aliyuncs.com, target: 直连, enabled: true, note: AI-通义DashScope }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: qianfan.baidubce.com, target: 直连, enabled: true, note: AI-百度千帆 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: yunqing.com, target: 直连, enabled: true, note: AI-云青 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: volces.com, target: 直连, enabled: true, note: AI-火山引擎 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: doubao.com, target: 直连, enabled: true, note: AI-豆包 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: siliconflow.cn, target: 直连, enabled: true, note: AI-硅基流动 }
-  - { category: 国内AI, type: DOMAIN-SUFFIX, payload: modelscope.cn, target: 直连, enabled: true, note: AI-魔搭ModelScope }
+  # ========== 代理集 ==========
+  - { category: GEOSITE, type: GEOSITE, payload: category-ai-!cn, target: 美国US, enabled: true, note: 海外AI }
+  - { category: GEOSITE, type: GEOSITE, payload: category-ai, target: 直连, enabled: true, note: 国内AI }
+  - { category: GEOSITE, type: GEOSITE, payload: telegram, target: 香港HK, enabled: true, note: 电报 }
+  - { category: GEOSITE, type: GEOSITE, payload: github, target: 日本JP, enabled: true, note: GitHub }
+  - { category: GEOSITE, type: GEOSITE, payload: docker, target: 日本JP, enabled: true, note: Docker }
+  - { category: GEOSITE, type: GEOSITE, payload: bitwarden, target: 直连, enabled: true, note: 密码 }
+  - { category: GEOSITE, type: GEOSITE, payload: bing, target: 日本JP, enabled: true, note: 搜索 }
+  - { category: GEOSITE, type: GEOSITE, payload: google, target: 日本JP, enabled: true, note: google }
+  - { category: GEOSITE, type: GEOSITE, payload: tmdb, target: 日本JP, enabled: true, note: TMDB }
+  - { category: GEOSITE, type: DOMAIN, payload: fanart.tv, target: 日本JP, enabled: true, note: Fanart }
+  - { category: GEOSITE, type: GEOSITE, payload: imdb, target: 日本JP, enabled: true, note: IMDb }
+  - { category: GEOSITE, type: GEOSITE, payload: metabrainz, target: 日本JP, enabled: true, note: 元数据 }
+  - { category: GEOSITE, type: GEOSITE, payload: netflix, target: 美国US, enabled: true, note: 奈飞 }
+  - { category: GEOSITE, type: GEOSITE, payload: disney, target: 美国US, enabled: true, note: 迪士尼 }
+  - { category: GEOSITE, type: GEOSITE, payload: hulu, target: 美国US, enabled: true, note: hulu }
+  - { category: GEOSITE, type: GEOSITE, payload: spotify, target: 美国US, enabled: true, note: spotify }
+  - { category: GEOSITE, type: GEOSITE, payload: youtube, target: 美国US, enabled: true, note: youtube }
+  - { category: GEOSITE, type: GEOSITE, payload: twitter, target: 香港HK, enabled: true, note: twitter }
+  - { category: GEOSITE, type: GEOSITE, payload: instagram, target: 香港HK, enabled: true, note: instagram }
+  - { category: GEOSITE, type: GEOSITE, payload: facebook, target: 香港HK, enabled: true, note: facebook }
+  - { category: GEOSITE, type: GEOSITE, payload: discord, target: 香港HK, enabled: true, note: discord }
+  - { category: GEOSITE, type: GEOSITE, payload: reddit, target: 香港HK, enabled: true, note: reddit }
+  - { category: GEOSITE, type: GEOSITE, payload: cloudflare, target: 直连, enabled: true, note: cloudflare }
+  - { category: GEOSITE, type: GEOSITE, payload: epicgames, target: 直连, enabled: true, note: epicgames }
+  - { category: GEOSITE, type: GEOSITE, payload: z-library, target: 日本JP, enabled: true, note: Z站 }
+  - { category: GEOSITE, type: GEOSITE, payload: microsoft, target: 直连, enabled: true, note: 微软 }
 
-  # ========== 流媒体 ==========
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: netflix.com, target: 美国US, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: nflxvideo.net, target: 美国US, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: nflxso.net, target: 美国US, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: disneyplus.com, target: 美国US, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: bamgrid.com, target: 美国US, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: hulu.com, target: 美国US, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: spotify.com, target: 日本JP, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: scdn.co, target: 日本JP, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: youtube.com, target: 日本JP, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: ytimg.com, target: 日本JP, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: googlevideo.com, target: 日本JP, enabled: true, note: 流媒体 }
-  - { category: 流媒体, type: DOMAIN-SUFFIX, payload: youtu.be, target: 日本JP, enabled: true, note: 流媒体 }
-
-  # ========== 影视元数据 ==========
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: themoviedb.org, target: 日本JP, enabled: true, note: TMDB }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: tmdb.org, target: 日本JP, enabled: true, note: TMDB }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: tmdb-image-prod.freetls.fastly.net, target: 日本JP, enabled: true, note: TMDB图片CDN }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: fanart.tv, target: 日本JP, enabled: true, note: Fanart }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: thetvdb.com, target: 日本JP, enabled: true, note: TVDB }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: tvdb.com, target: 日本JP, enabled: true, note: TVDB }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: imdb.com, target: 日本JP, enabled: true, note: IMDb }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: media-amazon.com, target: 日本JP, enabled: true, note: IMDb图片 }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: omdbapi.com, target: 日本JP, enabled: true, note: OMDb }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: musicbrainz.org, target: 日本JP, enabled: true, note: MusicBrainz }
-  - { category: 影视元数据, type: DOMAIN-SUFFIX, payload: coverartarchive.org, target: 日本JP, enabled: true, note: CoverArt }
-
-  # ========== 电报 ==========
-  - { category: 电报, type: DOMAIN-SUFFIX, payload: telegram.org, target: 香港HK, enabled: true, note: 电报 }
-  - { category: 电报, type: DOMAIN-SUFFIX, payload: t.me, target: 香港HK, enabled: true, note: 电报 }
-  - { category: 电报, type: DOMAIN-SUFFIX, payload: tdesktop.com, target: 香港HK, enabled: true, note: 电报 }
-  - { category: 电报, type: DOMAIN-SUFFIX, payload: telegra.ph, target: 香港HK, enabled: true, note: 电报 }
-
-  # ========== 开发：GitHub / Docker ==========
-  - { category: 开发, type: DOMAIN-SUFFIX, payload: github.com, target: 日本JP, enabled: true, note: GitHub }
-  - { category: 开发, type: DOMAIN-SUFFIX, payload: githubusercontent.com, target: 日本JP, enabled: true, note: GitHub }
-  - { category: 开发, type: DOMAIN-SUFFIX, payload: githubassets.com, target: 日本JP, enabled: true, note: GitHub }
-  - { category: 开发, type: DOMAIN-SUFFIX, payload: github.io, target: 日本JP, enabled: true, note: GitHub }
-  - { category: 开发, type: DOMAIN-SUFFIX, payload: ghcr.io, target: 日本JP, enabled: true, note: GitHub }
-  - { category: 开发, type: DOMAIN-SUFFIX, payload: docker.com, target: 日本JP, enabled: true, note: Docker }
-  - { category: 开发, type: DOMAIN-SUFFIX, payload: docker.io, target: 日本JP, enabled: true, note: Docker }
-  - { category: 开发, type: DOMAIN-SUFFIX, payload: dockerhub.com, target: 日本JP, enabled: true, note: Docker }
-
-  # ========== Google ==========
-  - { category: Google, type: DOMAIN-SUFFIX, payload: google.com, target: 日本JP, enabled: true, note: Google }
-  - { category: Google, type: DOMAIN-SUFFIX, payload: gstatic.com, target: 日本JP, enabled: true, note: Google }
-  - { category: Google, type: DOMAIN-SUFFIX, payload: googleusercontent.com, target: 日本JP, enabled: true, note: Google }
-  - { category: Google, type: DOMAIN-SUFFIX, payload: ggpht.com, target: 日本JP, enabled: true, note: Google }
-
-  # ========== 社交 ==========
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: twitter.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: x.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: twimg.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: facebook.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: fbcdn.net, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: instagram.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: cdninstagram.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: discord.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: discordapp.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: discord.gg, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: reddit.com, target: 香港HK, enabled: true, note: 社交 }
-  - { category: 社交, type: DOMAIN-SUFFIX, payload: redd.it, target: 香港HK, enabled: true, note: 社交 }
-
-  # ========== 其它常用 ==========
-  - { category: 其它, type: DOMAIN-SUFFIX, payload: bing.com, target: 日本JP, enabled: true, note: 搜索 }
-  - { category: 其它, type: DOMAIN-SUFFIX, payload: cloudflare.com, target: 直连, enabled: true, note: 基础设施 }
-  - { category: 其它, type: DOMAIN-KEYWORD, payload: epicgames.com, target: 直连, enabled: true, note: 游戏 }
-  - { category: 其它, type: DOMAIN-SUFFIX, payload: ugnas.com, target: 直连, enabled: true, note: NAS }
-  - { category: 其它, type: DOMAIN, payload: www.ug.link, target: 直连, enabled: true, note: NAS }
-  - { category: 其它, type: DOMAIN-SUFFIX, payload: giffgaff.com, target: 直连, enabled: true, note: GG卡 }
-  - { category: 其它, type: DOMAIN, payload: zh.z-library.sk, target: 日本JP, enabled: true, note: Z站 }
-  - { category: 其它, type: DOMAIN-SUFFIX, payload: 1000qm.vip, target: 直连, enabled: true, note: 阡陌居 }
 
   # ========== PT站 ==========
   - { category: PT站, type: DOMAIN, payload: pt.0ff.cc, target: 直连, enabled: true, note: 自由农场 }

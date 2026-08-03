@@ -1,0 +1,11 @@
+<div class="filter-actions">
+  <button mat-flat-button color="warn" type="button" (click.debounceTime)="resetClick.emit()">重置</button>
+  <button
+    mat-flat-button
+    color="primary"
+    [type]="filterType"
+    (click.debounceTime)="filterType === 'button' ? filterClick.emit() : null"
+  >
+    过滤
+  </button>
+</div>

@@ -1,0 +1,324 @@
+<cm-page-toolbar title="Geo 数据">
+  <button
+    mat-icon-button
+    color="primary"
+    type="button"
+    class="m-r-10"
+    matTooltip="刷新元数据"
+    (click.debounceTime)="reloadMeta()"
+  >
+    <i-tabler class="icon-20" name="refresh"></i-tabler>
+  </button>
+  <button mat-flat-button color="primary" type="button" [disabled]="updating()" (click.debounceTime)="update()">
+    {{ updating() ? '更新中…' : '更新数据' }}
+  </button>
+</cm-page-toolbar>
+
+<p class="text-muted f-s-12 m-b-16">
+  查询 GeoSite 分类、IP 网段和 ASN 数据；更新会覆盖 defaults/geo 下的文件。
+</p>
+
+<div class="row">
+  @for (item of statuses(); track item.name) {
+    <div class="col-24 col-sm-12 col-lg-6 m-b-16">
+      <mat-card class="cardWithShadow">
+        <mat-card-content class="p-16">
+          <div class="d-flex align-items-center justify-content-between gap-8 m-b-8">
+            <strong class="f-s-14">{{ resourceName(item.name) }}</strong>
+            <span [class]="item.available ? badgeOk : badgeErr">{{ item.available ? '可用' : '不可用' }}</span>
+          </div>
+          <div class="f-s-12 text-muted">{{ item.name }} · {{ formatBytes(item.size) }}</div>
+          <div class="f-s-12 text-muted m-t-4 text-truncate" [title]="item.sha256 || ''">
+            版本 {{ item.version || '—' }}
+          </div>
+          @if (item.databaseType) {
+            <div class="f-s-12 text-muted m-t-4 text-truncate" [title]="item.databaseType">
+              {{ item.databaseType }} · build {{ item.buildEpoch || '—' }}
+            </div>
+          }
+          @if (item.error) {
+            <div class="f-s-12 text-error m-t-8" [title]="item.error">{{ item.error }}</div>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</div>
+
+<mat-card class="cardWithShadow m-b-16">
+  <mat-card-content class="p-16">
+    <h3 class="f-w-600 f-s-16 m-b-4">域名查询</h3>
+    <p class="f-s-12 text-muted m-b-16">GeoIP、MetaDB 和 ASN 需要勾选 DNS 解析后才能按 IP 查询。</p>
+
+    <div class="row align-items-end">
+      <cm-form-field class="col-24 col-md-12">
+        <mat-label>域名</mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <input
+            matInput
+            [(ngModel)]="domain"
+            placeholder="例如 www.example.com"
+            (keyup.enter)="query()"
+          />
+        </mat-form-field>
+      </cm-form-field>
+      <div class="col-24 col-md-6 m-b-16">
+        <mat-checkbox [(ngModel)]="resolve" color="primary">额外进行 DNS 解析</mat-checkbox>
+      </div>
+      <div class="col-24 col-md-6 m-b-16">
+        <button mat-flat-button color="primary" type="button" [disabled]="loading()" (click.debounceTime)="query()">
+          {{ loading() ? '查询中…' : '查询' }}
+        </button>
+      </div>
+    </div>
+
+    @if (queryResult(); as result) {
+      <mat-divider class="m-b-16"></mat-divider>
+      <div class="d-flex flex-wrap gap-8 m-b-16">
+        <span [class]="badgeMuted">域名 {{ result.domain }}</span>
+        @for (ip of result.ips; track ip) {
+          <span [class]="badgeMuted">IP {{ ip }}</span>
+        }
+        @if (result.resolveSkipped) {
+          <span [class]="badgeWarn">未进行 DNS 解析</span>
+        }
+        @if (result.resolveError) {
+          <span [class]="badgeWarn">DNS：{{ result.resolveError }}</span>
+        }
+      </div>
+
+      <div class="row">
+        <div class="col-24 col-lg-12 m-b-16">
+          <mat-card class="cardWithShadow">
+            <mat-card-content class="p-16">
+              <div class="d-flex align-items-center gap-8 m-b-12">
+                <h4 class="f-w-600 f-s-14 m-0">GeoSite</h4>
+                <span [class]="badgeMuted">{{ result.geosite.length }}</span>
+              </div>
+              @if (result.geosite.length) {
+                @for (hit of result.geosite; track hit.category + hit.type + hit.value) {
+                  <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-b-8">
+                    <div class="min-w-0">
+                      <div class="f-w-600 f-s-14">{{ hit.category }}</div>
+                      <div class="f-s-12 text-muted">{{ hit.type }} · {{ hit.value }}</div>
+                    </div>
+                    <button
+                      mat-stroked-button
+                      color="primary"
+                      type="button"
+                      (click.debounceTime)="openGeoSiteCategoryEntries(hit.category)"
+                    >
+                      查看分类条目
+                    </button>
+                  </div>
+                }
+              } @else {
+                <div class="f-s-14 text-muted">无命中</div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="col-24 col-lg-12 m-b-16">
+          <mat-card class="cardWithShadow">
+            <mat-card-content class="p-16">
+              <div class="d-flex align-items-center gap-8 m-b-12">
+                <h4 class="f-w-600 f-s-14 m-0">GeoIP</h4>
+                <span [class]="badgeMuted">{{ result.geoip.length }}</span>
+              </div>
+              @if (result.geoip.length) {
+                @for (hit of result.geoip; track hit.ip + hit.cidr + hit.category) {
+                  <div class="m-b-8">
+                    <div class="f-w-600 f-s-14">{{ hit.category }}</div>
+                    <div class="f-s-12 text-muted">{{ hit.ip }} · {{ hit.cidr }}</div>
+                  </div>
+                }
+              } @else {
+                <div class="f-s-14 text-muted">{{ result.resolveSkipped ? '未启用 DNS' : '无命中' }}</div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="col-24 col-lg-12 m-b-16">
+          <mat-card class="cardWithShadow">
+            <mat-card-content class="p-16">
+              <div class="d-flex align-items-center gap-8 m-b-12">
+                <h4 class="f-w-600 f-s-14 m-0">MetaDB</h4>
+                <span [class]="badgeMuted">{{ result.metadb.length }}</span>
+              </div>
+              @if (result.metadb.length) {
+                @for (hit of result.metadb; track hit.ip + hit.cidr) {
+                  <div class="m-b-8">
+                    <div class="f-w-600 f-s-14">{{ hit.ip }}</div>
+                    <div class="f-s-12 text-muted">{{ hit.cidr }} · {{ hit.record }}</div>
+                  </div>
+                }
+              } @else {
+                <div class="f-s-14 text-muted">{{ result.resolveSkipped ? '未启用 DNS' : '无记录或文件不可用' }}</div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="col-24 col-lg-12 m-b-16">
+          <mat-card class="cardWithShadow">
+            <mat-card-content class="p-16">
+              <div class="d-flex align-items-center gap-8 m-b-12">
+                <h4 class="f-w-600 f-s-14 m-0">ASN</h4>
+                <span [class]="badgeMuted">{{ result.asn.length }}</span>
+              </div>
+              @if (result.asn.length) {
+                @for (hit of result.asn; track hit.ip + hit.cidr) {
+                  <div class="m-b-8">
+                    <div class="f-w-600 f-s-14">AS{{ hit.asn }}</div>
+                    <div class="f-s-12 text-muted">{{ hit.ip }} · {{ hit.cidr }} · {{ hit.organization }}</div>
+                  </div>
+                }
+              } @else {
+                <div class="f-s-14 text-muted">{{ result.resolveSkipped ? '未启用 DNS' : '无记录或文件不可用' }}</div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
+
+<mat-card class="cardWithShadow m-b-16">
+  <mat-card-content class="p-16">
+    <h3 class="f-w-600 f-s-16 m-b-4">分类与记录搜索</h3>
+    <p class="f-s-12 text-muted m-b-16">
+      GeoSite / GeoIP 按分类反查；ASN 按编号或组织名搜索；当前 MetaDB 按国家/地区代码搜索。MetaDB 文件不包含可靠的 ISP、城市或地区名称字段。
+    </p>
+
+    <div class="row align-items-end">
+      <cm-form-field class="col-24 col-md-6">
+        <mat-label>数据文件</mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select [ngModel]="reverseFile" (ngModelChange)="changeReverseFile($event)">
+            <mat-option value="geosite">GeoSite</mat-option>
+            <mat-option value="geoip">GeoIP</mat-option>
+            <mat-option value="metadb">MetaDB</mat-option>
+            <mat-option value="asn">ASN</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </cm-form-field>
+
+      @if (reverseFile === 'geosite' || reverseFile === 'geoip') {
+        <cm-form-field class="col-24 col-md-12">
+          <mat-label>分类关键词</mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input
+              matInput
+              [(ngModel)]="reverseKeyword"
+              (ngModelChange)="commitReverseKeyword()"
+              placeholder="例如 google、ads、cn"
+            />
+          </mat-form-field>
+        </cm-form-field>
+        <div class="col-24 col-md-6 m-b-16">
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            [disabled]="reverseLoading()"
+            (click.debounceTime)="reverse()"
+          >
+            {{ reverseLoading() ? '查询中…' : '查看条目' }}
+          </button>
+        </div>
+      } @else {
+        <cm-form-field class="col-24 col-md-6">
+          <mat-label>搜索字段</mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <mat-select [(ngModel)]="searchField">
+              @if (reverseFile === 'asn') {
+                <mat-option value="asn">ASN 编号</mat-option>
+                <mat-option value="organization">组织名</mat-option>
+              }
+              @if (reverseFile === 'metadb') {
+                <mat-option value="code">国家/地区代码</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </cm-form-field>
+        <cm-form-field class="col-24 col-md-6">
+          <mat-label>搜索关键词</mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input
+              matInput
+              [(ngModel)]="searchKeyword"
+              (keyup.enter)="openDatabaseSearch()"
+              [placeholder]="reverseFile === 'asn' ? '例如 15169、Google' : '例如 CN、US、AS'"
+            />
+          </mat-form-field>
+        </cm-form-field>
+        <div class="col-24 col-md-6 m-b-16">
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            [disabled]="searchLoading()"
+            (click.debounceTime)="openDatabaseSearch()"
+          >
+            {{ searchLoading() ? '搜索中…' : '搜索记录' }}
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (reverseFile === 'metadb' || reverseFile === 'asn') {
+      <p class="f-s-12 text-muted m-b-8">
+        {{
+          reverseFile === 'metadb'
+            ? '可搜索 Meta-geoip0 记录中的代码标签；ASN、组织名、ISP、城市和地区名称不属于当前 MetaDB 文件。'
+            : '可按 ASN 编号或 ASN 组织名搜索 GeoLite2-ASN.mmdb。'
+        }}
+      </p>
+    }
+
+    @if (reverseFile === 'geosite' || reverseFile === 'geoip') {
+      <div class="m-t-8">
+        <p class="f-s-14 text-muted m-b-8">匹配分类 {{ filteredCategories().length }} 个，点击分组查看具体条目：</p>
+        <div class="d-flex flex-wrap gap-8" style="max-height: 13rem; overflow-y: auto">
+          @for (item of filteredCategories(); track item.name) {
+            <button
+              mat-stroked-button
+              type="button"
+              [color]="reverseCategory === item.name ? 'primary' : undefined"
+              (click.debounceTime)="selectReverseCategory(item)"
+            >
+              {{ item.name }}
+              <span [class]="badgeMuted" class="m-l-4">{{ item.count }}</span>
+            </button>
+          } @empty {
+            <div class="f-s-14 text-muted">没有匹配的分类</div>
+          }
+        </div>
+      </div>
+    }
+
+    @if (reverseResult(); as result) {
+      @if (result.message) {
+        <mat-card class="cardWithShadow m-t-16">
+          <mat-card-content class="p-12 f-s-12 text-warning">{{ result.message }}</mat-card-content>
+        </mat-card>
+      } @else {
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-t-16">
+          <span class="f-s-14 text-muted">已加载 {{ result.items?.length || 0 }} 条，共 {{ result.total }} 条</span>
+          <button
+            mat-stroked-button
+            color="primary"
+            type="button"
+            [disabled]="reverseLoading()"
+            (click.debounceTime)="openReverseEntries(result, true)"
+          >
+            查看条目
+          </button>
+        </div>
+      }
+    }
+  </mat-card-content>
+</mat-card>

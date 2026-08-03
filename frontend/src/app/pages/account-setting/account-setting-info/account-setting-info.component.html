@@ -1,0 +1,25 @@
+<mat-card-content class="p-y-24">
+  <div class="row">
+    <div class="col-sm-12">
+      <mat-card class="cardWithShadow">
+        <mat-card-content class="p-y-24">
+          <mat-card-title>修改头像</mat-card-title>
+          <mat-card-subtitle class="mat-body-1">在这里修改您的用户头像</mat-card-subtitle>
+          <div class="text-center m-t-32">
+            <img [src]="userInfo.avatarSrc || '/assets/images/avatar/default.jpg'" class="rounded-circle" width="160" />
+            <div class="m-t-30">
+              <button mat-flat-button color="primary" type="button" (click)="openAvatarSettingDialog()">头像设置</button>
+            </div>
+            <span class="f-s-14 m-t-30 d-block">选择一个图片作为你的用户头像</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <div class="col-sm-12">
+      <app-account-setting-info-password-change></app-account-setting-info-password-change>
+    </div>
+    <div class="col-24">
+      <app-account-setting-info-base-info></app-account-setting-info-base-info>
+    </div>
+  </div>
+</mat-card-content>

@@ -1,0 +1,42 @@
+.form-help {
+  padding: 2px;
+  margin-left: 6px;
+  width: 1.125rem;
+  height: 1.125rem;
+  font-size: .75rem;
+  color: var(--tblr-text-second);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  background: var(--tblr-light);
+  border-radius: 100rem;
+  transition: background-color .3s, color .3s;
+  line-height: 1.2;
+  display: inline-block;
+  vertical-align: middle;
+  border: none;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .form-help {
+    transition: none
+  }
+}
+
+.form-help:hover {
+  color: #fff;
+  background: var(--tblr-primary)
+}
+
+
+.cm-form-field{
+  ::ng-deep{
+    mat-slide-toggle {
+      margin-top: 10px;
+    }
+  }
+}

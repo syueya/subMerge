@@ -11,6 +11,7 @@ import (
 	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
+	"github.com/submerge/submerge/backend/internal/geo"
 	"github.com/submerge/submerge/backend/internal/middleware"
 	"github.com/submerge/submerge/backend/internal/publish"
 	"github.com/submerge/submerge/backend/internal/rule"
@@ -69,6 +70,10 @@ func main() {
 	}
 	publishSvc := publish.NewService(db, sourceSvc, ruleSvc)
 	subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
+	geoSvc := geo.NewService(cfg.GeoDir, geo.URLs{
+		GeoIP: cfg.GeoIPURL, GeoSite: cfg.GeoSiteURL, MetaDB: cfg.MetaDBURL, ASN: cfg.ASNURL,
+	})
+	geoSvc.Load()
 
 	// 启动后异步拉一次全部启用源，再按间隔定时刷新；首次发布由用户在面板完成
 	go func() {
@@ -105,6 +110,7 @@ func main() {
 		Rule:    rule.NewHandler(ruleSvc, auditSvc),
 		Publish: publish.NewHandler(publishSvc, auditSvc),
 		Sub:     subscription.NewHandler(subSvc, auditSvc),
+		Geo:     geo.NewHandler(geoSvc, auditSvc),
 		Audit:   auditSvc,
 		AuthMW:  middleware.AuthRequired(db),
 		LoginRL: middleware.RateLimit(cfg.RateLimitLogin),

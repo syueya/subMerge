@@ -6,6 +6,7 @@
 - 网页分开展示：策略组管出口成员，分流规则管业务匹配；预览后发布
 - 独立订阅链接，隐藏上游地址；令牌可绑定部分源
 - 分流在 Clash Meta / Clash Verge 客户端执行
+- 管理端提供 Geo 数据查询与更新页面（`/geo`）
 
 版本见 `backend/version/VERSION`。
 
@@ -27,7 +28,14 @@ cd frontend && npm start   # http://localhost:4200 → API :8080
 | 项目根 | `backend/data` | `backend/log` |
 | `backend/` 或 Docker `/app` | `./data` | `./log` |
 
-## 本机二进制
+## Geo 数据
+
+管理端 `/geo` 页面读取 `backend/defaults/geo/` 下的四个文件，并显示文件大小、SHA256、MMDB build 时间或数据哈希版本。域名查询默认只匹配 `geosite.dat` 的分类；勾选 DNS 解析后，还会用解析出的 IP 查询 `geoip.dat`、`geoip.metadb` 和 `GeoLite2-ASN.mmdb`。
+
+页面的「更新数据」会从以下地址下载并校验后原子覆盖 `backend/defaults/geo/`，服务随后重载索引。地址可通过环境变量覆盖：`GEOIP_URL`、`GEOSITE_URL`、`GEODB_URL`、`GEOASN_URL`。运行进程必须对该目录有写权限。
+
+`geosite.dat` 支持按分类反查域名条目；GeoIP 文件反查的是其实际保存的 CIDR。`geoip.metadb` 与 ASN 数据库不保存域名，因此不能从分类反查域名。
+
 
 ```bash
 cd frontend && npm ci && npm run build

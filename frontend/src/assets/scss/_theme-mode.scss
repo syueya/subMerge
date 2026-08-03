@@ -1,0 +1,153 @@
+// =============================================================================
+// 浅色 / 深色模式
+// 作用：
+//   1. 默认 Material 变量微调
+//   2. html.light-theme / html.dark-theme 背景、描边、组件态
+//   3. 深色模式下的少量布局/组件覆盖
+// =============================================================================
+@use "@angular/material" as mat;
+@use "sass:meta";
+@use "variables" as *;
+
+html {
+  --mat-sys-error-fixed-dim: rgb(254, 236, 238);
+  --mat-select-container-elevation-shadow: var(--mat-sys-level3);
+  --mat-list-list-item-label-text-tracking: 0;
+  --mat-slide-toggle-track-height: 28px;
+  --mat-sidenav-container-divider-color: var(--mat-sys-outline-variant);
+  --mat-dialog-with-actions-content-padding: 20px 24px;
+  --mat-form-field-container-text-tracking: unset;
+  --mat-slide-toggle-with-icon-handle-size: 22px;
+  --mat-badge-text-color: white;
+  --mat-slide-toggle-selected-with-icon-handle-horizontal-margin: 0 26px;
+}
+
+html.light-theme {
+    color-scheme: light;
+    --mat-sys-corner-small: 7px;
+    --mat-sys-background: #fff;
+    --mat-sys-surface-bright: #f2f6fa;
+    --mat-sys-surface: #fff;
+    --mat-sys-surface-container: #fff;
+    --mat-sys-surface-container-low: #fff;
+    --mat-sys-on-background: #2a3547;
+    --mat-sys-outline: #d7dde2;
+    --mat-sys-outline-variant: #d7dde2;
+    --mat-form-field-outlined-hover-outline-color: #d7dde2;
+    --mat-checkbox-unselected-hover-state-layer-color: #d7dde2;
+    --mat-menu-item-hover-state-layer-color: #f6f9fc;
+    --mat-button-toggle-state-layer-color: #f6f9fc;
+    --mat-option-focus-state-layer-color: #f6f9fc;
+    --mat-option-hover-state-layer-color: #f6f9fc;
+    --mat-slide-toggle-unselected-track-color: #f6f9fc;
+    --mat-stepper-header-focus-state-layer-color: #f6f9fc;
+    --mat-stepper-header-hover-state-layer-color: #f6f9fc;
+    --mat-dialog-supporting-text-color: var(--mat-sys-on-background);
+    --mat-expansion-header-hover-state-layer-color: #f6f9fc;
+  }
+
+html.dark-theme {
+  color-scheme: dark;
+  --mat-sys-background: #141a21;
+  --mat-sys-on-background: rgba(255, 255, 255, 0.9);
+  --mat-sys-on-primary: #fff;
+  --mat-sys-surface-bright: #ffffff05;
+  --mat-sys-surface: #141a21;
+  --mat-sys-surface-container: #141a21;
+  --mat-sys-surface-container-low: #141a21;
+  --mat-sys-outline-variant: #2e3f50;
+  --mat-sys-outline: #2e3f50;
+  --mat-form-field-outlined-hover-outline-color: #465670;
+  --mat-checkbox-unselected-hover-state-layer-color: #19212a;
+  --mat-menu-item-hover-state-layer-color: #19212a;
+  --mat-button-toggle-state-layer-color: #19212a;
+  --mat-option-focus-state-layer-color: #19212a;
+  --mat-option-hover-state-layer-color: #19212a;
+  --mat-slide-toggle-unselected-track-color: #19212a;
+  --mat-stepper-header-focus-state-layer-color: #19212a;
+  --mat-stepper-header-hover-state-layer-color: #19212a;
+  --mat-expansion-header-hover-state-layer-color: #19212a;
+  @include mat.card-overrides((
+      elevated-container-color: #1c252e,
+      elevated-container-elevation: rgba(0, 0, 0, 0.2) 0px 0px 2px 0px,
+      subtitle-text-color: rgba(255, 255, 255, 0.67),
+    ));
+  @include mat.theme-overrides((
+      level1: 0px 12px 24px -4px rgba(143, 176, 210, 0.02),
+      level2: 0px 12px 24px -4px rgba(143, 176, 210, 0.02),
+      level3: 0px 12px 24px -4px rgba(143, 176, 210, 0.02),
+    ));
+}
+
+.dark-theme {
+  //   typography
+  color: $dark-text-secondary;
+
+  .mat-mdc-menu-panel {
+    color: var(--mat-sys-on-background) !important;
+  }
+
+  .bg-white,
+  .mdc-menu-surface {
+    background-color: var(--mat-sys-surface) !important;
+  }
+
+  .topbar {
+    background-color: var(--mat-sys-surface);
+  }
+
+  .hljs {
+    background: var(--mat-sys-surface);
+  }
+
+  .cardWithShadow {
+    box-shadow: $darkcardshadow;
+  }
+
+  // -------------------------------------------------------
+  //   border
+  // -------------------------------------------------------
+
+  .b-1 {
+    border: 1px solid var(--mat-sys-outline-variant) !important;
+  }
+
+  .b-b-1 {
+    border-bottom: 1px solid var(--mat-sys-outline-variant) !important;
+  }
+
+  .b-t-1 {
+    border-top: 1px solid var(--mat-sys-outline-variant) !important;
+  }
+
+  .b-r-1 {
+    border-right: 1px solid var(--mat-sys-outline-variant) !important;
+  }
+
+  .b-l-1 {
+    border-left: 1px solid var(--mat-sys-outline-variant);
+  }
+
+}
+
+// horizontal + dark
+
+html.dark-theme {
+  .logodark {
+    display: none;
+  }
+}
+
+html.light-theme {
+  .logolight {
+    display: none;
+  }
+}
+
+// 侧边栏品牌标题在深浅主题下沿用系统前景色
+html.dark-theme,
+html.light-theme {
+  .branding-title {
+    color: var(--mat-sys-on-surface, inherit);
+  }
+}

@@ -1,0 +1,245 @@
+// =============================================================================
+// 页面骨架与通用结构
+// 作用：body、主布局容器、表格容器、链接、常用尺寸辅助类。
+// =============================================================================
+@use "variables" as *;
+
+// --- 全局重置与 body ---
+*,
+:after,
+:before {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: $font-family;
+  line-height: 1.334rem;
+  overflow-x: hidden;
+  color: var(--mat-sys-on-background);
+}
+
+// --- 原生滚动条 ---
+:root {
+  --scrollbar-track-thickness: 3px;
+  --scrollbar-track-hover-thickness: 3px;
+  --scrollbar-track-color: transparent;
+  --scrollbar-thumb-color: rgba(42, 53, 71, 0.18);
+  --scrollbar-thumb-hover-color: rgba(42, 53, 71, 0.32);
+  --scrollbar-thumb-active-color: rgba(42, 53, 71, 0.4);
+}
+
+html.dark-theme {
+  --scrollbar-thumb-color: rgba(255, 255, 255, 0.16);
+  --scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.28);
+  --scrollbar-thumb-active-color: rgba(255, 255, 255, 0.36);
+}
+
+html,
+body,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-track-thickness);
+  height: var(--scrollbar-track-thickness);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-color);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-color);
+}
+
+// --- 空白布局容器（登录 / 错误页） ---
+.blank-layout-container {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-title {
+  font-size: 28px;
+  line-height: 1.3;
+}
+
+// --- 主布局外壳 ---
+.mainWrapper {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  flex: 1;
+  height: 100%;
+}
+
+.container {
+  max-width: 1200px;
+  padding-left: 24px;
+  padding-right: 24px;
+  margin: 0 auto;
+  &.full-width {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+}
+
+// --- 页面内容区 ---
+.pageWrapper {
+  padding: 12px 24px;
+  min-height: 100vh;
+
+  margin: 0 auto;
+}
+
+// --- 移动端打开侧边栏按钮 ---
+.sidebar-mobile-open {
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 8px);
+  z-index: 8;
+  margin: 8px 0 0 8px;
+  background: var(--mat-sys-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.w-full {
+  width: 100%;
+}
+
+.w-60 {
+  width: 60px;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.h-200 {
+  height: 200px;
+}
+
+.shadow-none {
+  box-shadow: none !important;
+}
+
+.rounded {
+  border-radius: $border-radius !important;
+}
+
+.rounded-circle {
+  border-radius: 50% !important;
+}
+
+.rounded-pill {
+  border-radius: 25px !important;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.text-decoration-none {
+  text-decoration: none;
+}
+
+.position-relative {
+  position: relative;
+}
+
+th.mat-mdc-header-cell {
+  font-weight: bold;
+  min-width: 75px;
+  box-sizing: content-box;
+}
+
+// --- 表格容器与备注列 ---
+.table-container {
+  position: relative;
+  overflow: auto;
+
+  .mdc-data-table__header-cell {
+    padding: 0 8px;
+  }
+
+  td,
+  mat-cell {
+    white-space: nowrap;
+    padding: 8px;
+    min-width: 75px;
+    box-sizing: content-box;
+  }
+
+  .mat-column-note {
+    max-width: 200px; /* 备注列最大宽度 */
+    overflow: hidden; /* 隐藏超出部分 */
+    word-wrap: break-word; /* 允许在单词内换行 */
+    white-space: normal; /* 允许备注内容换行 */
+  }
+
+  th.mat-mdc-header-cell {
+    font-weight: bold;
+    min-width: 75px;
+    box-sizing: content-box;
+  }
+
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    &:first-child {
+      padding-left: 24px;
+    }
+    &:last-child {
+      padding-right: 24px;
+    }
+  }
+
+  td.cdk-column-action {
+    .mat-mdc-icon-button.mat-mdc-button-base {
+      --mat-icon-button-state-layer-size: 48px;
+      padding: 12px;
+    }
+  }
+}
+
+
+.op-5 {
+  opacity: 0.5;
+}
+
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+.avatar-group {
+  img {
+    border: 2px solid $white;
+    margin-right: -5px;
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+}
+
+a {
+  color: var(--mat-sys-on-background);
+  &:hover {
+    color: $primary;
+  }
+}
+
+@media (min-width: 768px) {
+  html .flex-sm-row {
+    flex-direction: row !important;
+  }
+}

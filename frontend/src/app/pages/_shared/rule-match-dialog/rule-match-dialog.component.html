@@ -1,0 +1,101 @@
+<cm-dialog-header [modalTitle]="title"></cm-dialog-header>
+
+<div mat-dialog-content class="mat-subtitle-2 lh-16">
+  <p class="text-muted f-s-12 m-b-16">{{ subtitle }}</p>
+
+  @if (loading) {
+    <p class="text-muted f-s-14">正在加载规则…</p>
+  } @else {
+    <div class="row">
+      <cm-form-field class="col-24">
+        <mat-label>域名 / IP</mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <input
+            matInput
+            type="text"
+            [(ngModel)]="testInput"
+            placeholder="例如 chat.openai.com 或 https://www.google.com/path"
+            (keydown.enter)="$event.preventDefault(); runTest()"
+          />
+        </mat-form-field>
+      </cm-form-field>
+    </div>
+
+    <div class="d-flex flex-wrap gap-8 m-b-16">
+      <button mat-flat-button color="primary" type="button" (click.debounceTime)="runTest()">测试</button>
+      @for (ex of testExamples; track ex) {
+        <button mat-stroked-button color="primary" type="button" (click.debounceTime)="useExample(ex)">
+          {{ ex }}
+        </button>
+      }
+    </div>
+
+    @if (testResult(); as r) {
+      <mat-card class="cardWithShadow m-b-16">
+        <mat-card-content class="p-16">
+          <div class="d-flex flex-wrap align-items-center gap-8 m-b-12 f-s-14">
+            <span class="text-muted">解析为</span>
+            <code class="f-s-12">{{ r.host || '—' }}</code>
+            <span class="bg-light-primary text-primary rounded f-s-12 f-w-600 p-x-8 p-y-2">{{ kindLabel(r.kind) }}</span>
+          </div>
+
+          @if (r.matched && r.rule) {
+            <div class="m-b-8">
+              <div class="d-flex flex-wrap align-items-center gap-8 m-b-12">
+                <span class="bg-light-success text-success rounded f-s-12 f-w-600 p-x-8 p-y-2">已命中</span>
+                <span class="f-s-14 text-muted">{{ r.note }}</span>
+              </div>
+              <div class="row">
+                <div class="col-24 col-md-12 m-b-8">
+                  <div class="f-s-12 text-muted">规则类型</div>
+                  <div class="f-s-14 f-w-600">{{ typeText(r.rule!.type) }}</div>
+                </div>
+                <div class="col-24 col-md-12 m-b-8">
+                  <div class="f-s-12 text-muted">匹配内容</div>
+                  <div class="f-s-14">{{ r.rule!.payload || '（MATCH 无 payload）' }}</div>
+                </div>
+                <div class="col-24 col-md-12 m-b-8">
+                  <div class="f-s-12 text-muted">目标出口</div>
+                  <div class="f-s-14 f-w-600 text-primary">{{ targetText(r.rule!.target) }}</div>
+                </div>
+                @if (r.rule!.raw) {
+                  <div class="col-24 m-b-8">
+                    <div class="f-s-12 text-muted">原文</div>
+                    <div class="f-s-12 text-muted">{{ r.rule!.raw }}</div>
+                  </div>
+                }
+              </div>
+              @if (showEditAction || showLocateAction) {
+                <div class="d-flex flex-wrap gap-8 m-t-12">
+                  @if (showEditAction) {
+                    <button mat-stroked-button color="primary" type="button" (click.debounceTime)="onEdit(r.rule!)">
+                      编辑此规则
+                    </button>
+                  }
+                  @if (showLocateAction && canLocate(r.rule!)) {
+                    <button mat-stroked-button color="primary" type="button" (click.debounceTime)="onLocate(r.rule!)">
+                      定位到策略组
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            <p class="f-s-12 text-muted m-b-0">
+              在此之前跳过 {{ r.skipped }} 条启用规则（含类型不匹配或 GEOIP 等前端无法判定的规则）
+            </p>
+          } @else {
+            <div class="bg-light-warning text-warning rounded p-12 f-s-14">{{ r.note }}</div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>
+
+<div class="m-b-16">
+  <mat-divider></mat-divider>
+</div>
+
+<div mat-dialog-actions class="text-right p-24 p-t-0">
+  <button mat-stroked-button color="primary" type="button" mat-dialog-close>关闭</button>
+</div>

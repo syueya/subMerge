@@ -1,0 +1,27 @@
+<div class="row">
+  <div class="col-24">
+    @if (dataList?.length) {
+      @if (dataList.length >= maxLabelNum) {
+        <mat-form-field appearance="outline" class="w-full label-select" color="primary">
+        <cm-input-seleted-search   [formControl]="itemCtrl" [disabledIds]="disabledIds" [valueProp]="valueProp" [renderProp]="renderProp" [selectData]="dataList" [optionRender]="optionRender" (selectionChange)="userSelectionChange($event.value)"></cm-input-seleted-search>
+         </mat-form-field>
+      } @else {
+        <mat-chip-listbox [formControl]="itemCtrl" (change)="userSelectionChange($event.value)">
+          <div class="d-flex flex-wrap">
+            @for (item of dataList; track item[valueProp]; let i = $index) {
+              <mat-chip-option class="selectOption" [disabled]="item[valueProp] === value || itemCtrl.disabled || disabledIds?.includes(item[valueProp])" [value]="item[valueProp]">
+                @if (optionRender) {
+                  <ng-container *ngTemplateOutlet="optionRender; context: { $implicit: item }"></ng-container>
+                } @else {
+                  <!-- 默认渲染内容 -->
+                  {{ item[renderProp] }}
+                }
+              </mat-chip-option>
+            }
+          </div>
+        </mat-chip-listbox>
+      }
+
+    }
+  </div>
+</div>

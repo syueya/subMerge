@@ -1,0 +1,15 @@
+<div class="cm-form-field">
+  <div class="mat-subtitle-2 p-b-8 d-block">
+    <ng-content select="mat-label"></ng-content>
+    @if (help) {
+      <button type="button" class="form-help" (click)="tooltip.toggle()">
+        <i-tabler name="question-mark" class="icon-14"></i-tabler>
+      </button>
+      <span #tooltip="matTooltip" [matTooltip]="help" matTooltipTouchGestures="off" matTooltipPosition="above" matTooltipShowDelay="0"></span>
+    }
+    <ng-container *ngTemplateOutlet="buttonsTemplate ? buttonsTemplate : defaultButtons"></ng-container>
+  </div>
+
+  <ng-content></ng-content>
+</div>
+<ng-template #defaultButtons></ng-template>

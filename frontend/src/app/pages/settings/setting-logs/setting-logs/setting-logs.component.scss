@@ -1,0 +1,56 @@
+.app-left-sidebar {
+  &.mat-sidenav {
+    width: 200px;
+  }
+}
+
+.logs-type-scroll {
+  display: block;
+  height: calc(100vh - 195px);
+}
+
+.logs-viewport {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 125px);
+}
+
+@media (max-width: 1023px) {
+  .logs-type-scroll {
+    height: min(360px, 50vh);
+  }
+
+  .logs-viewport {
+    height: min(560px, calc(100vh - 220px));
+    min-height: 280px;
+  }
+}
+
+.level-error,
+.level-fatal {
+  color: var(--mat-sys-error);
+}
+
+.level-info {
+  color: var(--mat-sys-primary);
+}
+
+.level-debug,
+.level-slow {
+  color: var(--mat-sys-secondary);
+}
+.log-wrap {
+  white-space: pre-wrap; /* 保留空白符并换行 */
+  word-wrap: break-word; /* 强制长单词换行 */
+  overflow-wrap: break-word;
+}
+.log-item {
+  box-sizing: border-box;
+}
+.log-content-container{
+  ::ng-deep .cdk-virtual-scroll-content-wrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+

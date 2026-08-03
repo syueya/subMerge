@@ -1,0 +1,39 @@
+import { Component, inject } from '@angular/core';
+import { FormBuilder, Validators } from '@angular/forms';
+import { MatDialogRef } from '@angular/material/dialog';
+import { DialogService } from '@common/services/dialog.service';
+import { CATEGORY_NEW_VALUE } from '../services/rule-ui';
+import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+
+@Component({
+	selector: 'app-new-category-form',
+	templateUrl: './new-category-form.component.html',
+	standalone: false,
+})
+export class NewCategoryFormComponent extends CmParentFormComponent {
+	dialogRef = inject<MatDialogRef<NewCategoryFormComponent, string | null>>(MatDialogRef);
+	private fb = inject(FormBuilder);
+	private dialog = inject(DialogService);
+
+	readonly tip = '新建一个空的业务分类分组；随后可在该分组下添加规则。分类名仅面板展示。';
+
+	constructor() {
+		super();
+		this.editForm = this.fb.group({
+			name: ['', [Validators.required, Validators.maxLength(64)]],
+		});
+	}
+
+	submit(): void {
+		const name = String(this.editForm.get('name')?.value || '').trim();
+		if (!name) {
+			void this.dialog.error('请填写分类名称');
+			return;
+		}
+		if (name === CATEGORY_NEW_VALUE) {
+			void this.dialog.error('分类名称不可用');
+			return;
+		}
+		this.dialogRef.close(name);
+	}
+}

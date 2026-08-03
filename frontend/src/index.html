@@ -1,28 +1,87 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="light">
-<head>
- <meta charset="utf-8">
- <title>SubMerge</title>
- <base href="/">
- <meta name="viewport" content="width=device-width, initial-scale=1">
- <link rel="icon" href="favicon.ico" sizes="any">
- <link rel="icon" type="image/svg+xml" href="favicon.svg">
- <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
- <link rel="apple-touch-icon" href="logo-192.png">
- <script>
- (function () {
- try {
- var t = localStorage.getItem('submerge-theme');
- if (t !== 'dark' && t !== 'light') t = 'light';
- document.documentElement.setAttribute('data-theme', t);
- document.documentElement.style.colorScheme = t;
- } catch (e) {
- document.documentElement.setAttribute('data-theme', 'light');
- }
- })();
- </script>
-</head>
-<body>
- <app-root></app-root>
-</body>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="applicable-device" content="pc,mobile" />
+    <meta http-equiv="Content-Language" content="zh-cn" />
+    <meta name="renderer" content="webkit" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,IE=11,IE=10,IE=9,IE=8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=0" />
+    <meta name="Robots" content="noindex,nofollow,noarchive" />
+    <title>SubMerge</title>
+    <base href="/" />
+    <link rel="icon" href="favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg">
+    <link rel="icon" type="image/svg+xml" sizes="any" href="favicon.svg">
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="msapplication-TileColor" content="#5d87ff">
+    <meta name="theme-color" content="#fafafa"/>
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="MobileOptimized" content="320" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SubMerge" />
+    <meta name="description" content="Clash 订阅合并与配置下发面板" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="referrer" content="never" />
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="MobileOptimized" content="320" />
+  </head>
+  <body class="mat-typography">
+    <div class="preloader">
+      <style type="text/css">
+        .preloader {
+          position: absolute;
+          z-index: 999;
+          display: block;
+          background: var(--initial-loading-bg, #fff);
+          block-size: 100vh;
+          inline-size: 100vw;
+        }
+        .preloader-content {
+          position: absolute;
+          inset-block-start: 50%;
+          inset-inline-start: calc(50% - 50px);
+        }
+
+        @keyframes preloader-logo-zoom {
+          0% {
+            transform: scale(0.8);
+          }
+          50% {
+            transform: scale(1.2);
+          }
+          100% {
+            transform: scale(0.8);
+          }
+        }
+
+        .preloader-content .logo-zoom-svg {
+          animation: preloader-logo-zoom 0.8s linear;
+          transform-origin: center;
+        }
+      </style>
+      <div class="preloader-content">
+        <div class="preloader-logo">
+          <!-- Logo -->
+           <svg t="1752492040464" class="logo-zoom-svg" viewBox="0 0 1024 1024" width="100px" height="100px">
+            <path d="M546.462897 266.292966c-73.410207 0-133.15531-59.727448-133.155311-133.137656C413.307586 59.762759 473.05269 0 546.462897 0c73.410207 0 133.12 59.727448 133.12 133.15531 0 73.410207-59.709793 133.137655-133.12 133.137656z m-283.453794 105.736827c-67.054345 0-121.626483-54.554483-121.626482-121.644138s54.572138-121.644138 121.626482-121.644138a121.767724 121.767724 0 0 1 121.608828 121.644138c0 67.054345-54.554483 121.644138-121.608828 121.644138zM142.547862 647.185655A107.343448 107.343448 0 0 1 35.310345 539.895172a107.343448 107.343448 0 0 1 107.237517-107.237517 107.343448 107.343448 0 0 1 107.219862 107.237517 107.343448 107.343448 0 0 1-107.219862 107.272828z m120.461241 272.595862a91.047724 91.047724 0 0 1-90.941793-90.959448 91.065379 91.065379 0 0 1 90.924138-90.941793 91.065379 91.065379 0 0 1 90.941793 90.941793c0 50.14069-40.783448 90.959448-90.924138 90.959448zM546.462897 1024a79.518897 79.518897 0 0 1-79.448276-79.448276c0-43.820138 35.645793-79.448276 79.448276-79.448276a79.518897 79.518897 0 0 1 79.43062 79.448276c0 43.820138-35.628138 79.448276-79.448276 79.448276z m287.744-134.285241a64.194207 64.194207 0 0 1-64.123587-64.123587 64.194207 64.194207 0 0 1 64.123587-64.123586 64.194207 64.194207 0 0 1 64.123586 64.123586 64.194207 64.194207 0 0 1-64.123586 64.123587z m117.848275-296.695173a52.683034 52.683034 0 0 1-52.612413-52.612414 52.683034 52.683034 0 0 1 52.612413-52.630069 52.70069 52.70069 0 0 1 52.630069 52.612414 52.718345 52.718345 0 0 1-52.630069 52.630069z m-158.667034-338.696827a40.818759 40.818759 0 1 0 81.655172 0.017655 40.818759 40.818759 0 0 0-81.655172 0z" fill="#389BFF" p-id="5061"></path>
+          </svg>
+        </div>
+      </div>
+      <!-- 设置加载背景 -->
+      <script>
+        const loaderColor = localStorage.getItem('wt_actTheme_primary_color') || '#FFFFFF';
+        if (loaderColor) {
+          const pageLoadingElement = document.querySelector('.preloader');
+          if (pageLoadingElement) {
+            pageLoadingElement.style.setProperty('--initial-loading-bg', loaderColor);
+          }
+        }
+      </script>
+    </div>
+    <app-root></app-root>
+    <noscript>请启用 JavaScript 以继续使用此应用程序.</noscript>
+  </body>
 </html>

@@ -1,0 +1,39 @@
+<div class="profile-bar">
+  @if (userInfo) {
+    <div class="profile-card">
+      <div class="profile-card__main">
+        <a
+          routerLink="/main/account-setting"
+          class="profile-card__user text-decoration-none"
+          matTooltip="账户与头像设置"
+        >
+          <img
+            [ngSrc]="userInfo.avatarSrc || '/assets/images/avatar/default.jpg'"
+            class="profile-card__avatar rounded-circle"
+            width="40"
+            height="40"
+          />
+          <div class="profile-card__meta">
+            <div class="profile-card__line">
+              <h5 class="profile-card__name">{{ userInfo.nickName || '未知用户' }}</h5>
+              <span class="profile-card__role">{{ roleLabel() }}</span>
+            </div>
+            <div class="profile-card__version-row">
+              <app-app-version class="profile-card__version"></app-app-version>
+            </div>
+          </div>
+        </a>
+
+        <button
+          mat-icon-button
+          type="button"
+          class="profile-card__logout"
+          matTooltip="注销登录"
+          (click.debounceTime)="logOut()"
+        >
+          <i-tabler name="power" class="text-primary icon-18 d-flex"></i-tabler>
+        </button>
+      </div>
+    </div>
+  }
+</div>

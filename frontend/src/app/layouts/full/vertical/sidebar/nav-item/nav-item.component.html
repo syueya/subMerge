@@ -1,0 +1,43 @@
+@if (item.navCap) {
+  <div mat-subheader class="nav-caption">
+    {{ item.navCap }}
+  </div>
+}
+
+@if (!item.navCap && isGroupItem(item)) {
+  <div
+    mat-subheader
+    class="nav-caption nav-group-label hide-menu"
+    [class.activeMenu]="isActiveRoute(item.route)"
+    (click)="onItemSelected(item)"
+    (keydown.enter)="onItemSelected(item)"
+    [attr.tabindex]="item.route ? 0 : null"
+    [attr.role]="item.route ? 'link' : null"
+  >
+    {{ item.displayName }}
+  </div>
+  @for (child of item.children; track child.route || child.displayName || child.navCap) {
+    <app-nav-item class="menu-list-item-child" [item]="child" (notify)="notify.emit()" [depth]="depth + 1"></app-nav-item>
+  }
+}
+
+@if (!item.navCap && !isGroupItem(item) && !item.external && !item.twoLines) {
+  <a
+    mat-list-item
+    (click)="onItemSelected(item)"
+    class="menu-list-item"
+    [class.activeMenu]="isActiveRoute(item.route)"
+    [class.disabled]="item.disabled"
+    [matTooltip]="showNameTooltip() ? (item.displayName || '') : ''"
+    matTooltipPosition="right"
+    [matTooltipDisabled]="!showNameTooltip()"
+  >
+    <i-tabler class="routeIcon" name="{{ item.iconName }}" matListItemIcon></i-tabler>
+    <span class="hide-menu">{{ item.displayName }}</span>
+    @if (item.chip) {
+      <span>
+        <span class="{{ item.chipClass }} p-x-8 p-y-4 item-chip f-w-500 rounded-pill ">{{ item.chipContent }}</span>
+      </span>
+    }
+  </a>
+}

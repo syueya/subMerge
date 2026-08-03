@@ -156,6 +156,21 @@ type DraftStatusResponse struct {
 	PublishedVersion int    `json:"publishedVersion,omitempty"`
 	// BuildError 草稿无法生成时的错误（仍可视为 dirty）
 	BuildError string `json:"buildError,omitempty"`
+	// Changes 草稿相对已发布配置的实体级变更列表（节点/策略组/规则）。
+	// 仅在有已发布版本且草稿可生成时填充，用于向用户展示「改了什么」。
+	Changes []DraftChange `json:"changes,omitempty"`
+}
+
+// DraftChange 单条草稿变更（相对当前已发布版本）
+type DraftChange struct {
+	// Kind：proxy（节点）| group（策略组）| rule（分流规则）
+	Kind string `json:"kind"`
+	// Action：added（新增）| removed（删除）| modified（修改）
+	Action string `json:"action"`
+	// Name 变更对象的名称/标识（规则用规则内容）
+	Name string `json:"name"`
+	// Detail 变更细节（如策略组成员差异、规则新旧对比），可空
+	Detail string `json:"detail,omitempty"`
 }
 
 // RuleListResponse 规则列表

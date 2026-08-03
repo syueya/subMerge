@@ -1,0 +1,26 @@
+@if (!pageInfo || !pageInfo['hideBreadcrumb']) {
+  <div class="bg-light-primary rounded p-20 m-b-20">
+    <div class="row">
+      <div class="col-sm-14">
+        <h4 class="page-title m-0 f-s-18 f-w-600"> {{ pageTitle }} </h4>
+      </div>
+      <div class="d-none d-sm-flex col-sm-10 align-items-center justify-content-end text-right">
+        <ul class="breadcrumb">
+          @for (url of breadcrumbs; track url.url; let index = $index,last
+        = $last) {
+            @if (!last) {
+              <li class="breadcrumb-item" [routerLink]="url.url">
+                <a [routerLink]="url.url">{{ url.title }}</a>
+              </li>
+              <li class="breadcrumb-item p-t-2">
+                <i-tabler name="chevron-right" class="icon-14"></i-tabler>
+              </li>
+            } @else {
+              <li class="breadcrumb-item active">{{ url.title }}</li>
+            }
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+}

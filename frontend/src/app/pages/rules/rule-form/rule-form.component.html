@@ -1,0 +1,103 @@
+<cm-dialog-header [modalTitle]="isUpdate ? '编辑规则' : '添加规则'"></cm-dialog-header>
+
+<form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
+  <div mat-dialog-content class="mat-subtitle-2 lh-16">
+    <p class="text-muted f-s-12 m-b-16">
+      @if (systemLocked) {
+        系统规则：类型/匹配/分类固定，仅可改出口、备注、启用；改完需发布才生效
+      } @else {
+        按从上到下顺序匹配，命中即走对应出口；改完需发布才生效
+      }
+    </p>
+
+    <div class="row">
+      <cm-form-field class="col-24 col-md-12" [help]="tip.ruleType">
+        <mat-label>规则类型<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select formControlName="type" (selectionChange)="onRuleTypeChange()">
+            @for (t of ruleTypes; track t.value) {
+              <mat-option [value]="t.value">{{ t.text }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24 col-md-12" [help]="tip.ruleTarget">
+        <mat-label>目标出口<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select formControlName="target">
+            @for (g of data.groups; track g.id) {
+              <mat-option [value]="g.name">{{ g.name }}</mat-option>
+            }
+            @if (orphanTarget(); as orphan) {
+              <mat-option [value]="orphan">{{ orphan }}（已不存在）</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (data.groups.length === 0) {
+          <p class="f-s-12 text-muted m-b-12">
+            暂无策略组，请先到
+            <a routerLink="/main/groups" class="text-primary">策略组</a>
+            页创建
+          </p>
+        }
+      </cm-form-field>
+
+      @if (!isMatch()) {
+        <cm-form-field class="col-24" [help]="payloadTipText()">
+          <mat-label>{{ payloadLabelText() }}<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input matInput formControlName="payload" [placeholder]="payloadPlaceholderText()" />
+          </mat-form-field>
+        </cm-form-field>
+      }
+
+      <cm-form-field class="col-24 col-md-12" [help]="tip.ruleCategory">
+        <mat-label>业务分类</mat-label>
+        @if (systemLocked) {
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input matInput value="系统分类" disabled />
+          </mat-form-field>
+        } @else {
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <mat-select formControlName="category">
+              @for (c of categorySelectOptions(); track c.value) {
+                <mat-option [value]="c.value">{{ c.text }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (editForm.get('category')?.value === categoryNewValue) {
+            <mat-form-field appearance="outline" class="w-full" color="primary">
+              <input matInput formControlName="categoryCustom" placeholder="输入新分类名，例如：个人" />
+            </mat-form-field>
+          }
+        }
+      </cm-form-field>
+
+      <cm-form-field class="col-24 col-md-12" [help]="tip.ruleNote">
+        <mat-label>备注（可选）</mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <input matInput formControlName="note" placeholder="例如：国内直连 / OpenAI" />
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24" [help]="tip.ruleEnabled">
+        <mat-label>启用</mat-label>
+        <div class="m-b-16">
+          <mat-slide-toggle formControlName="enabled" color="primary">启用此规则</mat-slide-toggle>
+        </div>
+      </cm-form-field>
+    </div>
+  </div>
+</form>
+
+<div class="m-b-16">
+  <mat-divider></mat-divider>
+</div>
+
+<div mat-dialog-actions class="text-right p-24 p-t-0">
+  <button mat-stroked-button color="primary" type="button" mat-dialog-close>取消</button>
+  <button mat-flat-button color="primary" type="button" [disabled]="isSubmitting" (click.debounceTime)="submit()">
+    {{ isSubmitting ? '保存中...' : isUpdate ? '更新规则' : '添加规则' }}
+  </button>
+</div>

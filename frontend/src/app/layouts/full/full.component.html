@@ -1,0 +1,70 @@
+<span>
+  <mat-sidenav-container
+    class="mainWrapper"
+    autosize
+    autoFocus
+    [class.sidebarNav-mini]="options.sidenavCollapsed && options.navPos !== 'top' && !resView"
+  >
+    <!-- ============================================================== -->
+    <!-- Vertical Sidebar -->
+    <!-- ============================================================== -->
+
+    <mat-sidenav
+      #leftsidenav
+      [mode]="isOver ? 'over' : 'side'"
+      [opened]="options.navPos === 'side' && options.sidenavOpened && !isOver && !resView"
+      (openedChange)="onSidenavOpenedChange($event)"
+      (closedStart)="onSidenavClosedStart()"
+      class="sidebarNav"
+    >
+      <div class="flex-layout">
+        <app-sidebar
+          (toggleMobileNav)="sidenav.toggle()"
+          (toggleCollapsed)="toggleCollapsed()"
+          [showToggle]="isOver"
+        ></app-sidebar>
+        <ng-scrollbar class="position-relative" style="height: 100%">
+          <mat-nav-list class="sidebar-list">
+            @for (item of mainMenuList; track item.route || item.displayName || item.navCap) {
+              <app-nav-item [item]="item" (notify)="sidenav.toggle()"> </app-nav-item>
+            }
+          </mat-nav-list>
+        </ng-scrollbar>
+        <app-sidenav-account-info></app-sidenav-account-info>
+      </div>
+    </mat-sidenav>
+
+    <!-- ============================================================== -->
+    <!-- Main Content -->
+    <!-- ============================================================== -->
+    <mat-sidenav-content class="contentWrapper" #content>
+      @if (isOver) {
+        <button
+          mat-icon-button
+          type="button"
+          (click)="sidenav.toggle()"
+          matTooltip="打开菜单"
+          class="sidebar-mobile-open d-flex justify-content-center"
+        >
+          <i-tabler name="menu-2" class="icon-20 d-flex"></i-tabler>
+        </button>
+      }
+
+      <main class="pageWrapper">
+        <app-breadcrumb></app-breadcrumb>
+        <!-- ============================================================== -->
+        <!-- Outlet -->
+        <!-- ============================================================== -->
+        <router-outlet></router-outlet>
+      </main>
+    </mat-sidenav-content>
+
+  </mat-sidenav-container>
+  @if (showBackToTop) {
+    <div class="back-to-top-button">
+      <button mat-mini-fab color="primary" matTooltip="返回顶部" (click)="scrollToTop(350)">
+        <i-tabler class="icon-24" name="chevron-up"></i-tabler>
+      </button>
+    </div>
+  }
+</span>

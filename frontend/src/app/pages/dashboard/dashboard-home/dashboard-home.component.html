@@ -1,0 +1,140 @@
+<cm-page-toolbar title="概览">
+  <button
+    mat-icon-button
+    color="primary"
+    type="button"
+    class="m-r-10"
+    matTooltip="刷新状态"
+    [disabled]="loading()"
+    (click.debounceTime)="reload(true)"
+  >
+    <i-tabler class="icon-20" name="refresh"></i-tabler>
+  </button>
+</cm-page-toolbar>
+
+<p class="text-muted f-s-12 m-b-16">
+  合并多源 Clash 订阅：策略组管出口，分流规则管匹配；发布后用令牌下发给客户端。
+</p>
+
+@if (loading()) {
+  <div class="d-flex justify-content-center p-24">
+    <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
+  </div>
+}
+
+<div class="row">
+  <div class="col-24 col-sm-12 col-lg-8 col-xl-4 m-b-16">
+    <mat-card class="cardWithShadow">
+      <mat-card-content class="p-16">
+        <div class="f-s-12 text-muted m-b-4">订阅源</div>
+        <div class="f-s-24 f-w-600">{{ sourceCount() }}</div>
+        <div class="f-s-12 text-muted m-t-4">启用 {{ enabledSourceCount() }} · 节点 {{ proxyCount() }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  <div class="col-24 col-sm-12 col-lg-8 col-xl-5 m-b-16">
+    <mat-card class="cardWithShadow">
+      <mat-card-content class="p-16">
+        <div class="f-s-12 text-muted m-b-4">策略组</div>
+        <div class="f-s-24 f-w-600">{{ groupCount() }}</div>
+        <div class="f-s-12 text-muted m-t-4">出口容器 · 成员/测速</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  <div class="col-24 col-sm-12 col-lg-8 col-xl-5 m-b-16">
+    <mat-card class="cardWithShadow">
+      <mat-card-content class="p-16">
+        <div class="f-s-12 text-muted m-b-4">分流规则</div>
+        <div class="f-s-24 f-w-600">{{ ruleCount() }}</div>
+        <div class="f-s-12 text-muted m-t-4">业务匹配 · 草稿</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  <div class="col-24 col-sm-12 col-lg-12 col-xl-5 m-b-16">
+    <mat-card class="cardWithShadow">
+      <mat-card-content class="p-16">
+        <div class="f-s-12 text-muted m-b-4">发布</div>
+        <div class="f-s-24 f-w-600">
+          @if (latestRelease(); as rel) {
+            v{{ rel.version }}
+          } @else {
+            —
+          }
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-8 m-t-4">
+          <span [class]="draftClass()" [title]="buildErrorDetail() || draftLabel()">{{ draftLabel() }}</span>
+          @if (!buildErrorDetail() && (latestRelease()?.publishedAt || latestRelease()?.createdAt)) {
+            <span class="f-s-12 text-muted">
+              {{ formatTime(latestRelease()?.publishedAt || latestRelease()?.createdAt) }}
+            </span>
+          }
+        </div>
+        @if (buildErrorDetail()) {
+          <p class="f-s-12 text-muted m-t-8 m-b-0" [title]="buildErrorDetail()">{{ buildErrorDetail() }}</p>
+        } @else if (draftSummary()) {
+          <p class="f-s-12 text-warning m-t-8 m-b-0" [title]="draftSummary()">{{ draftSummary() }}</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+  <div class="col-24 col-sm-12 col-lg-12 col-xl-5 m-b-16">
+    <mat-card class="cardWithShadow">
+      <mat-card-content class="p-16">
+        <div class="f-s-12 text-muted m-b-4">分享令牌</div>
+        <div class="f-s-24 f-w-600">{{ tokenCount() }}</div>
+        <div class="f-s-12 text-muted m-t-4">有效 {{ activeTokenCount() }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+
+@if (draft()?.dirty) {
+  <mat-card class="cardWithShadow m-b-16">
+    <mat-card-content class="p-16">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-12">
+        <div>
+          <div class="f-s-14 f-w-600">有未发布更改</div>
+          <p class="f-s-12 text-muted m-t-4 m-b-0">订阅仍使用已发布版本；发布后才会生效。</p>
+        </div>
+        <div class="d-flex flex-wrap gap-8">
+          <a mat-stroked-button color="primary" routerLink="/main/groups">策略组</a>
+          <a mat-stroked-button color="primary" routerLink="/main/rules">分流规则</a>
+          <a mat-flat-button color="primary" routerLink="/main/releases">去发布</a>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+}
+
+<mat-card class="cardWithShadow m-b-16">
+  <mat-card-content class="p-16">
+    <h3 class="f-w-600 f-s-16 m-b-4">使用流程</h3>
+    <p class="f-s-12 text-muted m-b-16">
+      策略组与分流规则分开维护；改任一项后都须发布。广告依赖 Clash Meta 的 geosite；令牌可随时复制完整链接。
+    </p>
+    <div class="row">
+      @for (s of steps; track s.n) {
+        <div class="col-24 col-md-12 col-xl-8 m-b-16">
+          <mat-card class="cardWithShadow h-100">
+            <mat-card-content class="p-16 d-flex align-items-start gap-12">
+              <div
+                class="bg-light-primary text-primary rounded d-flex align-items-center justify-content-center f-w-600"
+                style="width: 36px; height: 36px; flex: 0 0 36px"
+              >
+                {{ s.n }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="d-flex align-items-center gap-8 m-b-4">
+                  <i-tabler [name]="s.icon" class="icon-20 text-primary"></i-tabler>
+                  <span class="f-w-600 f-s-14">{{ s.title }}</span>
+                </div>
+                <p class="f-s-12 text-muted m-b-12">{{ s.desc }}</p>
+                <a mat-stroked-button color="primary" [routerLink]="s.path">{{ s.action }}</a>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
+    </div>
+  </mat-card-content>
+</mat-card>

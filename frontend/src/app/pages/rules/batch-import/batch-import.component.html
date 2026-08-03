@@ -1,0 +1,86 @@
+<cm-dialog-header modalTitle="批量导入规则"></cm-dialog-header>
+
+<form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
+  <div mat-dialog-content class="mat-subtitle-2 lh-16">
+    <p class="text-muted f-s-12 m-b-16">一行一条；适合个人域名/中转 API，不写进默认 seed</p>
+
+    <div class="row">
+      <cm-form-field class="col-24" [help]="tipBatchImport">
+        <mat-label>规则文本<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <textarea
+            matInput
+            rows="10"
+            formControlName="text"
+            placeholder="个人,DOMAIN-SUFFIX,example.com,直连,域名"
+          ></textarea>
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24 col-md-12">
+        <mat-label>默认类型（仅写匹配内容时）</mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select formControlName="defaultType">
+            @for (t of ruleTypes; track t.value) {
+              @if (t.value !== 'MATCH') {
+                <mat-option [value]="t.value">{{ t.text }}</mat-option>
+              }
+            }
+          </mat-select>
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24 col-md-12">
+        <mat-label>默认出口</mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select formControlName="defaultTarget">
+            @for (g of data.groups; track g.id) {
+              <mat-option [value]="g.name">{{ g.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24 col-md-12">
+        <mat-label>默认备注（可选）</mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <input matInput formControlName="defaultNote" placeholder="例如：个人-中转" />
+        </mat-form-field>
+      </cm-form-field>
+
+      <cm-form-field class="col-24 col-md-12">
+        <mat-label>默认分类（可选）</mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select formControlName="defaultCategory">
+            @for (c of batchCategorySelectOptions(); track c.value) {
+              <mat-option [value]="c.value">{{ c.text }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (editForm.get('defaultCategory')?.value === categoryNewValue) {
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input matInput formControlName="defaultCategoryCustom" placeholder="输入新分类名，例如：个人" />
+          </mat-form-field>
+        }
+      </cm-form-field>
+
+      <cm-form-field class="col-24">
+        <mat-label>启用</mat-label>
+        <div class="m-b-16">
+          <mat-slide-toggle formControlName="enabled" color="primary">启用导入的规则</mat-slide-toggle>
+        </div>
+      </cm-form-field>
+    </div>
+  </div>
+</form>
+
+<div class="m-b-16">
+  <mat-divider></mat-divider>
+</div>
+
+<div mat-dialog-actions class="text-right p-24 p-t-0">
+  <button mat-stroked-button color="primary" type="button" [disabled]="isSubmitting" mat-dialog-close>取消</button>
+  <button mat-flat-button color="primary" type="button" [disabled]="isSubmitting" (click.debounceTime)="submit()">
+    {{ isSubmitting ? '导入中...' : '导入' }}
+  </button>
+</div>

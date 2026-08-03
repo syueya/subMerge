@@ -1,0 +1,10 @@
+/* Angular 默认全局入口：基础 html/body，其余样式走 assets/scss/style.scss */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}

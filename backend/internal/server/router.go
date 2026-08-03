@@ -15,6 +15,7 @@ import (
 	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/auth"
 	"github.com/submerge/submerge/backend/internal/config"
+	"github.com/submerge/submerge/backend/internal/geo"
 	"github.com/submerge/submerge/backend/internal/middleware"
 	"github.com/submerge/submerge/backend/internal/publish"
 	"github.com/submerge/submerge/backend/internal/rule"
@@ -30,6 +31,7 @@ type Deps struct {
 	Rule    *rule.Handler
 	Publish *publish.Handler
 	Sub     *subscription.Handler
+	Geo     *geo.Handler
 	Audit   *audit.Service
 	AuthMW  gin.HandlerFunc
 	LoginRL gin.HandlerFunc
@@ -110,6 +112,13 @@ func NewRouter(d Deps) *gin.Engine {
 			secured.GET("/proxies", d.Source.ListProxies)
 			secured.PUT("/proxies/batch", d.Source.BatchUpdateProxies)
 			secured.PUT("/proxies/:id", d.Source.UpdateProxy)
+
+			secured.GET("/geo/status", d.Geo.Status)
+			secured.GET("/geo/categories", d.Geo.Categories)
+			secured.POST("/geo/query", d.Geo.Query)
+			secured.POST("/geo/reverse", d.Geo.Reverse)
+			secured.POST("/geo/search", d.Geo.Search)
+			secured.POST("/geo/update", d.Geo.Update)
 
 			secured.GET("/rules", d.Rule.ListRules)
 			secured.POST("/rules", d.Rule.CreateRule)
