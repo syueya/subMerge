@@ -1,11 +1,11 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { RuleEditorComponent } from './rule-editor/rule-editor.component';
+import { RuleHomeComponent } from './rule-home/rule-home.component';
 
 const routes: Routes = [
   {
     path: '',
-    component: RuleEditorComponent,
+    component: RuleHomeComponent,
     data: {
       title: '分流规则',
       hideBreadcrumb: true

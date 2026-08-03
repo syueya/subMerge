@@ -1,7 +1,7 @@
 <cm-dialog-header [modalTitle]="isUpdate ? '编辑用户' : '新增用户'"> </cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="mat-subtitle-2 lh-16">
+  <div mat-dialog-content>
     <div class="row">
       <cm-form-field class="col-24 col-md-12 col-lg-12">
         <mat-label>用户名<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>

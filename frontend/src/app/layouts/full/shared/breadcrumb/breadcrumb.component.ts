@@ -41,6 +41,15 @@ export class AppBreadcrumbComponent extends CmParentComponent {
 
       .subscribe(event => {
         this.pageInfo = event;
+        // 隐藏面包屑时也要清空旧状态，避免切页后残留上一页标题/路径
+        if (event?.['hideBreadcrumb']) {
+          this.pageTitle = '';
+          this.breadcrumbs = [];
+          if (event['title']) {
+            this.titleService.setTitle(`${event['title']} - SubMerge`);
+          }
+          return;
+        }
         if (event['title']) {
           this.pageTitle = event['title'];
           this.titleService.setTitle(`${event['title']} - SubMerge`);

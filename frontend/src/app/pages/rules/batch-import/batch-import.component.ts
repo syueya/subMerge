@@ -2,27 +2,15 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import {
+	BatchImportDialogData,
 	RULE_TYPE_OPTIONS,
-	ProxyGroup,
-	Rule,
 	RuleType,
 } from '@data-struct';
 import { DialogService } from '@common/services/dialog.service';
 import { RuleService } from '../services/rule.service';
-import {
-	CATEGORY_NEW_VALUE,
-	buildCategoryOptions,
-	resolveSelectedCategory,
-} from '../services/rule-ui';
+import { buildCategoryOptions } from '../services/rule-ui';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { finalize, takeUntil } from 'rxjs';
-
-export interface BatchImportDialogData {
-	groups: ProxyGroup[];
-	rules: Rule[];
-	extraCategories: string[];
-	defaultTarget?: string;
-}
 
 @Component({
 	selector: 'app-batch-import',
@@ -36,10 +24,7 @@ export class BatchImportComponent extends CmParentFormComponent {
 	private svc = inject(RuleService);
 	private dialog = inject(DialogService);
 
-	ruleTypes = RULE_TYPE_OPTIONS;
-	readonly categoryNewValue = CATEGORY_NEW_VALUE;
-	readonly tipBatchImport =
-		'一行一条，空行与 # 注释忽略。\n完整：分类,类型,匹配内容,出口[,备注]\n仅域名：example.com（用下方默认类型/出口/备注/分类）\n示例：\n个人,DOMAIN-SUFFIX,xiaxiazi.ccwu.cc,直连,域名\n海外AI,DOMAIN-SUFFIX,openai.com,美国US,AI-OpenAI\ngpt-api.xxww.online\n新规则会插在国内 GEOIP / 兜底 MATCH 之前。';
+ruleTypes = RULE_TYPE_OPTIONS;
 
 	constructor() {
 		super();
@@ -49,17 +34,16 @@ export class BatchImportComponent extends CmParentFormComponent {
 			defaultTarget: [this.data.defaultTarget || '直连', [Validators.required]],
 			defaultNote: [''],
 			defaultCategory: [''],
-			defaultCategoryCustom: [''],
 			enabled: [true],
 		});
 	}
 
-	batchCategorySelectOptions() {
-		return buildCategoryOptions(this.data.rules, this.data.extraCategories, {
-			allowNew: true,
-			newValue: this.categoryNewValue,
-		});
-	}
+/** 已有分类；新分类由输入框直接输入 */
+		batchCategorySelectOptions() {
+			return buildCategoryOptions(this.data.rules, this.data.extraCategories, {
+				allowNew: false,
+			});
+		}
 
 	submit(): void {
 		if (this.isSubmitting) return;
@@ -73,15 +57,7 @@ export class BatchImportComponent extends CmParentFormComponent {
 			void this.dialog.error('请选择默认出口（仅写域名时会用到）');
 			return;
 		}
-		const defaultCategory = resolveSelectedCategory(
-			raw.defaultCategory,
-			raw.defaultCategoryCustom,
-			this.categoryNewValue,
-		);
-		if (raw.defaultCategory === this.categoryNewValue && !defaultCategory) {
-			void this.dialog.error('请填写新建分类名称');
-			return;
-		}
+		const defaultCategory = String(raw.defaultCategory || '').trim();
 		this.isSubmitting = true;
 		this.svc
 			.batchImportRules({

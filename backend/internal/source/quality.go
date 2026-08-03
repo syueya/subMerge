@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/regioncatalog"
 )
 
 // 机场常见「说明/统计」假节点名（已入库的也会标异常）
@@ -45,9 +46,9 @@ func AssessProxy(name, region, typ, server string, port int) (ok bool, issue str
 	if ls == "127.0.0.1" || ls == "0.0.0.0" || ls == "localhost" || ls == "null" || ls == "none" {
 		return false, "服务器地址无效"
 	}
-	if region == "" || region == "UNKNOWN" {
+	if regioncatalog.IsFallback(region) {
 		// 仍可能是可用线路，但地区未识别
-		return false, "地区未识别（UNKNOWN）"
+		return false, "地区未识别（UNK）"
 	}
 	return true, ""
 }

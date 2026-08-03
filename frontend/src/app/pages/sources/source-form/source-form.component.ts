@@ -7,7 +7,7 @@ import {
 	FALLBACK_REGION,
 	RegionCatalogEntry,
 	RegionMode,
-	SubscriptionSource,
+	SourceFormDialogData,
 	regionOptionText,
 } from '@data-struct';
 import { DialogService } from '@common/services/dialog.service';
@@ -15,12 +15,6 @@ import { SourceService } from '../services/source.service';
 import { formatRefreshMsg } from '../services/source-refresh.util';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { concatMap, finalize, takeUntil } from 'rxjs';
-
-export interface SourceFormDialogData {
-	source: SubscriptionSource | null;
-	regionCatalog: RegionCatalogEntry[];
-	fallbackRegion: string;
-}
 
 @Component({
 	selector: 'app-source-form',
@@ -34,22 +28,9 @@ export class SourceFormComponent extends CmParentFormComponent {
 	private svc = inject(SourceService);
 	private dialog = inject(DialogService);
 
-	isUpdate: boolean;
-	showAdvanced = false;
-
-	readonly tip = {
-		name: '备注名会拼到节点名末尾（如「良心云」→ …-良心云），请起简短可辨认的名字。',
-		region:
-			'固定模式：从目录选择地区，该源全部节点加此前缀。\n自动识别：回退建议选「未知 (UNKNOWN)」，仅当节点名识别失败时使用。',
-		regionMode:
-			'自动识别（机场推荐）：从节点名 emoji/关键词推断 JP/HK/US…，混合地区订阅一条即可；回退默认 UNKNOWN。\n固定地区：整源强制同一前缀（单地区订阅更合适）。',
-		url: '上游 Clash 订阅地址。加密存储，界面只显示脱敏结果。编辑时留空表示不修改。',
-		excludeName:
-			'名称匹配此正则的节点会被丢弃（不区分大小写）。\n默认含：剩余流量、套餐到期、过滤掉… 等机场信息节点。\n拉取成功后弹窗会列出被过滤的名称。',
-		excludeServers: 'server 黑名单，逗号/换行分隔。如 127.0.0.1,localhost',
-		includeName: '可选。非空时只保留名称匹配的节点（白名单）。',
-		enabled: '关闭后此源不参与拉取与发布。',
-	};
+isUpdate: boolean;
+	/** 过滤规则折叠（cm-collapse-panel） */
+	filterExpanded = false;
 
 	constructor() {
 		super();
@@ -119,7 +100,7 @@ export class SourceFormComponent extends CmParentFormComponent {
 		}
 	}
 
-	get regionMode(): RegionMode {
+get regionMode(): RegionMode {
 		return this.editForm.get('regionMode')?.value || 'auto';
 	}
 
@@ -142,11 +123,11 @@ export class SourceFormComponent extends CmParentFormComponent {
 			return;
 		}
 		if (!/^[A-Z0-9]{1,16}$/.test(region)) {
-			void this.dialog.error('请选择有效地区（如 UNKNOWN、US、JP、HK）');
+			void this.dialog.error('请选择有效地区（如 UNK、US、JP、HK）');
 			return;
 		}
 		if (mode === 'fixed' && region === FALLBACK_REGION) {
-			void this.dialog.error('固定地区模式请选择具体国家/地区，不要用 UNKNOWN');
+			void this.dialog.error('固定地区模式请选择具体国家/地区，不要用 UNK');
 			return;
 		}
 

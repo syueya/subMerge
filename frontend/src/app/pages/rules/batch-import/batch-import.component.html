@@ -1,24 +1,17 @@
 <cm-dialog-header modalTitle="批量导入规则"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="mat-subtitle-2 lh-16">
-    <p class="text-muted f-s-12 m-b-16">一行一条；适合个人域名/中转 API，不写进默认 seed</p>
-
+  <div mat-dialog-content>
     <div class="row">
-      <cm-form-field class="col-24" [help]="tipBatchImport">
-        <mat-label>规则文本<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
-        <mat-form-field appearance="outline" class="w-full" color="primary">
-          <textarea
-            matInput
-            rows="10"
-            formControlName="text"
-            placeholder="个人,DOMAIN-SUFFIX,example.com,直连,域名"
-          ></textarea>
-        </mat-form-field>
+      <cm-form-field class="col-24 col-md-3">
+        <mat-label>启用</mat-label>
+        <div class="m-b-16">
+          <mat-slide-toggle formControlName="enabled" color="primary"></mat-slide-toggle>
+        </div>
       </cm-form-field>
 
-      <cm-form-field class="col-24 col-md-12">
-        <mat-label>默认类型（仅写匹配内容时）</mat-label>
+      <cm-form-field class="col-24 col-md-5" [help]="'仅写匹配内容时'">
+        <mat-label>默认类型</mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <mat-select formControlName="defaultType">
             @for (t of ruleTypes; track t.value) {
@@ -30,7 +23,7 @@
         </mat-form-field>
       </cm-form-field>
 
-      <cm-form-field class="col-24 col-md-12">
+      <cm-form-field class="col-24 col-md-5">
         <mat-label>默认出口</mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <mat-select formControlName="defaultTarget">
@@ -41,34 +34,36 @@
         </mat-form-field>
       </cm-form-field>
 
-      <cm-form-field class="col-24 col-md-12">
-        <mat-label>默认备注（可选）</mat-label>
+      <cm-form-field class="col-24 col-md-6" [help]="'仅写匹配内容时使用；可选已有分类或新建'">
+        <mat-label>默认分类</mat-label>
+        <cm-select-with-create
+          formControlName="defaultCategory"
+          [options]="batchCategorySelectOptions()"
+          placeholder="不填则归入未分类"
+          createHint="使用新分类"
+        ></cm-select-with-create>
+      </cm-form-field>
+
+      <cm-form-field class="col-24 col-md-5">
+        <mat-label>默认备注</mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
-          <input matInput formControlName="defaultNote" placeholder="例如：个人-中转" />
+          <input matInput formControlName="defaultNote" placeholder="如：个人-中转" />
         </mat-form-field>
       </cm-form-field>
 
-      <cm-form-field class="col-24 col-md-12">
-        <mat-label>默认分类（可选）</mat-label>
+      <cm-form-field
+        class="col-24"
+        [help]="'一行一条，空行与 # 注释忽略。\n完整：分类,类型,匹配内容,出口[,备注]\n仅域名：example.com（用下方默认类型/出口/备注/分类）\n示例：\n个人,DOMAIN-SUFFIX,xiaxiazi.ccwu.cc,直连,域名\n海外AI,DOMAIN-SUFFIX,openai.com,美国US,AI-OpenAI\ngpt-api.xxww.online\n新规则会插在国内 GEOIP / 兜底 MATCH 之前。'"
+      >
+        <mat-label>规则文本<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
-          <mat-select formControlName="defaultCategory">
-            @for (c of batchCategorySelectOptions(); track c.value) {
-              <mat-option [value]="c.value">{{ c.text }}</mat-option>
-            }
-          </mat-select>
+          <textarea
+            matInput
+            rows="6"
+            formControlName="text"
+            placeholder="个人,DOMAIN-SUFFIX,example.com,直连,域名"
+          ></textarea>
         </mat-form-field>
-        @if (editForm.get('defaultCategory')?.value === categoryNewValue) {
-          <mat-form-field appearance="outline" class="w-full" color="primary">
-            <input matInput formControlName="defaultCategoryCustom" placeholder="输入新分类名，例如：个人" />
-          </mat-form-field>
-        }
-      </cm-form-field>
-
-      <cm-form-field class="col-24">
-        <mat-label>启用</mat-label>
-        <div class="m-b-16">
-          <mat-slide-toggle formControlName="enabled" color="primary">启用导入的规则</mat-slide-toggle>
-        </div>
       </cm-form-field>
     </div>
   </div>

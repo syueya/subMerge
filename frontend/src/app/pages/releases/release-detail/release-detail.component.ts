@@ -3,12 +3,9 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import {
 	RELEASE_STATUS_OPTIONS,
 	ReleaseDetail,
+	ReleaseDetailDialogData,
 	enumText,
 } from '@data-struct';
-
-export interface ReleaseDetailDialogData {
-	detail: ReleaseDetail;
-}
 
 @Component({
 	selector: 'app-release-detail',

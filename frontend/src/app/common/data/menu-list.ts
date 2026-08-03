@@ -8,33 +8,33 @@ export const MenuList: MenuItem[] = [
   },
   {
     displayName: '订阅源',
-    iconName: 'activity',
+    iconName: 'cloud-download',
     route: '/main/sources'
   },
   {
     displayName: '策略组',
-    iconName: 'components',
+    iconName: 'hierarchy-2',
     route: '/main/groups'
   },
   {
     displayName: '分流规则',
-    iconName: 'settings',
+    iconName: 'list-check',
     route: '/main/rules'
   },
   {
+    displayName: 'Geo 数据',
+    iconName: 'world',
+    route: '/main/geo'
+  },
+  {
     displayName: '发布',
-    iconName: 'history',
+    iconName: 'rocket',
     route: '/main/releases'
   },
   {
     displayName: '令牌',
     iconName: 'key',
     route: '/main/tokens'
-  },
-  {
-    displayName: 'Geo 数据',
-    iconName: 'world',
-    route: '/main/geo'
   }
 ];
 

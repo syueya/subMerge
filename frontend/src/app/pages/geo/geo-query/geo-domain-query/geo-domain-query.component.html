@@ -1,0 +1,127 @@
+<cm-form-field>
+  <mat-label>域名</mat-label>
+  <mat-form-field appearance="outline" class="w-full" color="primary">
+    <input
+      matInput
+      [(ngModel)]="domain"
+      placeholder="例如 www.example.com"
+      (keyup.enter)="query()"
+    />
+  </mat-form-field>
+  <div formFieldAction class="d-flex align-items-center gap-12 flex-wrap">
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      [disabled]="loading()"
+      (click.debounceTime)="query()"
+    >
+      {{ loading() ? '查询中…' : '查询' }}
+    </button>
+    <mat-checkbox [(ngModel)]="resolve" color="primary">进行 DNS 解析</mat-checkbox>
+  </div>
+</cm-form-field>
+
+@if (queryResult(); as result) {
+  <mat-divider class="m-b-16"></mat-divider>
+  <div class="d-flex flex-wrap gap-8 m-b-16">
+    <span [class]="badgeMuted">域名 {{ result.domain }}</span>
+    @for (ip of result.ips; track ip) {
+      <span [class]="badgeMuted">IP {{ ip }}</span>
+    }
+    @if (result.resolveSkipped) {
+      <span [class]="badgeWarn">未进行 DNS 解析</span>
+    }
+    @if (result.resolveError) {
+      <span [class]="badgeWarn">DNS：{{ result.resolveError }}</span>
+    }
+  </div>
+
+  <div class="row">
+    <div class="col-24 col-lg-12 m-b-16">
+      <div class="p-12 rounded b-1">
+        <div class="d-flex align-items-center gap-8 m-b-12">
+          <h4 class="f-w-600 f-s-14 m-0">GeoSite</h4>
+          <span [class]="badgeMuted">{{ result.geosite.length }}</span>
+        </div>
+        @if (result.geosite.length) {
+          @for (hit of result.geosite; track hit.category + hit.type + hit.value) {
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-b-8">
+              <div class="min-w-0">
+                <div class="f-w-600 f-s-14">{{ hit.category }}</div>
+                <div class="f-s-12 text-muted">{{ hit.type }} · {{ hit.value }}</div>
+              </div>
+              <button
+                mat-stroked-button
+                color="primary"
+                type="button"
+                (click.debounceTime)="openGeoSiteCategoryEntries(hit.category)"
+              >
+                查看分类条目
+              </button>
+            </div>
+          }
+        } @else {
+          <div class="f-s-14 text-muted">无命中</div>
+        }
+      </div>
+    </div>
+
+    <div class="col-24 col-lg-12 m-b-16">
+      <div class="p-12 rounded b-1">
+        <div class="d-flex align-items-center gap-8 m-b-12">
+          <h4 class="f-w-600 f-s-14 m-0">GeoIP</h4>
+          <span [class]="badgeMuted">{{ result.geoip.length }}</span>
+        </div>
+        @if (result.geoip.length) {
+          @for (hit of result.geoip; track hit.ip + hit.cidr + hit.category) {
+            <div class="m-b-8">
+              <div class="f-w-600 f-s-14">{{ hit.category }}</div>
+              <div class="f-s-12 text-muted">{{ hit.ip }} · {{ hit.cidr }}</div>
+            </div>
+          }
+        } @else {
+          <div class="f-s-14 text-muted">{{ result.resolveSkipped ? '未启用 DNS' : '无命中' }}</div>
+        }
+      </div>
+    </div>
+
+    <div class="col-24 col-lg-12 m-b-16">
+      <div class="p-12 rounded b-1">
+        <div class="d-flex align-items-center gap-8 m-b-12">
+          <h4 class="f-w-600 f-s-14 m-0">MetaDB</h4>
+          <span [class]="badgeMuted">{{ result.metadb.length }}</span>
+        </div>
+        @if (result.metadb.length) {
+          @for (hit of result.metadb; track hit.ip + hit.cidr) {
+            <div class="m-b-8">
+              <div class="f-w-600 f-s-14">{{ hit.ip }}</div>
+              <div class="f-s-12 text-muted">{{ hit.cidr }} · {{ hit.record }}</div>
+            </div>
+          }
+        } @else {
+          <div class="f-s-14 text-muted">{{ result.resolveSkipped ? '未启用 DNS' : '无记录或文件不可用' }}</div>
+        }
+      </div>
+    </div>
+
+    <div class="col-24 col-lg-12 m-b-16">
+      <div class="p-12 rounded b-1">
+        <div class="d-flex align-items-center gap-8 m-b-12">
+          <h4 class="f-w-600 f-s-14 m-0">ASN</h4>
+          <span [class]="badgeMuted">{{ result.asn.length }}</span>
+        </div>
+        @if (result.asn.length) {
+          @for (hit of result.asn; track hit.ip + hit.cidr) {
+            <div class="m-b-8">
+              <div class="f-w-600 f-s-14">AS{{ hit.asn }}</div>
+              <div class="f-s-12 text-muted">{{ hit.ip }} · {{ hit.cidr }} · {{ hit.organization }}</div>
+            </div>
+          }
+        } @else {
+          <div class="f-s-14 text-muted">{{ result.resolveSkipped ? '未启用 DNS' : '无记录或文件不可用' }}</div>
+        }
+      </div>
+    </div>
+  </div>
+}

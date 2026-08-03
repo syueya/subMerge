@@ -8,10 +8,10 @@
 #   flag      国旗 emoji（节点名识别，可选）
 #   keywords  关键词列表（节点名识别，可选；长词优先由代码排序）
 #
-# UNKNOWN 仅作自动模式回退，不参与识别规则、不进策略组。
+# UNK 仅作自动模式回退，不参与识别规则、不进策略组（节点前缀如 UNK-xxx）。
 
 regions:
-  - { code: UNKNOWN, name: 未知 }
+  - { code: UNK, name: 未知 }
 
   # —— 常用国家（默认独立策略组）——
   - code: US

@@ -1,27 +1,29 @@
 import { AfterViewInit, Component, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import {
-	BADGE_MUTED,
-	BADGE_WARN,
-	ProxyGroup,
-	ShareToken,
-	SubscriptionSource,
-	TOKEN_STATUS_BADGE,
-	TOKEN_STATUS_OPTIONS,
-	TokenStatus,
-	enumBadgeClass,
-	enumText,
-} from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime } from '@common/util/format';
-import { RuleService } from '../../rules/services/rule.service';
-import { SourceService } from '../../sources/services/source.service';
-import { TokenService } from '../services/token.service';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-import { finalize, takeUntil } from 'rxjs';
-import { TokenEditComponent, TokenEditDialogData } from '../token-edit/token-edit.component';
-import { TokenFormComponent, TokenFormDialogData } from '../token-form/token-form.component';
+		BADGE_MUTED,
+		BADGE_WARN,
+		ProxyGroup,
+		ShareToken,
+		SubscriptionSource,
+		TOKEN_STATUS_BADGE,
+		TOKEN_STATUS_OPTIONS,
+		TokenEditDialogData,
+		TokenFormDialogData,
+		TokenStatus,
+		enumBadgeClass,
+		enumText,
+	} from '@data-struct';
+	import { DialogService } from '@common/services/dialog.service';
+	import { formatDateTime } from '@common/util/format';
+	import { RuleService } from '../../rules/services/rule.service';
+	import { SourceService } from '../../sources/services/source.service';
+	import { TokenService } from '../services/token.service';
+	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+	import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+	import { finalize, takeUntil } from 'rxjs';
+	import { TokenEditComponent } from '../token-edit/token-edit.component';
+	import { TokenFormComponent } from '../token-form/token-form.component';
 
 @Component({
 	selector: 'app-token-list',

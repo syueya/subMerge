@@ -2,22 +2,18 @@ import { Component, WritableSignal, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import {
-	BADGE_WARN,
-	ProxyGroup,
-	SubscriptionSource,
-	TOKEN_GROUP_MODE_OPTIONS,
-	TokenGroupMode,
-	enumText,
-} from '@data-struct';
+		BADGE_WARN,
+		ProxyGroup,
+		SubscriptionSource,
+		TOKEN_GROUP_MODE_OPTIONS,
+		TokenFormDialogData,
+		TokenGroupMode,
+		enumText,
+	} from '@data-struct';
 import { DialogService } from '@common/services/dialog.service';
 import { TokenService } from '../services/token.service';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { finalize, takeUntil } from 'rxjs';
-
-export interface TokenFormDialogData {
-	sourceList: SubscriptionSource[];
-	groupList: ProxyGroup[];
-}
 
 @Component({
 	selector: 'app-token-form',
@@ -31,14 +27,8 @@ export class TokenFormComponent extends CmParentFormComponent {
 	private svc = inject(TokenService);
 	private dialog = inject(DialogService);
 
-	readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
+readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
 	readonly badgeWarn = BADGE_WARN;
-	readonly tip = {
-		name: '朋友备注名，仅用于管理识别，不会出现在订阅内容中。',
-		sources: '勾选「全部源」时，之后新增的启用源也会自动纳入该链接；否则仅下发勾选的源。',
-		groupMode:
-			'自动：按该链接实际节点去掉空地区组（推荐）。\n全部：保留模板中的策略组。\n自定义：只下发勾选的策略组。',
-	};
 
 	allSources = signal(true);
 	sourceIds = signal<Set<number>>(new Set());

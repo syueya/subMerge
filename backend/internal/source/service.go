@@ -77,7 +77,7 @@ func (s *Service) Create(req common.CreateSourceRequest) (common.SubscriptionSou
 		regionMode = normalizeRegionMode(string(*req.RegionMode))
 	}
 
-	// 自动模式未显式指定地区时回退 UNKNOWN，避免默认成 US
+	// 自动模式未显式指定地区时回退 UNK，避免默认成 US
 	if strings.TrimSpace(string(req.Region)) == "" {
 		req.Region = common.Region(fallbackRegionCode())
 	}

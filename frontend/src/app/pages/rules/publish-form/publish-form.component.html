@@ -1,14 +1,10 @@
 <cm-dialog-header modalTitle="发布配置"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="mat-subtitle-2 lh-16">
-    <p class="text-muted f-s-12 m-b-16">
-      先「生成预览」检查 YAML，确认无误后再发布；发布后订阅链接会立刻使用新配置
-    </p>
-
+  <div mat-dialog-content>
     <div class="row">
-      <cm-form-field class="col-24" [help]="tipPublishNote">
-        <mat-label>发布备注（可选）</mat-label>
+      <cm-form-field class="col-24" [help]="'可选。只写在发布历史里，方便以后回看这次改了什么。'">
+        <mat-label>发布备注</mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <input matInput formControlName="note" placeholder="例如：调整 OpenAI 规则" />
         </mat-form-field>

@@ -8,7 +8,7 @@ import { CmParentComponent } from '@common/parents/parent/parent.component';
 import { formatDate } from '@common/util';
 import { takeUntil, finalize } from 'rxjs';
 
-import { LoginLog } from '../interfaces/LoginLog';
+import { LoginLog } from '@data-struct';
 
 @Component({
   selector: 'app-setting-user-login-logs',

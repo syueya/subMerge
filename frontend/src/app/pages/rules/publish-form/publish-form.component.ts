@@ -20,10 +20,8 @@ export class PublishFormComponent extends CmParentFormComponent {
 	private draftStore = inject(DraftStatusStore);
 	private dialog = inject(DialogService);
 
-	preview = signal<ReleasePreview | null>(null);
+preview = signal<ReleasePreview | null>(null);
 	previewing = false;
-
-	readonly tipPublishNote = '可选。只写在发布历史里，方便以后回看这次改了什么。';
 
 	constructor() {
 		super();

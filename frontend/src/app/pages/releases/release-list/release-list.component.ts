@@ -1,30 +1,29 @@
 import { AfterViewInit, Component, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import {
-	BADGE_ERR,
-	BADGE_MUTED,
-	BADGE_OK,
-	BADGE_WARN,
-	DraftChange,
-	RELEASE_STATUS_BADGE,
-	RELEASE_STATUS_OPTIONS,
-	Release,
-	ReleaseRuleLine,
-	enumBadgeClass,
-	enumText,
-} from '@data-struct';
-import { MatchableRule } from '@common/util/rule-match';
-import { DialogService } from '@common/services/dialog.service';
-import { DraftStatusStore } from '../services/draft-status.store';
-import { ReleaseService } from '../services/release.service';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-import { finalize, takeUntil } from 'rxjs';
-import {
-	RuleMatchDialogComponent,
-	RuleMatchDialogData,
-} from '../../_shared/rule-match-dialog/rule-match-dialog.component';
-import { ReleaseDetailComponent, ReleaseDetailDialogData } from '../release-detail/release-detail.component';
+		BADGE_ERR,
+		BADGE_MUTED,
+		BADGE_OK,
+		BADGE_WARN,
+		DraftChange,
+		MatchableRule,
+		RELEASE_STATUS_BADGE,
+		RELEASE_STATUS_OPTIONS,
+		Release,
+		ReleaseDetailDialogData,
+		ReleaseRuleLine,
+		RuleMatchDialogData,
+		enumBadgeClass,
+		enumText,
+	} from '@data-struct';
+	import { DialogService } from '@common/services/dialog.service';
+	import { DraftStatusStore } from '../services/draft-status.store';
+	import { ReleaseService } from '../services/release.service';
+	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+	import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+	import { finalize, takeUntil } from 'rxjs';
+	import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
+	import { ReleaseDetailComponent } from '../release-detail/release-detail.component';
 
 @Component({
 	selector: 'app-release-list',
@@ -41,9 +40,8 @@ export class ReleaseListComponent extends CmParentTableComponent implements Afte
 	override displayedColumns = ['version', 'status', 'counts', 'note', 'hash', 'createdBy', 'time', 'action'];
 
 	publishing = signal(false);
-	draftDirty = this.draftStore.dirty;
-	draftNote = this.draftStore.note;
-	draftChanges = this.draftStore.changes;
+draftDirty = this.draftStore.dirty;
+		draftChanges = this.draftStore.changes;
 	draftSummary = this.draftStore.summary;
 	changesExpanded = signal(false);
 	readonly changesCollapsedLimit = 20;

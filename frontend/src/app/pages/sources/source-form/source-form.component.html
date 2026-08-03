@@ -1,13 +1,19 @@
 <cm-dialog-header [modalTitle]="isUpdate ? '编辑订阅源' : '新增订阅源'"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="mat-subtitle-2 lh-16">
-    <p class="text-muted f-s-12 m-b-16">
-      {{ isUpdate ? '保存后不会自动拉取；改过滤/地区后建议手动拉取' : '保存后会自动拉取一次上游节点' }}
-    </p>
+  <div mat-dialog-content>
+    <div class="row m-b-12">
+      <cm-form-field class="col-24 col-md-4" [help]="'关闭后此源不参与拉取与发布。'">
+        <mat-label>启用</mat-label>
+        <div class="m-b-16">
+          <mat-slide-toggle formControlName="enabled" color="primary"></mat-slide-toggle>
+        </div>
+      </cm-form-field>
 
-    <div class="row">
-      <cm-form-field class="col-24 col-md-12" [help]="tip.name">
+      <cm-form-field
+        class="col-24 col-md-8"
+        [help]="'备注名会拼到节点名末尾（如「良心云」→ …-良心云），请起简短可辨认的名字。'"
+      >
         <mat-label>名称<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <input matInput type="text" formControlName="name" placeholder="例如：良心机场" />
@@ -15,7 +21,10 @@
         </mat-form-field>
       </cm-form-field>
 
-      <cm-form-field class="col-24 col-md-12" [help]="tip.regionMode">
+      <cm-form-field
+        class="col-24 col-md-6"
+        [help]="'自动识别（机场推荐）：从节点名 emoji/关键词推断 JP/HK/US…，混合地区订阅一条即可；回退默认 UNK。\n固定地区：整源强制同一前缀（单地区订阅更合适）。'"
+      >
         <mat-label>地区模式<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <mat-select formControlName="regionMode">
@@ -25,7 +34,14 @@
         </mat-form-field>
       </cm-form-field>
 
-      <cm-form-field class="col-24" [help]="tip.region">
+      <cm-form-field
+        class="col-24 col-md-6"
+        [help]="
+          regionMode === 'auto'
+            ? '回退地区默认「未知 (UNK)」。能认出 🇯🇵/香港 等时用识别结果；认不出才加此前缀（如 UNK-xxx）。'
+            : '固定地区：该源全部节点都会加此前缀（如 HK-xxx）。'
+        "
+      >
         <mat-label>
           {{ regionMode === 'auto' ? '回退地区' : '地区' }}
           <cm-required-mark class="m-l-4"></cm-required-mark>
@@ -43,16 +59,12 @@
             }
           </mat-select>
         </mat-form-field>
-        <p class="f-s-12 text-muted m-t-0 m-b-12">
-          @if (regionMode === 'auto') {
-            默认「未知 (UNKNOWN)」。能认出 🇯🇵/香港 等时用识别结果；认不出才加此前缀。
-          } @else {
-            该源全部节点都会加此前缀（如 HK-xxx）。
-          }
-        </p>
       </cm-form-field>
 
-      <cm-form-field class="col-24" [help]="tip.url">
+      <cm-form-field
+        class="col-24"
+        [help]="'上游 Clash 订阅地址。加密存储，界面只显示脱敏结果。编辑时留空表示不修改。'"
+      >
         <mat-label>
           订阅 URL
           @if (!isUpdate) {
@@ -69,45 +81,39 @@
           <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
         </mat-form-field>
       </cm-form-field>
-
-      <cm-form-field class="col-24" [help]="tip.enabled">
-        <mat-label>启用</mat-label>
-        <div class="m-b-16">
-          <mat-slide-toggle formControlName="enabled" color="primary">启用此订阅源</mat-slide-toggle>
-        </div>
-      </cm-form-field>
     </div>
 
-    <div class="m-b-8">
-      <button mat-stroked-button color="primary" type="button" (click)="showAdvanced = !showAdvanced">
-        {{ showAdvanced ? '收起过滤规则' : '展开过滤规则' }}
-      </button>
-    </div>
-
-    @if (showAdvanced) {
-      <div class="row m-t-12">
-        <cm-form-field class="col-24" [help]="tip.excludeName">
+    <cm-collapse-panel
+      title="过滤规则"
+      description="可选 · 排除信息节点 / 白名单"
+      [(expanded)]="filterExpanded"
+    >
+      <div class="row">
+        <cm-form-field
+          class="col-24"
+          [help]="'名称匹配此正则的节点会被丢弃（不区分大小写）。\n默认含：剩余流量、套餐到期、过滤掉… 等机场信息节点。\n拉取成功后弹窗会列出被过滤的名称。'"
+        >
           <mat-label>排除名称（正则）</mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
-            <textarea matInput rows="3" formControlName="excludeNameRegex"></textarea>
+            <textarea matInput rows="1" formControlName="excludeNameRegex"></textarea>
           </mat-form-field>
         </cm-form-field>
 
-        <cm-form-field class="col-24" [help]="tip.excludeServers">
+        <cm-form-field class="col-24" [help]="'server 黑名单，逗号/换行分隔。如 127.0.0.1,localhost'">
           <mat-label>排除服务器</mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
             <input matInput formControlName="excludeServers" />
           </mat-form-field>
         </cm-form-field>
 
-        <cm-form-field class="col-24" [help]="tip.includeName">
+        <cm-form-field class="col-24" [help]="'可选。非空时只保留名称匹配的节点（白名单）。'">
           <mat-label>仅包含名称（可选白名单正则）</mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
             <input matInput formControlName="includeNameRegex" placeholder="例如：日本|香港|JP|HK" />
           </mat-form-field>
         </cm-form-field>
       </div>
-    }
+    </cm-collapse-panel>
   </div>
 </form>
 

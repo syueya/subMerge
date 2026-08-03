@@ -1,35 +1,20 @@
-<cm-page-toolbar title="订阅源">
-  <button
-    mat-icon-button
-    color="primary"
-    type="button"
-    class="m-r-10"
-    matTooltip="刷新"
-    [disabled]="isLoading"
-    (click.debounceTime)="reloadTableDataByPage()"
-  >
+<cm-page-toolbar
+  title="订阅源"
+  description="添加机场 Clash 订阅，加密保存；拉取后按地区前缀合并节点。URL 仅脱敏展示。"
+>
+  <button mat-icon-button color="primary" type="button" matTooltip="刷新" [disabled]="isLoading"
+    (click.debounceTime)="reloadTableDataByPage()">
     <i-tabler class="icon-20" name="refresh"></i-tabler>
   </button>
   @if (selectedCount() > 0) {
-    <button
-      mat-stroked-button
-      color="warn"
-      type="button"
-      class="m-r-8"
-      [disabled]="busy()"
-      (click.debounceTime)="batchRemove()"
-    >
+    <button mat-stroked-button color="warn" type="button" [disabled]="busy()" (click.debounceTime)="batchRemove()">
       删除所选 ({{ selectedCount() }})
     </button>
-    <button mat-stroked-button color="primary" type="button" class="m-r-8" (click.debounceTime)="clearSelection()">
+    <button mat-stroked-button color="primary" type="button" (click.debounceTime)="clearSelection()">
       取消选择
     </button>
   }
-  <button
-    mat-stroked-button
-    color="primary"
-    type="button"
-    class="m-r-8"
+  <button mat-stroked-button color="primary" type="button"
     [disabled]="busy() || dataSource.data.length === 0"
     (click.debounceTime)="refreshAll()"
   >
@@ -39,10 +24,6 @@
     新增源
   </button>
 </cm-page-toolbar>
-
-<p class="text-muted f-s-12 m-b-12">
-  添加机场 Clash 订阅，加密保存；拉取后按地区前缀合并节点。URL 仅脱敏展示。
-</p>
 
 <cm-responsive-table-list
   [data]="dataSource.data"

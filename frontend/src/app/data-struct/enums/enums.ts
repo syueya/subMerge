@@ -34,8 +34,8 @@ export function enumBadgeClass(
 
 export type Region = string;
 
-/** 自动识别失败时的回退地区（与后端 FallbackRegion 一致） */
-export const FALLBACK_REGION = 'UNKNOWN';
+/** 自动识别失败时的回退地区（与后端 FallbackRegion 一致；节点前缀 UNK-xxx） */
+export const FALLBACK_REGION = 'UNK';
 
 /** 地区展示名：优先用目录 labels；无则回退地区码本身 */
 export function regionLabel(code: string, labels?: Record<string, string>): string {

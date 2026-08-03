@@ -1,0 +1,23 @@
+<mat-form-field appearance="outline" class="w-full" color="primary">
+  <input
+    matInput
+    type="text"
+    [formControl]="inputCtrl"
+    [placeholder]="placeholder"
+    [matAutocomplete]="auto"
+    (blur)="markTouched()"
+  />
+  <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onOptionSelected($event.option.value)">
+    @for (opt of filteredOptions(); track opt.value) {
+      <mat-option [value]="opt.text">{{ opt.text }}</mat-option>
+    }
+    @if (showCreateHint()) {
+      <mat-option [value]="inputCtrl.value.trim()" class="cm-select-with-create__new-opt">
+        {{ createHint }}「{{ inputCtrl.value.trim() }}」
+      </mat-option>
+    }
+    @if (!filteredOptions().length && !showCreateHint()) {
+      <mat-option disabled>无匹配项</mat-option>
+    }
+  </mat-autocomplete>
+</mat-form-field>

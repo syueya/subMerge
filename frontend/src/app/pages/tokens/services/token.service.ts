@@ -2,17 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { ApiService } from '@common/net/api.service';
 import { CachedRequest } from '@common/net/cached-request';
-import { ListResponse, ShareToken, TokenGroupMode, TokenStatus } from '@data-struct';
-
-export interface TokenUpsertBody {
-	name?: string;
-	status?: TokenStatus;
-	/** 传 [] 表示全部源；非空为指定源 */
-	sourceIds?: number[];
-	groupMode?: TokenGroupMode;
-	/** custom 时的策略组名白名单 */
-	groupNames?: string[];
-}
+import {
+	ListResponse,
+	ShareToken,
+	TokenGroupMode,
+	TokenUpsertBody,
+} from '@data-struct';
 
 @Injectable({ providedIn: 'root' })
 export class TokenService {

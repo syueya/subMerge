@@ -8,7 +8,7 @@ import { CmParentTableComponent } from '@common/parents/parent-table/parent-tabl
 import { formatDate } from '@common/util';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, takeUntil, timeout } from 'rxjs';
 
-import { SystemLogsTypeData, SystemLogsType, SystemLogsContent, SystemLogs } from '../interfaces/SystemLogs';
+import { SystemLogs, SystemLogsContent, SystemLogsType, SystemLogsTypeData } from '@data-struct';
 
 @Component({
   standalone: false,

@@ -214,3 +214,9 @@
     transform-origin: 0% 0%;
   }
 }
+
+// cm-select-with-create：autocomplete 面板在 overlay，新建提示需全局
+.cm-select-with-create__new-opt {
+  font-weight: 600;
+  color: var(--mat-sys-primary, #5d87ff);
+}

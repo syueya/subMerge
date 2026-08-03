@@ -1,15 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Component, inject } from '@angular/core';
-import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { AppCommonModule } from '@common/common.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { CmSharedDialogDataModel } from '@common/modules/shared-dialog/enum/CmSharedDialogDataModel';
 import { CmSharedDialogData } from '@common/modules/shared-dialog/interfaces/CmSharedDialogData';
 
+/**
+ * 确认/提示弹窗。
+ * 不要 import AppCommonModule：会与根公共模块形成运行时循环依赖（NG0919），
+ * 打开 confirm 时无法读取 @Component metadata。
+ */
 @Component({
-    selector: 'cm-shared-dialog',
-    imports: [AppCommonModule],
-    templateUrl: './shared-dialog.component.html',
-    styleUrl: './shared-dialog.component.scss'
+  selector: 'cm-shared-dialog',
+  imports: [MatDialogModule, MatButtonModule],
+  templateUrl: './shared-dialog.component.html',
+  styleUrl: './shared-dialog.component.scss'
 })
 export class CmSharedDialogComponent {
   dialogRef = inject<MatDialogRef<CmSharedDialogComponent>>(MatDialogRef);
@@ -18,7 +23,7 @@ export class CmSharedDialogComponent {
   static instance: CmSharedDialogComponent;
 
   modelType = CmSharedDialogDataModel;
-  // 当前组件类型
+  /** 当前弹窗类型 */
   model: CmSharedDialogDataModel | string = CmSharedDialogDataModel.confirm;
 
   constructor() {
@@ -27,29 +32,25 @@ export class CmSharedDialogComponent {
     CmSharedDialogComponent.instance = this;
     if (data.model) {
       this.model = data.model;
+      // 仅在调用方未指定按钮文案时填默认值，保留 confirmText 等自定义
       switch (data.model) {
         case CmSharedDialogDataModel.delete:
-          // 如果为删除时，修改确定按钮名称
-          data.sureStr = '删除';
+          data.sureStr ||= '删除';
           break;
         case CmSharedDialogDataModel.confirm:
-          // 如果为确认时，修改确定按钮名称
-          data.sureStr = '确认';
+          data.sureStr ||= '确认';
           break;
         case CmSharedDialogDataModel.info:
-          // 如果为提示时，修改确定按钮名称
-          data.sureStr = '好的';
+          data.sureStr ||= '好的';
           break;
-
         default:
           break;
       }
     }
   }
 
-
   onNoClick(param?: any): void {
-    if (this && this.dialogRef) {
+    if (this?.dialogRef) {
       this.dialogRef.close(param);
     } else {
       CmSharedDialogComponent.instance.dialogRef.close(param);

@@ -24,8 +24,17 @@ type Keyword struct {
 	Region  string
 }
 
-// FallbackCode 自动识别失败时的默认回退地区
-const FallbackCode = "UNKNOWN"
+// FallbackCode 自动识别失败时的默认回退地区（短码，节点前缀如 UNK-xxx）
+const FallbackCode = "UNK"
+
+// LegacyFallbackCode 旧版回退码，兼容已有源/节点数据
+const LegacyFallbackCode = "UNKNOWN"
+
+// IsFallback 是否为回退/未识别地区（含旧码 UNKNOWN）
+func IsFallback(code string) bool {
+	c := strings.ToUpper(strings.TrimSpace(code))
+	return c == "" || c == FallbackCode || c == LegacyFallbackCode
+}
 
 // OtherRegionToken 策略组成员 REGION:OTHER 展开用（非常用国家节点）
 const OtherRegionToken = "OTHER"
@@ -125,7 +134,7 @@ func load() {
 	})
 }
 
-// List 返回地区目录（含 UNKNOWN）
+// List 返回地区目录（含 UNK 回退项）
 func List() []Entry {
 	load()
 	out := make([]Entry, len(list))
@@ -147,7 +156,7 @@ func Name(code string) string {
 func DisplayName(code string) string {
 	load()
 	c := strings.ToUpper(strings.TrimSpace(code))
-	if c == "" || c == FallbackCode {
+	if IsFallback(c) {
 		return c
 	}
 	if e, ok := byCode[c]; ok {

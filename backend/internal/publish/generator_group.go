@@ -194,7 +194,7 @@ func expandRefs(
 				// map 遍历顺序不稳定；按地区码排序，保证发布 hash 可复现
 				regions := make([]string, 0, len(byRegion))
 				for region := range byRegion {
-					if regioncatalog.IsPrimary(region) || region == "UNKNOWN" {
+					if regioncatalog.IsPrimary(region) || regioncatalog.IsFallback(region) {
 						continue
 					}
 					regions = append(regions, region)

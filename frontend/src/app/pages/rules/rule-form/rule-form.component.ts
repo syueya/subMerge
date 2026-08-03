@@ -3,14 +3,12 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import {
 	RULE_TYPE_OPTIONS,
-	ProxyGroup,
-	Rule,
+	RuleFormDialogData,
 	RuleType,
 } from '@data-struct';
 import { DialogService } from '@common/services/dialog.service';
 import { RuleService } from '../services/rule.service';
 import {
-	CATEGORY_NEW_VALUE,
 	buildCategoryOptions,
 	isMatchType,
 	isSystemRule,
@@ -18,19 +16,9 @@ import {
 	payloadLabel,
 	payloadPlaceholder,
 	payloadTip,
-	resolveSelectedCategory,
 } from '../services/rule-ui';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { finalize, takeUntil } from 'rxjs';
-
-export interface RuleFormDialogData {
-	rule: Rule | null;
-	groups: ProxyGroup[];
-	rules: Rule[];
-	extraCategories: string[];
-	defaultCategory?: string;
-	defaultTarget?: string;
-}
 
 @Component({
 	selector: 'app-rule-form',
@@ -44,18 +32,8 @@ export class RuleFormComponent extends CmParentFormComponent {
 	private svc = inject(RuleService);
 	private dialog = inject(DialogService);
 
-	isUpdate: boolean;
+isUpdate: boolean;
 	ruleTypes = RULE_TYPE_OPTIONS;
-	readonly categoryNewValue = CATEGORY_NEW_VALUE;
-
-	readonly tip = {
-		ruleType: '用什么方式匹配流量：域名、域名后缀、关键词、国家代码、IP 段等。',
-		ruleTarget: '命中后走哪个策略组。\n只从策略组列表选择；策略组请到「策略组」页维护。',
-		ruleNote: '仅后台备注，方便自己辨认，不会写入 Clash 配置。',
-		ruleCategory:
-			'业务分类仅用于面板分组浏览，不写入 Clash。\n可从已有分类选择，或选「＋ 新建分类…」输入新名字。\n「系统分类」= 广告 / 国内 GEOIP / 兜底 MATCH（顺序固定）。',
-		ruleEnabled: '关闭后此规则不参与匹配，但仍保留在列表中。',
-	};
 
 	constructor() {
 		super();
@@ -67,10 +45,9 @@ export class RuleFormComponent extends CmParentFormComponent {
 			payload: [rule?.payload || ''],
 			target: [rule?.target || this.data.defaultTarget || '', [Validators.required]],
 			enabled: [rule?.enabled ?? true],
-			note: [rule?.note || ''],
-			category: [rule?.category || this.data.defaultCategory || ''],
-			categoryCustom: [''],
-		});
+note: [rule?.note || ''],
+				category: [rule?.category || this.data.defaultCategory || ''],
+			});
 		if (this.systemLocked) {
 			this.editForm.get('type')?.disable({ emitEvent: false });
 			this.editForm.get('payload')?.disable({ emitEvent: false });
@@ -86,13 +63,13 @@ export class RuleFormComponent extends CmParentFormComponent {
 		return isSystemRule({ type, payload });
 	}
 
-	categorySelectOptions() {
-		return buildCategoryOptions(this.data.rules, this.data.extraCategories, {
-			current: this.editForm.get('category')?.value,
-			allowNew: true,
-			newValue: this.categoryNewValue,
-		});
-	}
+/** 已有分类；新分类由输入框直接输入 */
+		categorySelectOptions() {
+			return buildCategoryOptions(this.data.rules, this.data.extraCategories, {
+				current: this.editForm.get('category')?.value,
+				allowNew: false,
+			});
+		}
 
 	payloadLabelText(): string {
 		return payloadLabel(this.editForm.get('type')?.value);
@@ -134,15 +111,7 @@ export class RuleFormComponent extends CmParentFormComponent {
 			void this.dialog.error('请选择目标出口');
 			return;
 		}
-		const category = resolveSelectedCategory(
-			raw.category,
-			raw.categoryCustom,
-			this.categoryNewValue,
-		);
-		if (raw.category === this.categoryNewValue && !category) {
-			void this.dialog.error('请填写新建分类名称');
-			return;
-		}
+		const category = String(raw.category || '').trim();
 		const body = {
 			type: raw.type,
 			payload: this.isMatch() ? '' : String(raw.payload || '').trim(),

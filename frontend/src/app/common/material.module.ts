@@ -9,7 +9,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MAT_DATE_FORMATS, MAT_DATE_LOCALE, MatRippleModule } from '@angular/material/core';
 import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MAT_FORM_FIELD_DEFAULT_OPTIONS, MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
@@ -49,7 +51,12 @@ export const MATERIAL_PROVIDERS = [
   { provide: MAT_DATE_LOCALE, useValue: 'zh-CN' },
   { provide: MatPaginatorIntl, useClass: CustomPaginatorIntl },
   { provide: MAT_DIALOG_DEFAULT_OPTIONS, useValue: { disableClose: false, autoFocus: false } },
-  { provide: MAT_TOOLTIP_DEFAULT_OPTIONS, useValue: { touchGestures: 'auto' } }
+  { provide: MAT_TOOLTIP_DEFAULT_OPTIONS, useValue: { touchGestures: 'auto' } },
+  // 无 hint/error 时不占底部空行；有 mat-error / mat-hint 时再展开
+  {
+    provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
+    useValue: { appearance: 'outline', subscriptSizing: 'dynamic' }
+  }
 ];
 
 @NgModule({
@@ -57,6 +64,7 @@ export const MATERIAL_PROVIDERS = [
   imports: [NgOptimizedImage],
   exports: [
     MatCheckboxModule,
+    MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
     MatRadioModule,
@@ -67,6 +75,7 @@ export const MATERIAL_PROVIDERS = [
     MatToolbarModule,
     MatCardModule,
     MatDividerModule,
+    MatExpansionModule,
     MatListModule,
     MatButtonModule,
     MatButtonToggleModule,

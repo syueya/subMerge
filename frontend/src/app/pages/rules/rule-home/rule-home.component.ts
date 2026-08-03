@@ -1,46 +1,46 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import {
-	BADGE_MUTED,
-	BADGE_OK,
-	BADGE_WARN,
-	RULE_TYPE_OPTIONS,
-	ProxyGroup,
-	Rule,
-	RuleType,
-	enumText,
-} from '@data-struct';
-import { MatchableRule } from '@common/util/rule-match';
-import { DialogService } from '@common/services/dialog.service';
-import { DraftStatusStore } from '../../releases/services/draft-status.store';
-import { RuleService } from '../services/rule.service';
-import {
-	CategorySection,
-	buildCategorySections,
-	buildTargetSections,
-	categoryToRemember,
-	defaultRuleTarget,
-	isSystemRule,
-	sortRules,
-} from '../services/rule-ui';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-import { CmParentComponent } from '@common/parents/parent/parent.component';
-import { takeUntil } from 'rxjs';
-import {
-	RuleMatchDialogComponent,
-	RuleMatchDialogData,
-	RuleMatchDialogResult,
-} from '../../_shared/rule-match-dialog/rule-match-dialog.component';
-import { BatchImportComponent, BatchImportDialogData } from '../batch-import/batch-import.component';
-import { NewCategoryFormComponent } from '../new-category-form/new-category-form.component';
-import { PublishFormComponent } from '../publish-form/publish-form.component';
-import { RuleFormComponent, RuleFormDialogData } from '../rule-form/rule-form.component';
+		BADGE_MUTED,
+		BADGE_OK,
+		BADGE_WARN,
+		BatchImportDialogData,
+		CategorySection,
+		MatchableRule,
+		ProxyGroup,
+		RULE_TYPE_OPTIONS,
+		Rule,
+		RuleFormDialogData,
+		RuleMatchDialogData,
+		RuleMatchDialogResult,
+		RuleType,
+		enumText,
+	} from '@data-struct';
+	import { DialogService } from '@common/services/dialog.service';
+	import { DraftStatusStore } from '../../releases/services/draft-status.store';
+	import { RuleService } from '../services/rule.service';
+	import {
+		buildCategorySections,
+		buildTargetSections,
+		categoryToRemember,
+		defaultRuleTarget,
+		isSystemRule,
+		sortRules,
+	} from '../services/rule-ui';
+	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+	import { CmParentComponent } from '@common/parents/parent/parent.component';
+	import { takeUntil } from 'rxjs';
+	import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
+	import { BatchImportComponent } from '../batch-import/batch-import.component';
+	import { NewCategoryFormComponent } from '../new-category-form/new-category-form.component';
+	import { PublishFormComponent } from '../publish-form/publish-form.component';
+	import { RuleFormComponent } from '../rule-form/rule-form.component';
 
 @Component({
-	selector: 'app-rule-editor',
-	templateUrl: './rule-editor.component.html',
+	selector: 'app-rule-home',
+	templateUrl: './rule-home.component.html',
 	standalone: false,
 })
-export class RuleEditorComponent extends CmParentComponent implements OnInit {
+export class RuleHomeComponent extends CmParentComponent implements OnInit {
 	private svc = inject(RuleService);
 	private draftStore = inject(DraftStatusStore);
 	private dialog = inject(DialogService);
@@ -51,10 +51,9 @@ export class RuleEditorComponent extends CmParentComponent implements OnInit {
 	extraCategories = signal<string[]>([]);
 	isLoading = false;
 
-	draftDirty = this.draftStore.dirty;
-	draftStatusNote = this.draftStore.note;
+draftDirty = this.draftStore.dirty;
 
-	viewMode = signal<'category' | 'target'>('category');
+		viewMode = signal<'category' | 'target'>('category');
 	expandedCategoryKeys = signal<Set<string>>(new Set());
 	expandedTargetKeys = signal<Set<string>>(new Set());
 
@@ -148,13 +147,21 @@ export class RuleEditorComponent extends CmParentComponent implements OnInit {
 		return !this.expandedKeys().has(key);
 	}
 
-	toggleSection(key: string): void {
+	isSectionExpanded(key: string): boolean {
+		return this.expandedKeys().has(key);
+	}
+
+	setSectionExpanded(key: string, open: boolean): void {
 		const cur = this.expandedKeys();
 		const next = new Set(cur);
-		if (next.has(key)) next.delete(key);
-		else next.add(key);
+		if (open) next.add(key);
+		else next.delete(key);
 		if (this.viewMode() === 'target') this.expandedTargetKeys.set(next);
 		else this.expandedCategoryKeys.set(next);
+	}
+
+	toggleSection(key: string): void {
+		this.setSectionExpanded(key, this.isSectionCollapsed(key));
 	}
 
 	reload(force = false): void {
@@ -369,8 +376,7 @@ export class RuleEditorComponent extends CmParentComponent implements OnInit {
 	openTestModal(): void {
 		const data: RuleMatchDialogData = {
 			title: '测试规则匹配',
-			subtitle:
-				'按当前草稿从上到下模拟匹配（未发布也按草稿）。支持域名；IP 仅 IP-CIDR；GEOSITE/GEOIP 浏览器侧会跳过。',
+			subtitle:'',
 			rules: this.testMatchRules(),
 			typeText: (t) => this.ruleTypeText(t),
 			targetText: (t) => t,

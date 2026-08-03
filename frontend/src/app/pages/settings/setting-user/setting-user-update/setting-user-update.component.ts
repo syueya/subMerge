@@ -8,7 +8,7 @@ import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.c
 import { validateConfirmPassword, validateUserName } from '@common/util';
 import { debounceTime, takeUntil, finalize } from 'rxjs';
 
-import { User } from '../interfaces/User';
+import { User } from '@data-struct';
 
 @Component({
   selector: 'app-setting-user-update',

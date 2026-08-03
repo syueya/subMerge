@@ -1,21 +1,13 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatTableDataSource } from '@angular/material/table';
-import { GeoEntryRow } from '@data-struct';
+import { PageEvent } from '@angular/material/paginator';
+import {
+	BADGE_MUTED,
+	GeoEntriesDialogData,
+	GeoEntriesDialogResult,
+	GeoEntryRow,
+} from '@data-struct';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
-
-export interface GeoEntriesDialogData {
-	title: string;
-	subtitle: string;
-	items: GeoEntryRow[];
-	total: number;
-	offset: number;
-	limit: number;
-	loading: boolean;
-	paginated: boolean;
-}
-
-export type GeoEntriesDialogResult = 'previous' | 'next' | null;
 
 @Component({
 	selector: 'app-geo-entries',
@@ -24,70 +16,69 @@ export type GeoEntriesDialogResult = 'previous' | 'next' | null;
 })
 export class GeoEntriesComponent extends CmParentComponent {
 	dialogRef = inject<MatDialogRef<GeoEntriesComponent, GeoEntriesDialogResult>>(MatDialogRef);
-	data = inject<GeoEntriesDialogData>(MAT_DIALOG_DATA);
+	private readonly initial = inject<GeoEntriesDialogData>(MAT_DIALOG_DATA);
 
-	dataSource = new MatTableDataSource<GeoEntryRow>([]);
-	displayedColumns = ['type', 'value', 'detail'];
+	readonly badgeMuted = BADGE_MUTED;
+	readonly pageSizeOptions = [20, 50, 100];
+
+	/** 弹窗内可变状态：父组件翻页后通过 applyData 就地刷新 */
+	private readonly state = signal<GeoEntriesDialogData>({ ...this.initial });
 
 	constructor() {
 		super();
-		this.dataSource.data = this.data.items || [];
+	}
+
+	/** 父组件更新当前页数据（不关弹窗） */
+	applyData(data: GeoEntriesDialogData): void {
+		this.state.set({
+			...data,
+			onPage: data.onPage ?? this.state().onPage ?? this.initial.onPage,
+		});
 	}
 
 	get title(): string {
-		return this.data.title || '条目';
+		return this.state().title || '条目';
 	}
 
 	get subtitle(): string {
-		return this.data.subtitle || (this.data.total ? `共 ${this.data.total} 条` : '');
+		const s = this.state();
+		return s.subtitle || (s.total ? `共 ${s.total} 条` : '');
 	}
 
 	get loading(): boolean {
-		return !!this.data.loading;
+		return !!this.state().loading;
 	}
 
 	get paginated(): boolean {
-		return !!this.data.paginated;
+		return !!this.state().paginated;
 	}
 
 	get total(): number {
-		return this.data.total || 0;
+		return this.state().total || 0;
 	}
 
-	get offset(): number {
-		return this.data.offset || 0;
+	get pageSize(): number {
+		return this.state().limit || 50;
+	}
+
+	get pageIndex(): number {
+		const s = this.state();
+		const size = s.limit || 50;
+		return size > 0 ? Math.floor((s.offset || 0) / size) : 0;
 	}
 
 	get items(): GeoEntryRow[] {
-		return this.data.items || [];
+		return this.state().items || [];
 	}
 
-	canPrevious(): boolean {
-		return this.offset > 0 && !this.loading;
-	}
-
-	canNext(): boolean {
-		return this.offset + this.items.length < this.total && !this.loading;
-	}
-
-	rangeText(): string {
-		if (!this.total) return `0 / ${this.total}`;
-		return `${this.offset + 1}-${this.offset + this.items.length} / ${this.total}`;
-	}
-
-	previous(): void {
-		if (!this.canPrevious()) return;
-		this.dialogRef.close('previous');
-	}
-
-	next(): void {
-		if (!this.canNext()) return;
-		this.dialogRef.close('next');
+	onPage(e: PageEvent): void {
+		const cb = this.state().onPage || this.initial.onPage;
+		cb?.(e.pageIndex, e.pageSize);
 	}
 
 	close(): void {
 		this.dialogRef.close(null);
 	}
 
-	tableTrackBy = (_: number, row: GeoEntryRow) => `${row.type}|${row.value}|${row.detail || ''}`;
+	trackBy = (_: number, row: GeoEntryRow) => `${row.type}|${row.value}|${row.detail || ''}`;
 }

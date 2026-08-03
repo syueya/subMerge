@@ -2,26 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import {
 	MatchableRule,
+	RuleMatchDialogData,
+	RuleMatchDialogResult,
 	RuleMatchResult,
-	runRuleMatch,
-} from '@common/util/rule-match';
-
-export interface RuleMatchDialogData {
-	title?: string;
-	subtitle?: string;
-	rules: MatchableRule[];
-	loading?: boolean;
-	typeText?: (type: string) => string;
-	targetText?: (target: string) => string;
-	showEditAction?: boolean;
-	showLocateAction?: boolean;
-	canLocate?: (rule: MatchableRule) => boolean;
-}
-
-export type RuleMatchDialogResult =
-	| { action: 'edit'; rule: MatchableRule }
-	| { action: 'locate'; rule: MatchableRule }
-	| null;
+} from '@data-struct';
+import { runRuleMatch } from '@common/util/rule-match';
 
 @Component({
 	selector: 'app-rule-match-dialog',
@@ -37,8 +22,8 @@ export class RuleMatchDialogComponent {
 
 	readonly testExamples = [
 		'chat.openai.com',
-		'https://www.google.com',
-		'www.bilibili.com',
+		'www.google.com',
+		'github.com',
 		't.me',
 	];
 
@@ -115,5 +100,30 @@ export class RuleMatchDialogComponent {
 			default:
 				return '无效';
 		}
+	}
+
+	/** 结果徽章文案：具体命中 / MATCH 兜底 / 完全未命中 */
+	statusLabel(r: RuleMatchResult): string {
+		if (r.matched) return '已命中';
+		return '未命中';
+	}
+
+	statusBadgeClass(r: RuleMatchResult): string {
+		if (r.matched) return 'bg-light-success text-success rounded f-s-12 f-w-600 p-x-8 p-y-2';
+		return 'bg-light-warning text-warning rounded f-s-12 f-w-600 p-x-8 p-y-2';
+	}
+
+	/** MATCH 兜底：模板用方法访问，避免 strictTemplates 对字段误报 */
+	isFallbackMatch(r: RuleMatchResult): boolean {
+		return !!r.fallbackMatch;
+	}
+
+	/** 有关联规则即可编辑（含 MATCH 兜底） */
+	canEdit(r: RuleMatchResult): boolean {
+		return this.showEditAction && !!r.rule;
+	}
+
+	canShowLocate(r: RuleMatchResult): boolean {
+		return this.showLocateAction && !!r.rule && this.canLocate(r.rule!);
 	}
 }

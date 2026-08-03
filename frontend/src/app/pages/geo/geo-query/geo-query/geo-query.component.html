@@ -1,0 +1,76 @@
+<div class="page-fill">
+  <cm-page-toolbar
+    title="Geo 数据"
+    description="查询 GeoSite 分类、IP 网段和 ASN 数据；更新会覆盖 defaults/geo 下的文件。"
+  >
+    <button
+      mat-icon-button
+      color="primary"
+      type="button"
+      class="m-r-10"
+      matTooltip="刷新元数据"
+      (click.debounceTime)="reloadMeta()"
+    >
+      <i-tabler class="icon-20" name="refresh"></i-tabler>
+    </button>
+    <button mat-flat-button color="primary" type="button" [disabled]="updating()" (click.debounceTime)="update()">
+      {{ updating() ? '更新中…' : '更新数据' }}
+    </button>
+  </cm-page-toolbar>
+
+  <div class="row m-b-12" style="flex: 0 0 auto">
+    @for (item of statuses(); track item.name) {
+      <div class="col-24 col-lg-6 m-b-12">
+        <mat-card class="cardWithShadow m-b-0">
+          <mat-card-content class="p-12">
+            <div class="d-flex align-items-center justify-content-between gap-8 m-b-4">
+              <strong class="f-s-14">{{ resourceName(item.name) }}</strong>
+              <span [class]="item.available ? badgeOk : badgeErr">{{ item.available ? '可用' : '不可用' }}</span>
+            </div>
+            <div class="f-s-12 text-muted">{{ item.name }} · {{ formatBytes(item.size) }}</div>
+            <div class="f-s-12 text-muted m-t-4 text-truncate" [title]="statusDetailTitle(item)">
+              {{ statusDetail(item) }}
+            </div>
+            @if (item.error) {
+              <div class="f-s-12 text-error m-t-4 text-truncate" [title]="item.error">{{ item.error }}</div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+  </div>
+
+  <mat-card class="cardWithShadow page-fill__body">
+    <mat-card-content class="p-16 page-fill__scroll">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-b-12">
+        <div>
+          <div class="f-w-600 f-s-16">
+            {{ queryTab() === 'domain' ? '域名查询' : '分类搜索' }}
+          </div>
+          <p class="f-s-12 text-muted m-b-0 m-t-4">
+            @if (queryTab() === 'domain') {
+              GeoIP、MetaDB 和 ASN 需要勾选 DNS 解析后才能按 IP 查询。
+            } @else {
+              GeoSite / GeoIP 按分类反查；ASN 按编号或组织名搜索；MetaDB 按国家/地区代码搜索。
+            }
+          </p>
+        </div>
+        <mat-button-toggle-group
+          [value]="queryTab()"
+          (change)="setQueryTab($event.value)"
+          hideSingleSelectionIndicator
+        >
+          <mat-button-toggle value="domain">域名查询</mat-button-toggle>
+          <mat-button-toggle value="search">分类搜索</mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+      <mat-divider class="m-b-16"></mat-divider>
+
+      @if (queryTab() === 'domain') {
+        <app-geo-domain-query (openCategory)="onOpenCategory($event)"></app-geo-domain-query>
+      } @else {
+        <app-geo-category-search [categories]="categories()"></app-geo-category-search>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

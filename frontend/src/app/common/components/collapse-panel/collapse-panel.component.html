@@ -1,0 +1,38 @@
+<mat-accordion displayMode="flat" class="cm-collapse-accordion">
+  <mat-expansion-panel
+    class="cm-collapse-panel"
+    [expanded]="expanded"
+    [disabled]="disabled"
+    [hideToggle]="true"
+    (expandedChange)="onExpandedChange($event)"
+  >
+    <mat-expansion-panel-header class="cm-collapse-panel__header">
+      <mat-panel-title class="cm-collapse-panel__title">
+        @if (!hideToggle) {
+          <span class="cm-collapse-panel__caret text-muted" aria-hidden="true">{{ expanded ? '▼' : '▶' }}</span>
+        }
+        <ng-content select="[cmCollapseTitle]"></ng-content>
+        @if (title) {
+          <span class="f-w-600 f-s-14">{{ title }}</span>
+        }
+      </mat-panel-title>
+      <mat-panel-description class="cm-collapse-panel__description">
+        @if (description) {
+          <span class="f-s-12 text-muted">{{ description }}</span>
+        }
+        <ng-content select="[cmCollapseDescription]"></ng-content>
+        <span class="cm-collapse-panel__actions" (click)="$event.stopPropagation()">
+          <ng-content select="[cmCollapseAction]"></ng-content>
+        </span>
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+
+    @if (expanded) {
+      <mat-divider></mat-divider>
+    }
+
+    <div class="cm-collapse-panel__body">
+      <ng-content></ng-content>
+    </div>
+  </mat-expansion-panel>
+</mat-accordion>

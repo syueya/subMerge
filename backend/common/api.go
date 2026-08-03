@@ -55,7 +55,7 @@ type UpdateProfileRequest struct {
 }
 
 // CreateSourceRequest 创建订阅源
-// Region 可省略：自动模式默认 UNKNOWN；固定模式建议传具体地区码
+// Region 可省略：自动模式默认 UNK；固定模式建议传具体地区码
 type CreateSourceRequest struct {
 	Name             string      `json:"name" binding:"required"`
 	Region           Region      `json:"region"`
@@ -335,7 +335,7 @@ type RegionCatalogEntry struct {
 // RegionCatalogResponse 地区目录
 type RegionCatalogResponse struct {
 	Items          []RegionCatalogEntry `json:"items"`
-	FallbackRegion string               `json:"fallbackRegion"` // 自动模式默认回退，通常 UNKNOWN
+	FallbackRegion string               `json:"fallbackRegion"` // 自动模式默认回退，通常 UNK
 }
 
 // MeResponse 当前用户

@@ -1,0 +1,143 @@
+<div class="row align-items-end">
+  <cm-form-field class="col-24 col-md-6">
+    <mat-label>数据文件</mat-label>
+    <mat-form-field appearance="outline" class="w-full" color="primary">
+      <mat-select [ngModel]="reverseFile" (ngModelChange)="changeReverseFile($event)">
+        <mat-option value="geosite">GeoSite</mat-option>
+        <mat-option value="geoip">GeoIP</mat-option>
+        <mat-option value="metadb">MetaDB</mat-option>
+        <mat-option value="asn">ASN</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </cm-form-field>
+
+  @if (reverseFile === 'geosite' || reverseFile === 'geoip') {
+    <cm-form-field class="col-24 col-md-18">
+      <mat-label>分类关键词</mat-label>
+      <mat-form-field appearance="outline" class="w-full" color="primary">
+        <input
+          matInput
+          [(ngModel)]="reverseKeyword"
+          (ngModelChange)="commitReverseKeyword()"
+          placeholder="例如 google、ads、cn"
+          (keyup.enter)="reverse()"
+        />
+      </mat-form-field>
+      <button
+        formFieldAction
+        mat-flat-button
+        color="primary"
+        type="button"
+        [disabled]="reverseLoading()"
+        (click.debounceTime)="reverse()"
+      >
+        {{ reverseLoading() ? '查询中…' : '查看条目' }}
+      </button>
+    </cm-form-field>
+  } @else {
+    <cm-form-field class="col-24 col-md-6">
+      <mat-label>搜索字段</mat-label>
+      <mat-form-field appearance="outline" class="w-full" color="primary">
+        <mat-select [(ngModel)]="searchField">
+          @if (reverseFile === 'asn') {
+            <mat-option value="asn">ASN 编号</mat-option>
+            <mat-option value="organization">组织名</mat-option>
+          }
+          @if (reverseFile === 'metadb') {
+            <mat-option value="code">国家/地区代码</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </cm-form-field>
+    <cm-form-field class="col-24 col-md-12">
+      <mat-label>搜索关键词</mat-label>
+      <mat-form-field appearance="outline" class="w-full" color="primary">
+        <input
+          matInput
+          [(ngModel)]="searchKeyword"
+          (keyup.enter)="openDatabaseSearch()"
+          [placeholder]="reverseFile === 'asn' ? '例如 15169、Google' : '例如 CN、US、AS'"
+        />
+      </mat-form-field>
+      <button
+        formFieldAction
+        mat-flat-button
+        color="primary"
+        type="button"
+        [disabled]="searchLoading()"
+        (click.debounceTime)="openDatabaseSearch()"
+      >
+        {{ searchLoading() ? '搜索中…' : '搜索记录' }}
+      </button>
+    </cm-form-field>
+  }
+</div>
+
+@if (reverseFile === 'metadb' || reverseFile === 'asn') {
+  <p class="f-s-12 text-muted m-b-8">
+    {{
+      reverseFile === 'metadb'
+        ? '可搜索 Meta-geoip0 记录中的代码标签；ASN、组织名、ISP、城市和地区名称不属于当前 MetaDB 文件。'
+        : '可按 ASN 编号或 ASN 组织名搜索 GeoLite2-ASN.mmdb。'
+    }}
+  </p>
+}
+
+@if (reverseFile === 'geosite' || reverseFile === 'geoip') {
+  <div class="m-t-8 p-12 rounded b-1">
+    <div style="max-height: 13rem; overflow-y: auto">
+      @if (visibleCategories().length) {
+        <mat-chip-listbox
+          class="d-flex flex-wrap"
+          [value]="reverseCategory"
+          (change)="onCategoryChipChange($event)"
+        >
+          @for (item of visibleCategories(); track item.name) {
+            <mat-chip-option [value]="item.name">
+              {{ item.name }}
+              <span class="text-muted m-l-4 f-s-12">{{ item.count }}</span>
+            </mat-chip-option>
+          }
+        </mat-chip-listbox>
+      } @else {
+        <div class="f-s-14 text-muted">
+          @if (reverseCommittedKeyword.trim()) {
+            没有匹配的分类
+          } @else {
+            暂无分类数据
+          }
+        </div>
+      }
+    </div>
+    <p class="f-s-12 text-muted m-b-0 m-t-12">
+      @if (reverseCommittedKeyword.trim()) {
+        匹配 {{ categoryMatchCount() }} / 共 {{ categoryTotalCount() }} 个分类
+      } @else {
+        共 {{ categoryTotalCount() }} 个分类
+      }
+      · 点击分类后点「查看条目」
+      @if (categoryTruncated()) {
+        · 仅显示前 {{ categoryVisibleLimit }} 个，请输入关键词缩小范围
+      }
+    </p>
+  </div>
+}
+
+@if (reverseResult(); as result) {
+  @if (result.message) {
+    <p class="f-s-12 text-warning m-t-16 m-b-0">{{ result.message }}</p>
+  } @else {
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-t-16">
+      <span class="f-s-14 text-muted">已加载 {{ result.items?.length || 0 }} 条，共 {{ result.total }} 条</span>
+      <button
+        mat-stroked-button
+        color="primary"
+        type="button"
+        [disabled]="reverseLoading()"
+        (click.debounceTime)="openReverseEntries(result, true)"
+      >
+        查看条目
+      </button>
+    </div>
+  }
+}

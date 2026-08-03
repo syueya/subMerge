@@ -1,11 +1,14 @@
 <cm-dialog-header [modalTitle]="'编辑链接范围 · ' + token.name"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="mat-subtitle-2 lh-16">
+  <div mat-dialog-content>
     <p class="text-muted f-s-12 m-b-16">订阅源决定节点；策略组决定配置里出现哪些组</p>
 
     <div class="row">
-      <cm-form-field class="col-24" [help]="tip.sources">
+      <cm-form-field
+        class="col-24"
+        [help]="'勾选「全部源」时，之后新增的启用源也会自动纳入该链接；否则仅下发勾选的源。'"
+      >
         <mat-label>包含的订阅源</mat-label>
         <div class="m-b-8">
           <mat-checkbox [checked]="allSources()" (change)="setAll($event.checked)">全部源</mat-checkbox>
@@ -43,7 +46,10 @@
         }
       </cm-form-field>
 
-      <cm-form-field class="col-24" [help]="tip.groupMode">
+      <cm-form-field
+        class="col-24"
+        [help]="'自动：按该链接实际节点去掉空地区组（推荐）。\n全部：保留模板中的策略组。\n自定义：只下发勾选的策略组。'"
+      >
         <mat-label>策略组</mat-label>
         <mat-radio-group
           class="d-flex flex-wrap gap-x-16 gap-y-8 m-b-12"

@@ -1,33 +1,35 @@
 import { AfterViewInit, Component, computed, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import {
-	BADGE_MUTED,
-	BADGE_WARN,
-	FALLBACK_REGION,
-	REFRESH_STATUS_BADGE,
-	REFRESH_STATUS_OPTIONS,
-	RegionCatalogEntry,
-	SubscriptionSource,
-	enumBadgeClass,
-	enumText,
-	regionOptionText,
-} from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime } from '@common/util/format';
-import { SourceService } from '../services/source.service';
-import { formatRefreshMsg } from '../services/source-refresh.util';
-import {
-	hasTraffic,
-	trafficExpireText,
-	trafficPercent,
-	trafficText,
-	trafficTitle,
-} from '../services/source-traffic.util';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-import { finalize, takeUntil } from 'rxjs';
-import { SourceFormComponent, SourceFormDialogData } from '../source-form/source-form.component';
-import { SourceProxiesComponent, SourceProxiesDialogData } from '../source-proxies/source-proxies.component';
+		BADGE_MUTED,
+		BADGE_WARN,
+		FALLBACK_REGION,
+		REFRESH_STATUS_BADGE,
+		REFRESH_STATUS_OPTIONS,
+		RegionCatalogEntry,
+		SourceFormDialogData,
+		SourceProxiesDialogData,
+		SubscriptionSource,
+		enumBadgeClass,
+		enumText,
+		regionOptionText,
+	} from '@data-struct';
+	import { DialogService } from '@common/services/dialog.service';
+	import { formatDateTime } from '@common/util/format';
+	import { SourceService } from '../services/source.service';
+	import { formatRefreshMsg } from '../services/source-refresh.util';
+	import {
+		hasTraffic,
+		trafficExpireText,
+		trafficPercent,
+		trafficText,
+		trafficTitle,
+	} from '../services/source-traffic.util';
+	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+	import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+	import { finalize, takeUntil } from 'rxjs';
+	import { SourceFormComponent } from '../source-form/source-form.component';
+	import { SourceProxiesComponent } from '../source-proxies/source-proxies.component';
 
 @Component({
 	selector: 'app-source-list',

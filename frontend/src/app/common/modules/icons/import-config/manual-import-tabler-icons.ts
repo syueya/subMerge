@@ -37,6 +37,7 @@ import {
   IconTestPipe,
   IconCell,
   IconEye,
+  IconEyeOff,
   IconReportSearch,
   IconShoppingCartSearch,
   IconDatabaseCog,
@@ -61,6 +62,24 @@ import {
   IconSparkles,
   IconMessageDots,
   IconListDetails,
+  // 侧边栏菜单
+  IconLayoutDashboard,
+  IconActivity,
+  IconComponents,
+  IconKey,
+  IconWorld,
+  // 页面常用操作 / 仪表盘引导
+  IconCloudDownload,
+  IconHierarchy2,
+  IconListCheck,
+  IconRocket,
+  IconCopy,
+  IconBan,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconArrowBackUp,
+  IconPuzzle,
+  IconId,
 } from '@luoxiao123/angular-tabler-icons/icons';
 
 export const ManualImportTablerIcons = {
@@ -102,6 +121,7 @@ export const ManualImportTablerIcons = {
   IconTestPipe,
   IconCell,
   IconEye,
+  IconEyeOff,
   IconReportSearch,
   IconShoppingCartSearch,
   IconDatabaseCog,
@@ -126,4 +146,22 @@ export const ManualImportTablerIcons = {
   IconSparkles,
   IconMessageDots,
   IconListDetails,
+  // 侧边栏菜单
+  IconLayoutDashboard,
+  IconActivity,
+  IconComponents,
+  IconKey,
+  IconWorld,
+  // 页面常用操作 / 仪表盘引导
+  IconCloudDownload,
+  IconHierarchy2,
+  IconListCheck,
+  IconRocket,
+  IconCopy,
+  IconBan,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconArrowBackUp,
+  IconPuzzle,
+  IconId,
 };

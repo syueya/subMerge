@@ -1,10 +1,15 @@
-import { RULE_CATEGORY_ORDER, Rule, RuleType } from '@data-struct';
+import {
+	CategoryOption,
+	CategorySection,
+	RULE_CATEGORY_ORDER,
+	Rule,
+	RuleType,
+} from '@data-struct';
 
 /** 下拉专用：新建分类哨兵值 */
 export const CATEGORY_NEW_VALUE = '__new__';
 
-export type CategoryOption = { value: string; text: string };
-export type CategorySection = { key: string; label: string; rules: Rule[] };
+export type { CategoryOption, CategorySection };
 
 /** 系统托管规则：广告 / 国内 GEOIP / MATCH 兜底（顺序固定，不可删） */
 export function isSystemRule(rule: { type?: string; payload?: string } | null | undefined): boolean {
@@ -177,41 +182,41 @@ export function buildTargetSections(rules: Rule[], groupNames: string[] = []): C
 }
 
 /**
- * 分类下拉：预设 + 规则中出现过的 + 空新建分类 + 未分类 + 可选「新建」。
- * current：编辑时若当前值不在列表，仍保留。
- */
-export function buildCategoryOptions(
-	rules: Rule[],
-	extraCategories: string[] = [],
-	opts?: { current?: string; allowNew?: boolean; newValue?: string },
-): CategoryOption[] {
-	const allowNew = opts?.allowNew !== false;
-	const newValue = opts?.newValue ?? CATEGORY_NEW_VALUE;
-	const seen = new Set<string>();
-	const out: CategoryOption[] = [];
-	const push = (value: string, text: string) => {
-		if (seen.has(value)) return;
-		seen.add(value);
-		out.push({ value, text });
-	};
-	for (const c of RULE_CATEGORY_ORDER) push(c, c);
-	for (const r of rules) {
-		const c = (r.category || '').trim();
-		if (c) push(c, c);
+	 * 分类下拉：预设 + 规则中出现过的 + extra 空分类 + 可选「新建」。
+	 * 不填 / 空串 = 未分类，故不下发「未分类」选项。
+	 * current：编辑时若当前值不在列表，仍保留。
+	 */
+	export function buildCategoryOptions(
+		rules: Rule[],
+		extraCategories: string[] = [],
+		opts?: { current?: string; allowNew?: boolean; newValue?: string },
+	): CategoryOption[] {
+		const allowNew = opts?.allowNew !== false;
+		const newValue = opts?.newValue ?? CATEGORY_NEW_VALUE;
+		const seen = new Set<string>();
+		const out: CategoryOption[] = [];
+		const push = (value: string, text: string) => {
+			if (!value || seen.has(value)) return;
+			seen.add(value);
+			out.push({ value, text });
+		};
+		for (const c of RULE_CATEGORY_ORDER) push(c, c);
+		for (const r of rules) {
+			const c = (r.category || '').trim();
+			if (c) push(c, c);
+		}
+		for (const c of extraCategories) {
+			if (c) push(c, c);
+		}
+		const cur = (opts?.current || '').trim();
+		if (cur && cur !== newValue && !seen.has(cur)) {
+			push(cur, cur);
+		}
+		if (allowNew) {
+			out.push({ value: newValue, text: '＋ 新建分类…' });
+		}
+		return out;
 	}
-	for (const c of extraCategories) {
-		if (c) push(c, c);
-	}
-	push('', '未分类');
-	const cur = (opts?.current || '').trim();
-	if (cur && cur !== newValue && !seen.has(cur)) {
-		push(cur, cur);
-	}
-	if (allowNew) {
-		out.push({ value: newValue, text: '＋ 新建分类…' });
-	}
-	return out;
-}
 
 export function resolveSelectedCategory(
 	selected: string,

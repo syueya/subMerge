@@ -1,24 +1,7 @@
 /** 浏览器侧规则匹配（域名 / IP-CIDR；GEOSITE/GEOIP 会跳过） */
+import type { MatchableRule, RuleMatchResult } from '@data-struct';
 
-export interface MatchableRule {
-	type: string;
-	payload?: string;
-	target: string;
-	enabled?: boolean;
-	/** 展示用原文，可选 */
-	raw?: string;
-}
-
-export interface RuleMatchResult {
-	input: string;
-	host: string;
-	kind: 'domain' | 'ipv4' | 'ipv6' | 'empty' | 'invalid';
-	matched: boolean;
-	rule: MatchableRule | null;
-	/** 扫描过但未命中的规则条数（含跳过的 GEOSITE 等） */
-	skipped: number;
-	note: string;
-}
+export type { MatchableRule, RuleMatchResult };
 
 export function normalizeHost(raw: string): { host: string; kind: RuleMatchResult['kind'] } {
 	let s = raw.trim();
@@ -118,28 +101,30 @@ function matchIPv4CIDR(ip: string, cidr: string): boolean {
 export function runRuleMatch(rawInput: string, rules: MatchableRule[]): RuleMatchResult {
 	const raw = rawInput;
 	const { host, kind } = normalizeHost(raw);
-	if (kind === 'empty') {
-		return {
-			input: raw,
-			host: '',
-			kind,
-			matched: false,
-			rule: null,
-			skipped: 0,
-			note: '请输入域名或 URL，例如 chat.openai.com 或 https://www.google.com',
-		};
-	}
-	if (kind === 'invalid') {
-		return {
-			input: raw,
-			host,
-			kind,
-			matched: false,
-			rule: null,
-			skipped: 0,
-			note: '无法解析输入，请检查格式',
-		};
-	}
+if (kind === 'empty') {
+			return {
+				input: raw,
+				host: '',
+				kind,
+				matched: false,
+				fallbackMatch: false,
+				rule: null,
+				skipped: 0,
+				note: '请输入域名或 URL，例如 chat.openai.com 或 https://www.google.com',
+			};
+		}
+		if (kind === 'invalid') {
+			return {
+				input: raw,
+				host,
+				kind,
+				matched: false,
+				fallbackMatch: false,
+				rule: null,
+				skipped: 0,
+				note: '无法解析输入，请检查格式',
+			};
+		}
 
 	const list = rules.filter((r) => r.enabled !== false);
 	let skipped = 0;
@@ -148,17 +133,19 @@ export function runRuleMatch(rawInput: string, rules: MatchableRule[]): RuleMatc
 		const typ = String(rule.type || '').toUpperCase();
 		const payload = rule.payload || '';
 
-		if (typ === 'MATCH') {
-			return {
-				input: raw,
-				host,
-				kind,
-				matched: true,
-				rule,
-				skipped,
-				note: '未命中其它规则，落入最终匹配 (MATCH)',
-			};
-		}
+if (typ === 'MATCH') {
+				// MATCH 是兜底：业务上算「未命中具体规则」，仅落到最终出口
+				return {
+					input: raw,
+					host,
+					kind,
+					matched: false,
+					fallbackMatch: true,
+					rule,
+					skipped,
+					note: '未命中其它规则，落入最终匹配 (MATCH)',
+				};
+			}
 
 		if (typ === 'GEOIP' || typ === 'GEOSITE') {
 			skipped++;
@@ -166,39 +153,42 @@ export function runRuleMatch(rawInput: string, rules: MatchableRule[]): RuleMatc
 		}
 
 		if (kind === 'domain') {
-			if (typ === 'DOMAIN' && matchDomain(host, payload)) {
-				return {
-					input: raw,
-					host,
-					kind,
-					matched: true,
-					rule,
-					skipped,
-					note: '命中域名精确匹配',
-				};
-			}
-			if (typ === 'DOMAIN-SUFFIX' && matchDomainSuffix(host, payload)) {
-				return {
-					input: raw,
-					host,
-					kind,
-					matched: true,
-					rule,
-					skipped,
-					note: '命中域名后缀',
-				};
-			}
-			if (typ === 'DOMAIN-KEYWORD' && matchDomainKeyword(host, payload)) {
-				return {
-					input: raw,
-					host,
-					kind,
-					matched: true,
-					rule,
-					skipped,
-					note: '命中域名关键词',
-				};
-			}
+if (typ === 'DOMAIN' && matchDomain(host, payload)) {
+					return {
+						input: raw,
+						host,
+						kind,
+						matched: true,
+						fallbackMatch: false,
+						rule,
+						skipped,
+						note: '命中域名精确匹配',
+					};
+				}
+				if (typ === 'DOMAIN-SUFFIX' && matchDomainSuffix(host, payload)) {
+					return {
+						input: raw,
+						host,
+						kind,
+						matched: true,
+						fallbackMatch: false,
+						rule,
+						skipped,
+						note: '命中域名后缀',
+					};
+				}
+				if (typ === 'DOMAIN-KEYWORD' && matchDomainKeyword(host, payload)) {
+					return {
+						input: raw,
+						host,
+						kind,
+						matched: true,
+						fallbackMatch: false,
+						rule,
+						skipped,
+						note: '命中域名关键词',
+					};
+				}
 			if (typ === 'IP-CIDR' || typ === 'IP-CIDR6') {
 				skipped++;
 				continue;
@@ -208,17 +198,18 @@ export function runRuleMatch(rawInput: string, rules: MatchableRule[]): RuleMatc
 		}
 
 		if (kind === 'ipv4') {
-			if (typ === 'IP-CIDR' && matchIPv4CIDR(host, payload)) {
-				return {
-					input: raw,
-					host,
-					kind,
-					matched: true,
-					rule,
-					skipped,
-					note: '命中 IPv4 CIDR',
-				};
-			}
+if (typ === 'IP-CIDR' && matchIPv4CIDR(host, payload)) {
+					return {
+						input: raw,
+						host,
+						kind,
+						matched: true,
+						fallbackMatch: false,
+						rule,
+						skipped,
+						note: '命中 IPv4 CIDR',
+					};
+				}
 			skipped++;
 			continue;
 		}
@@ -227,15 +218,16 @@ export function runRuleMatch(rawInput: string, rules: MatchableRule[]): RuleMatc
 			if (typ === 'IP-CIDR6') {
 				const p = payload.trim().toLowerCase().split('/')[0];
 				if (p && (host === p || host.startsWith(p.replace(/:$/, '')))) {
-					return {
-						input: raw,
-						host,
-						kind,
-						matched: true,
-						rule,
-						skipped,
-						note: '命中 IPv6 规则（简化匹配，正式以 Clash 为准）',
-					};
+return {
+							input: raw,
+							host,
+							kind,
+							matched: true,
+							fallbackMatch: false,
+							rule,
+							skipped,
+							note: '命中 IPv6 规则（简化匹配，正式以 Clash 为准）',
+						};
 				}
 			}
 			skipped++;
@@ -243,13 +235,14 @@ export function runRuleMatch(rawInput: string, rules: MatchableRule[]): RuleMatc
 		}
 	}
 
-	return {
-		input: raw,
-		host,
-		kind,
-		matched: false,
-		rule: null,
-		skipped,
-		note: '没有启用规则命中（请确认是否存在 MATCH 兜底规则）',
-	};
-}
+return {
+			input: raw,
+			host,
+			kind,
+			matched: false,
+			fallbackMatch: false,
+			rule: null,
+			skipped,
+			note: '没有启用规则命中（请确认是否存在 MATCH 兜底规则）',
+		};
+	}

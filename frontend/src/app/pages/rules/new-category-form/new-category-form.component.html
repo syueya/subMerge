@@ -1,10 +1,9 @@
 <cm-dialog-header modalTitle="新增分类"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="mat-subtitle-2 lh-16">
-    <p class="text-muted f-s-12 m-b-16">先建空分组，再在该分类下添加规则；分类仅面板展示</p>
+  <div mat-dialog-content>
     <div class="row">
-      <cm-form-field class="col-24" [help]="tip">
+      <cm-form-field class="col-24" [help]="'新建一个空的业务分类分组；随后可在该分组下添加规则。分类名仅面板展示。'">
         <mat-label>分类名称<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <input matInput formControlName="name" placeholder="例如：个人 / 公司 / 游戏" />
@@ -21,5 +20,5 @@
 
 <div mat-dialog-actions class="text-right p-24 p-t-0">
   <button mat-stroked-button color="primary" type="button" mat-dialog-close>取消</button>
-  <button mat-flat-button color="primary" type="button" (click.debounceTime)="submit()">创建并添加规则</button>
+  <button mat-flat-button color="primary" type="button" (click.debounceTime)="submit()">创建分类</button>
 </div>

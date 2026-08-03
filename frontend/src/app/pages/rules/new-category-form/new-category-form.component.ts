@@ -13,9 +13,7 @@ import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.c
 export class NewCategoryFormComponent extends CmParentFormComponent {
 	dialogRef = inject<MatDialogRef<NewCategoryFormComponent, string | null>>(MatDialogRef);
 	private fb = inject(FormBuilder);
-	private dialog = inject(DialogService);
-
-	readonly tip = '新建一个空的业务分类分组；随后可在该分组下添加规则。分类名仅面板展示。';
+private dialog = inject(DialogService);
 
 	constructor() {
 		super();

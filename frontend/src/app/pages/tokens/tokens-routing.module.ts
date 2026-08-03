@@ -6,7 +6,10 @@ const routes: Routes = [
   {
     path: '',
     component: TokenListComponent,
-    data: { title: '令牌' }
+    data: {
+      title: '令牌',
+      hideBreadcrumb: true
+    }
   }
 ];
 

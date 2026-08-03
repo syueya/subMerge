@@ -1,11 +1,9 @@
 <cm-dialog-header modalTitle="创建令牌"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="mat-subtitle-2 lh-16">
-    <p class="text-muted f-s-12 m-b-16">为朋友生成独立订阅链接；可限制订阅源与策略组投影</p>
-
+  <div mat-dialog-content>
     <div class="row">
-      <cm-form-field class="col-24" [help]="tip.name">
+      <cm-form-field class="col-24" [help]="'朋友备注名，仅用于管理识别，不会出现在订阅内容中。'">
         <mat-label>朋友备注名<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <input matInput type="text" formControlName="name" placeholder="例如：Alice" />
@@ -13,7 +11,10 @@
         </mat-form-field>
       </cm-form-field>
 
-      <cm-form-field class="col-24" [help]="tip.sources">
+      <cm-form-field
+        class="col-24"
+        [help]="'勾选「全部源」时，之后新增的启用源也会自动纳入该链接；否则仅下发勾选的源。'"
+      >
         <mat-label>包含的订阅源</mat-label>
         <div class="m-b-8">
           <mat-checkbox [checked]="allSources()" (change)="setAll($event.checked)">全部源</mat-checkbox>
@@ -53,7 +54,10 @@
         }
       </cm-form-field>
 
-      <cm-form-field class="col-24" [help]="tip.groupMode">
+      <cm-form-field
+        class="col-24"
+        [help]="'自动：按该链接实际节点去掉空地区组（推荐）。\n全部：保留模板中的策略组。\n自定义：只下发勾选的策略组。'"
+      >
         <mat-label>策略组</mat-label>
         <mat-radio-group
           class="d-flex flex-wrap gap-x-16 gap-y-8 m-b-12"

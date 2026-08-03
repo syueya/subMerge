@@ -10,7 +10,7 @@ import { formatDate } from '@common/util';
 import { UserRoleEnumToName } from '@data-struct';
 import { takeUntil, finalize } from 'rxjs';
 
-import { User } from '../interfaces/User';
+import { User } from '@data-struct';
 import { SettingUserLoginLogsComponent } from '../setting-user-login-logs/setting-user-login-logs.component';
 import { SettingUserUpdateComponent } from '../setting-user-update/setting-user-update.component';
 

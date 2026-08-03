@@ -1,21 +1,22 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import {
-	BADGE_MUTED,
-	BADGE_OK,
-	BADGE_WARN,
-	PROXY_GROUP_TYPE_OPTIONS,
-	ProxyGroup,
-	Rule,
-	enumText,
-} from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { DraftStatusStore } from '../../releases/services/draft-status.store';
-import { SourceService } from '../../sources/services/source.service';
-import { RuleService } from '../../rules/services/rule.service';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-import { takeUntil } from 'rxjs';
-import { CmParentComponent } from '@common/parents/parent/parent.component';
-import { GroupFormComponent, GroupFormDialogData } from '../group-form/group-form.component';
+		BADGE_MUTED,
+		BADGE_OK,
+		BADGE_WARN,
+		GroupFormDialogData,
+		PROXY_GROUP_TYPE_OPTIONS,
+		ProxyGroup,
+		Rule,
+		enumText,
+	} from '@data-struct';
+	import { DialogService } from '@common/services/dialog.service';
+	import { DraftStatusStore } from '../../releases/services/draft-status.store';
+	import { SourceService } from '../../sources/services/source.service';
+	import { RuleService } from '../../rules/services/rule.service';
+	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+	import { takeUntil } from 'rxjs';
+	import { CmParentComponent } from '@common/parents/parent/parent.component';
+	import { GroupFormComponent } from '../group-form/group-form.component';
 
 @Component({
 	selector: 'app-group-list',
@@ -34,11 +35,9 @@ export class GroupListComponent extends CmParentComponent implements OnInit {
 	regionCatalog = signal<{ code: string; name: string }[]>([]);
 	extraRegionCodes = signal<string[]>([]);
 	knownSources = signal<{ id: number; name: string }[]>([]);
-	isLoading = false;
+isLoading = false;
 
-	draftDirty = this.draftStore.dirty;
-	draftStatusNote = this.draftStore.note;
-	readonly defaultTestInterval = 300;
+		readonly defaultTestInterval = 300;
 	readonly badgeWarn = BADGE_WARN;
 
 	override ngOnInit(): void {
@@ -79,46 +78,46 @@ export class GroupListComponent extends CmParentComponent implements OnInit {
 							code: String(item.code || '').toUpperCase(),
 							name: String(item.name || '').trim(),
 						}))
-						.filter((item) => item.code && item.code !== 'UNKNOWN');
-					this.regionCatalog.set(items);
-				},
-				error: () => {},
-			});
-		this.sourceSvc
-			.list(force)
-			.pipe(takeUntil(this.$destroy))
-			.subscribe({
-				next: (r) => {
-					const sources: { id: number; name: string }[] = [];
-					const extras = new Set(this.extraRegionCodes());
-					const catalogCodes = new Set(this.regionCatalog().map((x) => x.code));
-					for (const s of r.items || []) {
-						const c = String(s.region || '').toUpperCase();
-						if (c && c !== 'UNKNOWN' && !catalogCodes.has(c)) extras.add(c);
-						const name = String(s.name || '').trim();
-						if (s.enabled && name) sources.push({ id: s.id, name });
-					}
-					this.extraRegionCodes.set([...extras].sort());
-					sources.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
-					this.knownSources.set(sources);
-				},
-				error: () => {},
-			});
-		this.sourceSvc
-			.listProxies(undefined, force)
-			.pipe(takeUntil(this.$destroy))
-			.subscribe({
-				next: (r) => {
-					const extras = new Set(this.extraRegionCodes());
-					const catalogCodes = new Set(this.regionCatalog().map((x) => x.code));
-					for (const p of r.items || []) {
-						const c = String(p.region || '').toUpperCase();
-						if (c && c !== 'UNKNOWN' && !catalogCodes.has(c)) extras.add(c);
-					}
-					this.extraRegionCodes.set([...extras].sort());
-				},
-				error: () => {},
-			});
+.filter((item) => item.code && item.code !== 'UNK' && item.code !== 'UNKNOWN');
+						this.regionCatalog.set(items);
+					},
+					error: () => {},
+				});
+			this.sourceSvc
+				.list(force)
+				.pipe(takeUntil(this.$destroy))
+				.subscribe({
+					next: (r) => {
+						const sources: { id: number; name: string }[] = [];
+						const extras = new Set(this.extraRegionCodes());
+						const catalogCodes = new Set(this.regionCatalog().map((x) => x.code));
+						for (const s of r.items || []) {
+							const c = String(s.region || '').toUpperCase();
+							if (c && c !== 'UNK' && c !== 'UNKNOWN' && !catalogCodes.has(c)) extras.add(c);
+							const name = String(s.name || '').trim();
+							if (s.enabled && name) sources.push({ id: s.id, name });
+						}
+						this.extraRegionCodes.set([...extras].sort());
+						sources.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
+						this.knownSources.set(sources);
+					},
+					error: () => {},
+				});
+			this.sourceSvc
+				.listProxies(undefined, force)
+				.pipe(takeUntil(this.$destroy))
+				.subscribe({
+					next: (r) => {
+						const extras = new Set(this.extraRegionCodes());
+						const catalogCodes = new Set(this.regionCatalog().map((x) => x.code));
+						for (const p of r.items || []) {
+							const c = String(p.region || '').toUpperCase();
+							if (c && c !== 'UNK' && c !== 'UNKNOWN' && !catalogCodes.has(c)) extras.add(c);
+						}
+						this.extraRegionCodes.set([...extras].sort());
+					},
+					error: () => {},
+				});
 	}
 
 	rulesOfGroup(name: string): number {

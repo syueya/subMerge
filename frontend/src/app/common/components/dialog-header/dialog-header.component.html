@@ -1,13 +1,22 @@
-<div mat-dialog-title class="mat-subtitle-1">
+<div mat-dialog-title class="mat-subtitle-1 m-b-0">
   <div class="d-flex align-items-center justify-content-between">
     <div class="modal-title">
       @if (titleTemplateRef) {
-          <ng-container *ngTemplateOutlet="titleTemplateRef"></ng-container>
-      }@else {
+        <ng-container *ngTemplateOutlet="titleTemplateRef"></ng-container>
+      } @else {
         {{ modalTitle }}
       }
-
     </div>
-    <button mat-icon-button class="btn-modal-close" type="button"  matTooltip="关闭" mat-dialog-close tabindex="-1"> <i-tabler name="x" class="icon-24"></i-tabler> </button>
+    <button
+      mat-icon-button
+      class="btn-modal-close"
+      type="button"
+      matTooltip="关闭"
+      mat-dialog-close
+      tabindex="-1"
+    >
+      <i-tabler name="x" class="icon-24"></i-tabler>
+    </button>
   </div>
 </div>
+<mat-divider></mat-divider>

@@ -1,17 +1,6 @@
-import { SubscriptionSource } from '@data-struct';
+import type { RefreshResultLike } from '@data-struct';
 
-export type RefreshResultLike = {
-	source: SubscriptionSource;
-	upstreamTotal?: number;
-	parsed?: number;
-	added: number;
-	skipped: number;
-	parseDropped?: Record<string, number>;
-	filterDropped?: Record<string, number>;
-	filteredNames?: string[];
-	filteredNamesOmitted?: number;
-	regionCounts?: Record<string, number>;
-};
+export type { RefreshResultLike };
 
 function formatDropMap(
 	m: Record<string, number> | undefined,

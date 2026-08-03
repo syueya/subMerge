@@ -103,6 +103,41 @@ body,
   margin: 0 auto;
 }
 
+// 顶栏（cm-page-toolbar）固定在视口内，仅下方内容卡滚动。
+// pageWrapper 上下各 12px padding，故高度用 100dvh - 24px。
+.page-fill {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 24px);
+  min-height: 0;
+  // 不在这里 overflow:hidden，否则会裁掉内容卡 box-shadow / 边框外圈
+
+  > cm-page-toolbar {
+    flex: 0 0 auto;
+  }
+
+  // 内容卡占满剩余高度；真正滚动落在 card-content / page-fill__scroll
+  > .page-fill__body.mat-mdc-card,
+  > .page-fill__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex !important;
+    flex-direction: column;
+    margin-bottom: 0;
+    // 满高卡贴底时外阴影几乎看不见，用描边保证轮廓；滚动只在内部
+    border: 1px solid var(--mat-sys-outline-variant);
+    box-shadow: $cardshadow;
+    overflow: visible;
+
+    .mat-mdc-card-content.page-fill__scroll,
+    .page-fill__scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+    }
+  }
+}
+
 // --- 移动端打开侧边栏按钮 ---
 .sidebar-mobile-open {
   position: sticky;

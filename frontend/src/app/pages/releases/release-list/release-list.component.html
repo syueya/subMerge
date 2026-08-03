@@ -1,4 +1,4 @@
-<cm-page-toolbar title="发布">
+<cm-page-toolbar title="发布"  description="查看历史配置与回滚。">
   <button
     mat-icon-button
     color="primary"
@@ -14,22 +14,12 @@
     @if (publishing()) {
       发布中...
     } @else if (draftDirty()) {
-      发布当前草稿 *
+      发布 *
     } @else {
-      发布当前草稿
+      发布
     }
   </button>
 </cm-page-toolbar>
-
-<p class="text-muted f-s-12 m-b-8">
-  查看历史配置与回滚；「全部源 + 自动」订阅使用当前生效版本。
-  <a class="text-primary" routerLink="/main/rules">去规则页</a>
-</p>
-@if (draftNote()) {
-  <p class="f-s-12 m-b-8" [class.text-warning]="draftDirty()" [class.text-muted]="!draftDirty()">
-    {{ draftNote() }}
-  </p>
-}
 @if (draftDirty() && draftChanges().length) {
   <mat-card class="cardWithShadow m-b-16">
     <mat-card-content class="p-12">

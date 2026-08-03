@@ -1,4 +1,7 @@
-<cm-page-toolbar title="分享令牌">
+<cm-page-toolbar
+  title="分享令牌"
+  description="为每位朋友生成独立订阅链接；可按源限制节点，并按策略组投影精简配置（默认自动剪掉空组）"
+>
   <button
     mat-icon-button
     color="primary"
@@ -14,10 +17,6 @@
     创建令牌
   </button>
 </cm-page-toolbar>
-
-<p class="text-muted f-s-12 m-b-12">
-  为每位朋友生成独立订阅链接；可按源限制节点，并按策略组投影精简配置（默认自动剪掉空组）
-</p>
 
 <cm-responsive-table-list
   [data]="dataSource.data"

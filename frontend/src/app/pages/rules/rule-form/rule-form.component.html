@@ -1,28 +1,19 @@
 <cm-dialog-header [modalTitle]="isUpdate ? '编辑规则' : '添加规则'"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="mat-subtitle-2 lh-16">
-    <p class="text-muted f-s-12 m-b-16">
-      @if (systemLocked) {
-        系统规则：类型/匹配/分类固定，仅可改出口、备注、启用；改完需发布才生效
-      } @else {
-        按从上到下顺序匹配，命中即走对应出口；改完需发布才生效
-      }
-    </p>
-
+  <div mat-dialog-content>
     <div class="row">
-      <cm-form-field class="col-24 col-md-12" [help]="tip.ruleType">
-        <mat-label>规则类型<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
-        <mat-form-field appearance="outline" class="w-full" color="primary">
-          <mat-select formControlName="type" (selectionChange)="onRuleTypeChange()">
-            @for (t of ruleTypes; track t.value) {
-              <mat-option [value]="t.value">{{ t.text }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+      <cm-form-field class="col-24 col-md-8" [help]="'关闭后此规则不参与匹配，但仍保留在列表中。'">
+        <mat-label>启用</mat-label>
+        <div class="m-b-16">
+          <mat-slide-toggle formControlName="enabled" color="primary"></mat-slide-toggle>
+        </div>
       </cm-form-field>
 
-      <cm-form-field class="col-24 col-md-12" [help]="tip.ruleTarget">
+      <cm-form-field
+        class="col-24 col-md-8"
+        [help]="'命中后走哪个策略组。\n只从策略组列表选择；策略组请到「策略组」页维护。'"
+      >
         <mat-label>目标出口<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <mat-select formControlName="target">
@@ -43,8 +34,41 @@
         }
       </cm-form-field>
 
+      <cm-form-field
+        class="col-24 col-md-8"
+        [help]="'业务分类仅用于面板分组浏览，不写入 Clash。\n可搜索选择已有分类，也可直接输入新名字。\n「系统分类」= 广告 / 国内 GEOIP / 兜底 MATCH（顺序固定）。'"
+      >
+        <mat-label>业务分类</mat-label>
+        @if (systemLocked) {
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input matInput value="系统分类" disabled />
+          </mat-form-field>
+        } @else {
+          <cm-select-with-create
+            formControlName="category"
+            [options]="categorySelectOptions()"
+            placeholder="不填则归入未分类"
+            createHint="使用新分类"
+          ></cm-select-with-create>
+        }
+      </cm-form-field>
+
+      <cm-form-field
+        class="col-24 col-md-8"
+        [help]="'用什么方式匹配流量：域名、域名后缀、关键词、国家代码、IP 段等。'"
+      >
+        <mat-label>规则类型<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+        <mat-form-field appearance="outline" class="w-full" color="primary">
+          <mat-select formControlName="type" (selectionChange)="onRuleTypeChange()">
+            @for (t of ruleTypes; track t.value) {
+              <mat-option [value]="t.value">{{ t.text }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </cm-form-field>
+
       @if (!isMatch()) {
-        <cm-form-field class="col-24" [help]="payloadTipText()">
+        <cm-form-field class="col-24 col-md-8" [help]="payloadTipText()">
           <mat-label>{{ payloadLabelText() }}<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
             <input matInput formControlName="payload" [placeholder]="payloadPlaceholderText()" />
@@ -52,40 +76,11 @@
         </cm-form-field>
       }
 
-      <cm-form-field class="col-24 col-md-12" [help]="tip.ruleCategory">
-        <mat-label>业务分类</mat-label>
-        @if (systemLocked) {
-          <mat-form-field appearance="outline" class="w-full" color="primary">
-            <input matInput value="系统分类" disabled />
-          </mat-form-field>
-        } @else {
-          <mat-form-field appearance="outline" class="w-full" color="primary">
-            <mat-select formControlName="category">
-              @for (c of categorySelectOptions(); track c.value) {
-                <mat-option [value]="c.value">{{ c.text }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          @if (editForm.get('category')?.value === categoryNewValue) {
-            <mat-form-field appearance="outline" class="w-full" color="primary">
-              <input matInput formControlName="categoryCustom" placeholder="输入新分类名，例如：个人" />
-            </mat-form-field>
-          }
-        }
-      </cm-form-field>
-
-      <cm-form-field class="col-24 col-md-12" [help]="tip.ruleNote">
+      <cm-form-field class="col-24 col-md-8" [help]="'仅后台备注，方便自己辨认，不会写入 Clash 配置。'">
         <mat-label>备注（可选）</mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <input matInput formControlName="note" placeholder="例如：国内直连 / OpenAI" />
         </mat-form-field>
-      </cm-form-field>
-
-      <cm-form-field class="col-24" [help]="tip.ruleEnabled">
-        <mat-label>启用</mat-label>
-        <div class="m-b-16">
-          <mat-slide-toggle formControlName="enabled" color="primary">启用此规则</mat-slide-toggle>
-        </div>
       </cm-form-field>
     </div>
   </div>

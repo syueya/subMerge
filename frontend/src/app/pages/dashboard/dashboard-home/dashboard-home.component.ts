@@ -1,8 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { catchError, forkJoin, of } from 'rxjs';
 import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime, localizeBuildError, shortBuildError } from '@common/util/format';
-import { BADGE_ERR, BADGE_MUTED, BADGE_OK, BADGE_WARN, Release } from '@data-struct';
+import { formatDateTime, localizeBuildError } from '@common/util/format';
+import { Release } from '@data-struct';
 import { DraftStatusStore } from '../../releases/services/draft-status.store';
 import { ReleaseService } from '../../releases/services/release.service';
 import { RuleService } from '../../rules/services/rule.service';
@@ -121,21 +121,16 @@ export class DashboardHomeComponent extends CmParentComponent implements OnInit 
 			});
 	}
 
-	draftLabel(): string {
+	/** 发布卡第三行：完整说明（与其它统计卡同为 f-s-12 一行） */
+	publishStatusText(): string {
 		const d = this.draft();
 		if (!d) return '—';
-		if (d.buildError) return shortBuildError(d.buildError);
+		const err = localizeBuildError(d.buildError);
+		if (err) return err;
 		if (!d.hasPublished) return '尚未发布';
-		if (d.dirty) return '有未发布更改';
-		return '已与线上一致';
-	}
-
-	draftClass(): string {
-		const d = this.draft();
-		if (!d) return BADGE_MUTED;
-		if (d.buildError) return BADGE_ERR;
-		if (!d.hasPublished || d.dirty) return BADGE_WARN;
-		return BADGE_OK;
+		if (d.dirty) return this.draftSummary() || '有未发布更改';
+		const time = this.formatTime(this.latestRelease()?.publishedAt || this.latestRelease()?.createdAt);
+		return time ? `已与线上一致 · ${time}` : '已与线上一致';
 	}
 
 	buildErrorDetail(): string {

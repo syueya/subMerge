@@ -1,6 +1,6 @@
 <cm-dialog-header [modalTitle]="'v' + detail.version + ' 配置'"></cm-dialog-header>
 
-<div mat-dialog-content class="mat-subtitle-2 lh-16">
+<div mat-dialog-content>
   <p class="text-muted f-s-12 m-b-12">
     {{ statusText(detail.status) }} · {{ detail.proxyCount }} 节点 · {{ detail.ruleCount }} 规则
     @if (detail.note) {
