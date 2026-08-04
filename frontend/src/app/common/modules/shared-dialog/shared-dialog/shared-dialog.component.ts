@@ -2,17 +2,21 @@
 import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CmSharedDialogDataModel } from '@common/modules/shared-dialog/enum/CmSharedDialogDataModel';
 import { CmSharedDialogData } from '@common/modules/shared-dialog/interfaces/CmSharedDialogData';
+import { IconsModule } from '@common/modules/icons/icons.module';
 
 /**
  * 确认/提示弹窗。
  * 不要 import AppCommonModule：会与根公共模块形成运行时循环依赖（NG0919），
  * 打开 confirm 时无法读取 @Component metadata。
+ * 标题区对齐 cm-dialog-header（垂直居中 + 分割线），但不直接引用该组件以免循环依赖。
  */
 @Component({
   selector: 'cm-shared-dialog',
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [MatDialogModule, MatButtonModule, MatDividerModule, MatTooltipModule, IconsModule],
   templateUrl: './shared-dialog.component.html',
   styleUrl: './shared-dialog.component.scss'
 })
