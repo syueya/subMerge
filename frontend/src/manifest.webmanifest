@@ -1,22 +1,24 @@
 {
-  "name": "Angular",
-  "short_name": "Angular",
-  "description": "可复用的 Angular 后台管理模板",
+  "name": "SubMerge",
+  "short_name": "SubMerge",
+  "description": "SubMerge 订阅管理面板",
   "scope": "./",
   "start_url": "./main/dashboard",
   "icons": [
     {
-      "src": "assets/images/icons/android-chrome-192x192.png",
+      "src": "assets/images/logos/favicon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "assets/images/icons/android-chrome-512x512.png",
+      "src": "assets/images/logos/favicon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
-  "theme_color": "#ffffff",
+  "theme_color": "#5d87ff",
   "background_color": "#ffffff",
   "display": "standalone",
   "shortcuts": [
@@ -25,8 +27,8 @@
       "url": "./main/dashboard",
       "icons": [
         {
-          "src": "assets/images/shortcuts/home.png",
-          "sizes": "240x240",
+          "src": "assets/images/logos/favicon-192.png",
+          "sizes": "192x192",
           "type": "image/png"
         }
       ]

@@ -7,7 +7,7 @@ import { Component } from '@angular/core';
   template: `
     <a href="/" class="branding-link d-flex align-items-center text-decoration-none">
       <img
-        src="./assets/images/logos/logoIcon.svg"
+        src="./assets/images/logos/favicon.svg"
         class="branding-logo"
         alt="SubMerge"
       />

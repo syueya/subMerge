@@ -2,7 +2,7 @@
   <div class="row">
     <div class="col-24 text-center">
       @if (loading) {
-        <img ngSrc="/assets/images/backgrounds/loading.svg" class="no-found-img" width="250" height="250" priority />
+        <img ngSrc="/assets/images/loading.svg" class="no-found-img" width="250" height="250" priority />
         <h6 class="f-s-16 f-w-600 m-b-30" [class.is-min]="isMin">{{ loadingTitle || '正在请求数据，请稍后...' }}</h6>
       } @else {
         <h6 class="f-s-16 f-w-600 m-t-30" [class.is-min]="isMin">{{ noDataTitle || '无数据' }}</h6>
