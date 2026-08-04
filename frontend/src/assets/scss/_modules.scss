@@ -4,6 +4,7 @@
 //   - message 顶部轻提示
 //   - notification 角标通知
 //   - alert 行内提示条
+//   - 进场/离场动画（原 _custom）
 //   - 右键/菜单面板（cm_menu_panel）
 // =============================================================================
 @use "variables" as *;
@@ -42,7 +43,7 @@
 .ms-message-notice-content {
   display: inline-block;
   padding: 10px 16px;
-  background: #fff;
+  background: var(--mat-sys-surface);
   border-radius: $border-radius;
   pointer-events: all;
 }
@@ -112,7 +113,7 @@
     overflow: hidden;
     line-height: 1.5715;
     word-wrap: break-word;
-    background: #fff;
+    background: var(--mat-sys-surface);
     border-radius: $border-radius;
   }
   .ms-notification-bottom .ms-notification-notice,
@@ -485,6 +486,104 @@ cm-alert {
     line-height: 1
 }
 
+// --- 进场 / 离场动画（配合 Angular animate.enter / leave）---
+.ms-message-enter {
+  animation: ms-message-fade-in 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes ms-message-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ms-notification-enter {
+  animation: ms-notification-slide-in 0.1s linear;
+}
+
+.ms-notification-enter-left {
+  animation-name: ms-notification-slide-from-left;
+}
+.ms-notification-enter-right {
+  animation-name: ms-notification-slide-from-right;
+}
+.ms-notification-enter-top {
+  animation-name: ms-notification-slide-from-top;
+}
+.ms-notification-enter-bottom {
+  animation-name: ms-notification-slide-from-bottom;
+}
+
+@keyframes ms-notification-slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(5%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ms-notification-slide-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-5%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ms-notification-slide-from-top {
+  from {
+    opacity: 0;
+    transform: translateY(-5%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ms-notification-slide-from-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(5%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ms-alert-leave {
+  animation: ms-alert-slide-out 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+}
+
+.ms-alert-no-animation .ms-alert-leave {
+  animation: none;
+}
+
+@keyframes ms-alert-slide-out {
+  from {
+    opacity: 1;
+    transform: scaleY(1);
+    transform-origin: 0% 0%;
+  }
+  to {
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: 0% 0%;
+  }
+}
+
 // --- cm_menu_panel：右键/菜单面板 ---
 .mat-menu-panel {
   max-height: 60vh !important;
@@ -493,26 +592,22 @@ cm-alert {
   background-color: var(--mat-sys-background);
 }
 
-// 右键菜单
 .mat-menu-panel,
 .pop-confirm-container {
   .contextmenu {
     width: 100%;
-    // padding: 8px 0;
   }
 
   .mat-menu-item {
-    // padding: 0 14px;
-    color: #212121;
+    color: $text-main;
     font-size: 14px;
 
     img {
       margin-right: 16px;
-      // vertical-align: middle;
     }
 
     .mat-icon {
-      color: #757575;
+      color: $text-muted;
     }
   }
 
@@ -526,11 +621,7 @@ cm-alert {
     color: rgba(0, 0, 0, 0.3);
   }
 
-  // .mat-menu-content{
-  //     padding: 0;
-  // }
   .mat-menu-content:not(:empty) {
     padding: 0;
-
   }
 }

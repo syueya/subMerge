@@ -1,0 +1,141 @@
+// =============================================================================
+// 边框 / 圆角工具类
+// 示例：b-1、b-t-1、rounded-7、rounded-14、rounded-circle、b-1-on-primary-25
+// 圆角 key 为真实 px：rounded-7=7px、14=14px、21、28、full（见 utilities/_core $radius）
+// =============================================================================
+@use "sass:meta";
+@use "core" as *;
+@use "../variables" as *;
+
+// --- 边框宽度 ---
+$utilities-border: (
+  "border": (
+    property: border,
+    class: b,
+    values: $borders,
+  ),
+  "border-top": (
+    property: border-top,
+    class: b-t,
+    values: $borders,
+  ),
+  "border-bottom": (
+    property: border-bottom,
+    class: b-b,
+    values: $borders,
+  ),
+  "border-left": (
+    property: border-left,
+    class: b-l,
+    values: $borders,
+  ),
+  "border-right": (
+    property: border-right,
+    class: b-r,
+    values: $borders,
+  ),
+);
+
+// --- 圆角 ---
+$utilities-rounded: (
+  "border-radius": (
+    property: border-radius,
+    class: rounded,
+    values: $radius,
+  ),
+  "border-top-left-radius": (
+    property: border-top-left-radius,
+    class: r-t-l,
+    values: $radius,
+  ),
+  "border-top-right-radius": (
+    property: border-top-right-radius,
+    class: r-t-r,
+    values: $radius,
+  ),
+  "border-bottom-right-radius": (
+    property: border-bottom-right-radius,
+    class: r-b-r,
+    values: $radius,
+  ),
+  "border-bottom-left-radius": (
+    property: border-bottom-left-radius,
+    class: r-b-l,
+    values: $radius,
+  ),
+  "border-top-radius": (
+    property: border-top-left-radius border-top-right-radius,
+    class: r-t,
+    values: $radius,
+  ),
+  "border-bottom-radius": (
+    property: border-bottom-left-radius border-bottom-right-radius,
+    class: r-b,
+    values: $radius,
+  ),
+  "border-left-radius": (
+    property: border-top-left-radius border-bottom-left-radius,
+    class: r-l,
+    values: $radius,
+  ),
+  "border-right-radius": (
+    property: border-top-right-radius border-bottom-right-radius,
+    class: r-r,
+    values: $radius,
+  ),
+);
+
+@include emit-utilities(map-collect($utilities-border, $utilities-rounded));
+
+// 默认圆角 / 圆形 / 胶囊（原 _base）
+.rounded {
+  border-radius: $border-radius !important;
+}
+
+.rounded-circle {
+  border-radius: 50% !important;
+}
+
+.rounded-pill {
+  border-radius: 25px !important;
+}
+
+// 语义色 1px 边框：.border-primary 等
+@mixin syntax-border-colors($args...) {
+  @each $name, $color in meta.keywords($args) {
+    html .border-#{$name} {
+      border: 1px solid #{$color} !important;
+    }
+  }
+}
+
+@include syntax-border-colors(
+  $primary: var(--mat-sys-primary),
+  $secondary: var(--mat-sys-secondary),
+  $success: $success,
+  $warning: $warning,
+  $error: var(--mat-sys-error)
+);
+
+// 半透明边框：b-1-{color}-{alpha}
+// 例：b-1-on-primary-25、b-1-white-50
+// 注意：alpha 必须用「数字 * 1%」生成真正的百分比，勿写 #{$alpha}%（Sass 会编成「25 %」导致 color-mix 失效）
+$border-soft-alphas: 10, 15, 20, 25, 30, 40, 50;
+$border-soft-colors: (
+  "white": $white,
+  "black": #000,
+  "primary": var(--mat-sys-primary),
+  "on-primary": var(--mat-sys-on-primary),
+  "on-surface": var(--mat-sys-on-surface),
+  "outline": var(--mat-sys-outline-variant),
+);
+
+@each $name, $color in $border-soft-colors {
+  @each $alpha in $border-soft-alphas {
+    $pct: $alpha * 1%;
+
+    .b-1-#{$name}-#{$alpha} {
+      border: 1px solid color-mix(in srgb, #{$color} #{$pct}, transparent) !important;
+    }
+  }
+}

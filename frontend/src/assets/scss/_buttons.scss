@@ -1,0 +1,251 @@
+// =============================================================================
+// Material 按钮样式
+// 作用：按钮尺寸/圆角 overrides + primary/accent/success/warn/error 各变体配色。
+// =============================================================================
+@use "@angular/material" as mat;
+@use "variables" as *;
+
+// --- button 尺寸 / 圆角 ---
+@include mat.button-overrides(
+  (
+    protected-hover-container-elevation-shadow: var(--mat-sys-level1),
+    filled-horizontal-padding: 15px,
+    outlined-horizontal-padding: 15px,
+    protected-horizontal-padding: 15px,
+    text-horizontal-padding: 8px,
+    filled-container-shape: var(--mat-sys-corner-small),
+    outlined-container-shape: var(--mat-sys-corner-small),
+    protected-container-shape: var(--mat-sys-corner-small),
+    text-container-shape: var(--mat-sys-corner-small),
+  )
+);
+
+@include mat.icon-button-overrides(
+  (
+    icon-color: $text-color,
+  )
+);
+
+// --- 语义色变体 ---
+html {
+  .mat-mdc-button-base.bg-light-primary:hover,
+  .mat-mdc-button-base.bg-light-secondary:hover,
+  .mat-mdc-button-base.bg-light-error:hover,
+  .mat-mdc-button-base.bg-light-warning:hover,
+  .mat-mdc-button-base.bg-light-success:hover {
+    color: $white !important;
+  }
+
+  .mat-mdc-button-base.bg-light-primary {
+    &:hover {
+      background-color: var(--mat-sys-primary) !important;
+    }
+  }
+
+  .mat-mdc-button-base.bg-light-secondary {
+    &:hover {
+      background-color: var(--mat-sys-secondary) !important;
+    }
+  }
+
+  .mat-mdc-button-base.bg-light-error {
+    &:hover {
+      background-color: var(--mat-sys-error) !important;
+    }
+  }
+
+  .mat-mdc-button-base.bg-light-warning {
+    &:hover {
+      background-color: $warning !important;
+    }
+  }
+
+  .mat-mdc-button-base.bg-light-success {
+    &:hover {
+      background-color: $success !important;
+    }
+  }
+
+  @mixin button-style($text-color, $border-color, $background-color) {
+    color: $text-color;
+    border-color: $border-color;
+    background-color: $background-color;
+  }
+
+  // Base Button
+  @mixin button-style-base($text-color) {
+    color: $text-color;
+  }
+
+  .mat-mdc-button-base:not(:disabled) {
+    &.mat-primary {
+      @include button-style-base($primary);
+    }
+
+    &.mat-accent {
+      @include button-style-base($accent);
+    }
+
+    &.mat-success {
+      @include button-style-base($success);
+    }
+
+    &.mat-warn {
+      @include button-style-base($warning);
+    }
+
+    &.mat-error {
+      @include button-style-base($error);
+    }
+  }
+
+  // Raised Button
+  @mixin button-style-raised-fixed-dim($color, $background-color) {
+    color: $color;
+    background-color: $background-color;
+    border: none;
+  }
+
+  @mixin button-style-raised($color) {
+    color: $color;
+    background-color: rgba($color, 0.1);
+    border: none;
+  }
+
+  .mat-mdc-raised-button:not(:disabled) {
+    &.mat-primary {
+      @include button-style-raised-fixed-dim($primary, $primary-fixed-dim);
+    }
+
+    &.mat-accent {
+      @include button-style-raised-fixed-dim($accent, $accent-fixed-dim);
+    }
+
+    &.mat-success {
+      @include button-style-raised($success);
+    }
+
+    &.mat-warn {
+      @include button-style-raised($warning);
+    }
+
+    &.mat-error {
+      @include button-style-raised-fixed-dim($error, $error-fixed-dim);
+    }
+  }
+
+  // Outlined Button
+  .mat-mdc-outlined-button:not(:disabled) {
+    &.mat-primary {
+      @include button-style($primary, $primary, transparent);
+    }
+
+    &.mat-accent {
+      @include button-style($accent, $accent, transparent);
+    }
+
+    &.mat-success {
+      @include button-style($success, $success, transparent);
+    }
+
+    &.mat-warn {
+      @include button-style($warning, $warning, transparent);
+    }
+
+    &.mat-error {
+      @include button-style($error, $error, transparent);
+    }
+  }
+
+  // Unelevated Button
+  .mat-mdc-unelevated-button:not(:disabled) {
+    &.mat-primary {
+      @include button-style($white, $primary, $primary);
+    }
+
+    &.mat-accent {
+      @include button-style($white, $accent, $accent);
+    }
+
+    &.mat-success {
+      @include button-style($white, $success, $success);
+    }
+
+    &.mat-warn {
+      @include button-style($white, $warning, $warning);
+    }
+
+    &.mat-error {
+      @include button-style($white, $error, $error);
+    }
+  }
+
+  // Icon Button
+  .mat-mdc-icon-button:not(:disabled) {
+    &.mat-primary {
+      @include button-style($primary, $primary, transparent);
+    }
+
+    &.mat-accent {
+      @include button-style($accent, $accent, transparent);
+    }
+
+    &.mat-success {
+      @include button-style($success, $success, transparent);
+    }
+
+    &.mat-warn {
+      @include button-style($warning, $warning, transparent);
+    }
+
+    &.mat-error {
+      @include button-style($error, $error, transparent);
+    }
+  }
+
+  // FAB
+  .mat-mdc-fab:not(:disabled) {
+    &.mat-primary {
+      @include button-style($white, $primary, $primary);
+    }
+
+    &.mat-accent {
+      @include button-style($white, $accent, $accent);
+    }
+
+    &.mat-success {
+      @include button-style($white, $success, $success);
+    }
+
+    &.mat-warn {
+      @include button-style($white, $warning, $warning);
+    }
+
+    &.mat-error {
+      @include button-style($white, $error, $error);
+    }
+  }
+
+  // Mini FAB
+  .mat-mdc-mini-fab:not(:disabled) {
+    &.mat-primary {
+      @include button-style($white, $primary, $primary);
+    }
+
+    &.mat-accent {
+      @include button-style($white, $accent, $accent);
+    }
+
+    &.mat-success {
+      @include button-style($white, $success, $success);
+    }
+
+    &.mat-warn {
+      @include button-style($white, $warning, $warning);
+    }
+
+    &.mat-error {
+      @include button-style($white, $error, $error);
+    }
+  }
+}

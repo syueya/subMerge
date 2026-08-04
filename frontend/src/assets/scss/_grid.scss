@@ -1,31 +1,36 @@
 // =============================================================================
-// 24 栅格系统
-// 作用：.row / .col-* / .col-md-* 等响应式分栏，表单与列表筛选区复用。
+// 24 栅格 + 全局响应式
+// 作用：
+//   1. .row / .col-* / .col-md-* 等分栏
+//   2. 全局手写 @media（工具类 d-sm-*、侧栏、Material token 等）
+// 断点唯一来源：$breakpoints（勿在其它文件写死 px）
+//   xsmall 0 · small/sm 600 · medium/md 960 · large/lg 1280 · xl 1700 · …
 // =============================================================================
 @use "sass:map";
 @use "sass:math";
+@use "variables" as *;
 
 $grid-columns: 24 !default;
 $grid-gutter: 30px !default;
 
 $breakpoints: (
   xsmall: 0,
-  small:  600px,
+  small: 600px,
   medium: 960px,
-  large:  1280px,
+  large: 1280px,
   xlarge: 1700px,
   xxlarge: 2100px,
-  xxxlarge: 3000px
+  xxxlarge: 3000px,
 ) !default;
 
 $breakpoint-infixs: (
-  xsmall: '',
-  small: 'sm',
-  medium: 'md',
-  large: 'lg',
-  xlarge: 'xl',
-  xxlarge: 'xxl',
-  xxxlarge: 'xxxl'
+  xsmall: "",
+  small: "sm",
+  medium: "md",
+  large: "lg",
+  xlarge: "xl",
+  xxlarge: "xxl",
+  xxxlarge: "xxxl",
 ) !default;
 
 @function bp($name, $breakpoints: $breakpoints) {
@@ -34,7 +39,7 @@ $breakpoint-infixs: (
   @return $min;
 }
 
-// Media of at least the minimum breakpoint width.
+// ≥ 断点最小宽度
 @mixin bp-gt($name, $breakpoints: $breakpoints) {
   $min: bp($name, $breakpoints);
 
@@ -42,13 +47,12 @@ $breakpoint-infixs: (
     @media (min-width: $min) {
       @content;
     }
-  }
-  @else {
+  } @else {
     @content;
   }
 }
 
-// Media of at most the maximum breakpoint width.
+// ≤ 断点最小宽度 - 1px
 @mixin bp-lt($name, $breakpoints: $breakpoints) {
   $max: bp($name, $breakpoints) - 1px;
 
@@ -56,39 +60,38 @@ $breakpoint-infixs: (
     @media (max-width: $max) {
       @content;
     }
-  }
-  @else {
+  } @else {
     @content;
   }
 }
 
-@mixin make-grid-columns($i: 1, $list: '.col') {
+@mixin make-grid-columns($i: 1, $list: ".col") {
   @each $breakpoint, $infix in $breakpoint-infixs {
-    @if $infix != '' {
-      $infix: '-#{$infix}';
+    @if $infix != "" {
+      $infix: "-#{$infix}";
     }
 
-    @if ($infix != '') {
-      $list: '#{$list}, .col#{$infix}';
+    @if ($infix != "") {
+      $list: "#{$list}, .col#{$infix}";
     }
 
     @for $i from 1 through $grid-columns {
-      $list: '#{$list}, .col#{$infix}-#{$i}';
+      $list: "#{$list}, .col#{$infix}-#{$i}";
     }
   }
 
   #{$list} {
     position: relative;
     width: 100%;
-    padding-right: $grid-gutter * .5;
-    padding-left: $grid-gutter * .5;
+    padding-right: $grid-gutter * 0.5;
+    padding-left: $grid-gutter * 0.5;
   }
 }
 
-@mixin loop-grid-columns($columns: $grid-columns, $breakpoint-infix: '') {
-  $infix: '';
-  @if $breakpoint-infix != '' {
-    $infix: '-#{$breakpoint-infix}';
+@mixin loop-grid-columns($columns: $grid-columns, $breakpoint-infix: "") {
+  $infix: "";
+  @if $breakpoint-infix != "" {
+    $infix: "-#{$breakpoint-infix}";
   }
 
   .col#{$infix} {
@@ -112,8 +115,8 @@ $breakpoint-infixs: (
 .row {
   display: flex;
   flex-wrap: wrap;
-  margin-right: $grid-gutter * -.5;
-  margin-left: $grid-gutter * -.5;
+  margin-right: $grid-gutter * -0.5;
+  margin-left: $grid-gutter * -0.5;
 }
 
 .no-gutters {
@@ -121,7 +124,7 @@ $breakpoint-infixs: (
   margin-left: 0;
 
   > .col,
-  > [class*='col-'] {
+  > [class*="col-"] {
     padding-right: 0;
     padding-left: 0;
   }
@@ -130,11 +133,88 @@ $breakpoint-infixs: (
 @include make-grid-columns();
 
 @each $breakpoint, $infix in $breakpoint-infixs {
-  @if ($breakpoint== 'xsmall') {
+  @if ($breakpoint == "xsmall") {
     @include loop-grid-columns($grid-columns, $infix);
   } @else {
     @include bp-gt($breakpoint) {
       @include loop-grid-columns($grid-columns, $infix);
+    }
+  }
+}
+
+// =============================================================================
+// 全局响应式（统一用 bp-gt / bp-lt，断点与上方 $breakpoints 一致）
+// 组件 *.component.scss 内媒体查询仍就地编写
+// =============================================================================
+
+// < small(600)：Material tab 可横向拖动；xs 间距 / hstack 堆叠
+@include bp-lt(small) {
+  .mat-mdc-tab-label-container {
+    overflow: scroll !important;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+  }
+
+  .mat-mdc-tab-label-container::-webkit-scrollbar {
+    display: none; /* Safari / Chrome */
+  }
+
+  .p-xs-6 {
+    padding: 0 6px !important;
+  }
+
+  .hstack {
+    flex-direction: column;
+  }
+}
+
+// ≥ small(600)：sm 工具类 + sidenav 宽度 token + flex-sm-row
+@include bp-gt(small) {
+  body {
+    .d-sm-flex {
+      display: flex !important;
+    }
+
+    .d-sm-none {
+      display: none !important;
+    }
+  }
+
+  html .flex-sm-row {
+    flex-direction: row !important;
+  }
+
+  :root {
+    --mat-sidenav-container-width: 480px;
+  }
+}
+
+// ≥ medium(960)：md 工具类 + 迷你侧栏主内容左边距
+@include bp-gt(medium) {
+  .d-md-none {
+    display: none !important;
+  }
+
+  .sidebarNav-mini {
+    .contentWrapper {
+      margin-left: $sidenav-mini !important;
+    }
+  }
+}
+
+// ≥ large(1280)：lg 工具类（原 d-lg 为 1200，已对齐 grid）
+@include bp-gt(large) {
+  body {
+    .d-lg-flex {
+      display: flex !important;
+    }
+
+    .d-lg-none {
+      display: none !important;
+    }
+
+    .align-items-lg-center {
+      align-items: center !important;
     }
   }
 }

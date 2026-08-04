@@ -1,0 +1,190 @@
+// =============================================================================
+// 主题（色板 + 浅/深色）
+// 作用：
+//   1. html.xxx_theme 切换主色 / 次色（默认 blue_theme，见 app/config.ts）
+//   2. html.light-theme / html.dark-theme 背景、描边、组件态
+//   3. 深色下少量组件覆盖、logo / 品牌色
+// 原子色工具类（bg-primary / text-error 等）见 utilities/_colors.scss
+// =============================================================================
+@use "@angular/material" as mat;
+@use "variables" as *;
+
+// -----------------------------------------------------------------------------
+// 1. 色板（html.*_theme）
+// -----------------------------------------------------------------------------
+html.aqua_theme {
+  --mat-sys-primary: rgb(0, 116, 186);
+  --mat-sys-primary-fixed-dim: rgb(230, 241, 247);
+  --mat-sys-secondary: rgb(71, 215, 188);
+  --mat-sys-secondary-fixed-dim: rgb(230, 245, 242);
+  --mat-sys-tertiary: rgb(71, 215, 188);
+}
+
+html.blue_theme {
+  --mat-sys-primary: rgb(93, 135, 255);
+  --mat-sys-primary-fixed-dim: rgb(230, 235, 255);
+  --mat-sys-secondary: rgb(68, 183, 247);
+  --mat-sys-secondary-fixed-dim: rgb(230, 242, 255);
+}
+
+html.cyan_theme {
+  --mat-sys-primary: rgb(0, 185, 192);
+  --mat-sys-primary-fixed-dim: rgb(38, 197, 202);
+  --mat-sys-secondary: rgb(244, 139, 108);
+  --mat-sys-secondary-fixed-dim: rgb(246, 154, 127);
+  --mat-sys-tertiary: rgb(244, 139, 108);
+}
+
+html.green_theme {
+  --mat-sys-primary: rgb(6, 118, 154);
+  --mat-sys-primary-fixed-dim: rgb(43, 137, 171);
+  --mat-sys-secondary: rgb(195, 208, 70);
+  --mat-sys-secondary-fixed-dim: rgb(204, 217, 94);
+  --mat-sys-tertiary: rgb(195, 208, 70);
+}
+
+html.orange_theme {
+  --mat-sys-primary: rgb(250, 137, 107);
+  --mat-sys-primary-fixed-dim: rgb(251, 153, 127);
+  --mat-sys-secondary: rgb(0, 127, 180);
+  --mat-sys-secondary-fixed-dim: rgb(38, 145, 191);
+  --mat-sys-error-fixed-dim: rgb(254, 236, 238);
+}
+
+html.purple_theme {
+  --mat-sys-primary: rgb(110, 53, 183);
+  --mat-sys-primary-fixed-dim: rgb(130, 81, 194);
+  --mat-sys-secondary: rgb(139, 200, 206);
+  --mat-sys-secondary-fixed-dim: rgb(155, 208, 215);
+  --mat-sys-tertiary: rgb(139, 200, 206);
+}
+
+// -----------------------------------------------------------------------------
+// 2. Material 全局微调 + 浅 / 深色 token
+// -----------------------------------------------------------------------------
+html {
+  --mat-sys-error-fixed-dim: rgb(254, 236, 238);
+  --mat-select-container-elevation-shadow: var(--mat-sys-level3);
+  --mat-list-list-item-label-text-tracking: 0;
+  --mat-slide-toggle-track-height: 28px;
+  --mat-sidenav-container-divider-color: var(--mat-sys-outline-variant);
+  --mat-dialog-with-actions-content-padding: 20px 24px;
+  --mat-form-field-container-text-tracking: unset;
+  --mat-slide-toggle-with-icon-handle-size: 22px;
+  --mat-badge-text-color: white;
+  --mat-slide-toggle-selected-with-icon-handle-horizontal-margin: 0 26px;
+}
+
+html.light-theme {
+  color-scheme: light;
+  --mat-sys-corner-small: #{$border-radius};
+  --mat-sys-background: #fff;
+  --mat-sys-surface-bright: #f2f6fa;
+  --mat-sys-surface: #fff;
+  --mat-sys-surface-container: #fff;
+  --mat-sys-surface-container-low: #fff;
+  --mat-sys-on-background: #{$text-main};
+  --mat-sys-outline: #d7dde2;
+  --mat-sys-outline-variant: #d7dde2;
+  --mat-form-field-outlined-hover-outline-color: #d7dde2;
+  --mat-checkbox-unselected-hover-state-layer-color: #d7dde2;
+  --mat-menu-item-hover-state-layer-color: #f6f9fc;
+  --mat-button-toggle-state-layer-color: #f6f9fc;
+  --mat-option-focus-state-layer-color: #f6f9fc;
+  --mat-option-hover-state-layer-color: #f6f9fc;
+  --mat-slide-toggle-unselected-track-color: #f6f9fc;
+  --mat-stepper-header-focus-state-layer-color: #f6f9fc;
+  --mat-stepper-header-hover-state-layer-color: #f6f9fc;
+  --mat-dialog-supporting-text-color: var(--mat-sys-on-background);
+  --mat-expansion-header-hover-state-layer-color: #f6f9fc;
+}
+
+html.dark-theme {
+  color-scheme: dark;
+  --mat-sys-background: #{$dark-body-bg};
+  --mat-sys-on-background: rgba(255, 255, 255, 0.9);
+  --mat-sys-on-primary: #fff;
+  --mat-sys-surface-bright: #ffffff05;
+  --mat-sys-surface: #{$dark-body-bg};
+  --mat-sys-surface-container: #{$dark-body-bg};
+  --mat-sys-surface-container-low: #{$dark-body-bg};
+  --mat-sys-outline-variant: #2e3f50;
+  --mat-sys-outline: #2e3f50;
+  --mat-form-field-outlined-hover-outline-color: #465670;
+  --mat-checkbox-unselected-hover-state-layer-color: #19212a;
+  --mat-menu-item-hover-state-layer-color: #19212a;
+  --mat-button-toggle-state-layer-color: #19212a;
+  --mat-option-focus-state-layer-color: #19212a;
+  --mat-option-hover-state-layer-color: #19212a;
+  --mat-slide-toggle-unselected-track-color: #19212a;
+  --mat-stepper-header-focus-state-layer-color: #19212a;
+  --mat-stepper-header-hover-state-layer-color: #19212a;
+  --mat-expansion-header-hover-state-layer-color: #19212a;
+  // 滚动条（默认值在 _base，深色覆盖在此）
+  --scrollbar-thumb-color: rgba(255, 255, 255, 0.16);
+  --scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.28);
+  --scrollbar-thumb-active-color: rgba(255, 255, 255, 0.36);
+
+  @include mat.card-overrides(
+    (
+      elevated-container-color: #1c252e,
+      elevated-container-elevation: rgba(0, 0, 0, 0.2) 0px 0px 2px 0px,
+      subtitle-text-color: #{$dark-text-secondary},
+    )
+  );
+  @include mat.theme-overrides(
+    (
+      level1: 0px 12px 24px -4px rgba(143, 176, 210, 0.02),
+      level2: 0px 12px 24px -4px rgba(143, 176, 210, 0.02),
+      level3: 0px 12px 24px -4px rgba(143, 176, 210, 0.02),
+    )
+  );
+}
+
+// -----------------------------------------------------------------------------
+// 3. 深色组件覆盖 + logo / 品牌
+// -----------------------------------------------------------------------------
+.dark-theme {
+  color: $dark-text-secondary;
+
+  .mat-mdc-menu-panel {
+    color: var(--mat-sys-on-background) !important;
+  }
+
+  .bg-white,
+  .mdc-menu-surface {
+    background-color: var(--mat-sys-surface) !important;
+  }
+
+  .topbar {
+    background-color: var(--mat-sys-surface);
+  }
+
+  .hljs {
+    background: var(--mat-sys-surface);
+  }
+
+  .cardWithShadow {
+    box-shadow: $darkcardshadow;
+  }
+}
+
+html.dark-theme {
+  .logodark {
+    display: none;
+  }
+}
+
+html.light-theme {
+  .logolight {
+    display: none;
+  }
+}
+
+// 侧边栏品牌标题在深浅主题下沿用系统前景色
+html.dark-theme,
+html.light-theme {
+  .branding-title {
+    color: var(--mat-sys-on-surface, inherit);
+  }
+}

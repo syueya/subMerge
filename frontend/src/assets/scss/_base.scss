@@ -1,6 +1,7 @@
 // =============================================================================
 // 页面骨架与通用结构
-// 作用：body、主布局容器、表格容器、链接、常用尺寸辅助类。
+// 作用：body、主布局容器、表格容器、链接。
+// 原子工具类见 utilities/（opacity、ls、sizing、rounded、cursor 等）。
 // =============================================================================
 @use "variables" as *;
 
@@ -18,7 +19,7 @@ body {
   color: var(--mat-sys-on-background);
 }
 
-// --- 原生滚动条 ---
+// --- 原生滚动条（深色 thumb 覆盖见 _theme.scss）---
 :root {
   --scrollbar-track-thickness: 3px;
   --scrollbar-track-hover-thickness: 3px;
@@ -26,12 +27,6 @@ body {
   --scrollbar-thumb-color: rgba(42, 53, 71, 0.18);
   --scrollbar-thumb-hover-color: rgba(42, 53, 71, 0.32);
   --scrollbar-thumb-active-color: rgba(42, 53, 71, 0.4);
-}
-
-html.dark-theme {
-  --scrollbar-thumb-color: rgba(255, 255, 255, 0.16);
-  --scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.28);
-  --scrollbar-thumb-active-color: rgba(255, 255, 255, 0.36);
 }
 
 html,
@@ -148,56 +143,6 @@ body,
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-.w-full {
-  width: 100%;
-}
-
-.w-60 {
-  width: 60px;
-}
-
-.h-full {
-  height: 100%;
-}
-
-.h-200 {
-  height: 200px;
-}
-
-.shadow-none {
-  box-shadow: none !important;
-}
-
-.rounded {
-  border-radius: $border-radius !important;
-}
-
-.rounded-circle {
-  border-radius: 50% !important;
-}
-
-.rounded-pill {
-  border-radius: 25px !important;
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.text-decoration-none {
-  text-decoration: none;
-}
-
-.position-relative {
-  position: relative;
-}
-
-th.mat-mdc-header-cell {
-  font-weight: bold;
-  min-width: 75px;
-  box-sizing: content-box;
-}
-
 // --- 表格容器与备注列 ---
 .table-container {
   position: relative;
@@ -246,15 +191,6 @@ th.mat-mdc-header-cell {
   }
 }
 
-
-.op-5 {
-  opacity: 0.5;
-}
-
-.cursor-pointer {
-  cursor: pointer !important;
-}
-
 .avatar-group {
   img {
     border: 2px solid $white;
@@ -270,11 +206,5 @@ a {
   color: var(--mat-sys-on-background);
   &:hover {
     color: $primary;
-  }
-}
-
-@media (min-width: 768px) {
-  html .flex-sm-row {
-    flex-direction: row !important;
   }
 }

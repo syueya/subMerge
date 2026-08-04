@@ -175,14 +175,7 @@ $swift-ease-out-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
   }
 }
 
-@media (min-width: 1024px) {
-  .sidebarNav-mini {
-    .contentWrapper {
-      margin-left: $sidenav-mini !important;
-    }
-  }
-}
-
+// 迷你侧栏内容区边距（≥ md）见 _grid.scss
 
 .sidebar-list {
   &.mdc-list {
