@@ -376,6 +376,8 @@ export interface GeoASNHit {
 
 export interface GeoQueryResponse {
 	domain: string;
+	/** "domain" | "ip" — present after geo query enhancement */
+	inputType?: 'domain' | 'ip' | string;
 	ips: string[];
 	resolveSkipped: boolean;
 	resolveError?: string;

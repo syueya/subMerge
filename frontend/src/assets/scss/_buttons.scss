@@ -20,6 +20,20 @@
   )
 );
 
+// 列表内次要操作：比默认 36px 更紧凑
+.mat-mdc-outlined-button.btn-compact,
+.mat-mdc-button.btn-compact,
+.mat-mdc-unelevated-button.btn-compact {
+  --mat-button-outlined-container-height: 28px;
+  --mat-button-text-container-height: 28px;
+  --mat-button-filled-container-height: 28px;
+  --mat-button-protected-container-height: 28px;
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 12px;
+  line-height: 28px;
+}
+
 @include mat.icon-button-overrides(
   (
     icon-color: $text-color,

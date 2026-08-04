@@ -73,16 +73,6 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
 		super.ngOnDestroy();
 	}
 
-	/** 域名查询结果里「查看分类条目」跳转入口 */
-	openGeoSiteCategory(category: string): void {
-		this.reverseFile = 'geosite';
-		this.reverseCategory = category;
-		this.reverseOffset = 0;
-		this.reverseResult.set(null);
-		this.entriesLimit = this.defaultEntriesLimit;
-		this.reverse();
-	}
-
 	clearResult(): void {
 		this.reverseResult.set(null);
 		this.closeEntries();

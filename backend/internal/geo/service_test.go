@@ -69,22 +69,38 @@ func TestServiceQueryReverseAndInvalidResources(t *testing.T) {
 	if len(statuses) != 4 || !statuses[0].Available || !statuses[1].Available || statuses[2].Available {
 		t.Fatalf("unexpected statuses: %+v", statuses)
 	}
-	result, err := svc.Query("WWW.Example.com.", false)
-	if err != nil {
-		t.Fatal(err)
+result, err := svc.Query("WWW.Example.com.", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Domain != "www.example.com" || result.InputType != "domain" || len(result.GeoSite) != 1 || !result.ResolveSkipped {
+			t.Fatalf("unexpected query result: %+v", result)
+		}
+
+		ipResult, err := svc.Query("192.0.2.8", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ipResult.InputType != "ip" || ipResult.Domain != "192.0.2.8" || len(ipResult.IPs) != 1 || ipResult.IPs[0] != "192.0.2.8" {
+			t.Fatalf("unexpected IP query result: %+v", ipResult)
+		}
+		if !ipResult.ResolveSkipped || len(ipResult.GeoSite) != 0 || len(ipResult.GeoIP) != 1 || ipResult.GeoIP[0].Category != "test" {
+			t.Fatalf("unexpected IP geo lookup: %+v", ipResult)
+		}
+
+		if _, err := svc.Query("not a valid host", false); err == nil {
+			t.Fatal("expected invalid query error")
+		}
+
+		reverse, err := svc.Reverse("geosite", "test", 10, 0)
+		if err != nil || reverse.Total != 1 || reverse.Items[0].Value != "example.com" {
+			t.Fatalf("unexpected reverse result: %+v err=%v", reverse, err)
+		}
+		unsupported, err := svc.Reverse("asn", "", 10, 0)
+		if err != nil || unsupported.Message == "" {
+			t.Fatalf("expected unsupported reverse response: %+v err=%v", unsupported, err)
+		}
 	}
-	if result.Domain != "www.example.com" || len(result.GeoSite) != 1 || !result.ResolveSkipped {
-		t.Fatalf("unexpected query result: %+v", result)
-	}
-	reverse, err := svc.Reverse("geosite", "test", 10, 0)
-	if err != nil || reverse.Total != 1 || reverse.Items[0].Value != "example.com" {
-		t.Fatalf("unexpected reverse result: %+v err=%v", reverse, err)
-	}
-	unsupported, err := svc.Reverse("asn", "", 10, 0)
-	if err != nil || unsupported.Message == "" {
-		t.Fatalf("expected unsupported reverse response: %+v err=%v", unsupported, err)
-	}
-}
 
 func TestSearchASNAndMetaDBValidation(t *testing.T) {
 	if got := metaCodes("CN"); len(got) != 1 || got[0] != "CN" {

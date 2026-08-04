@@ -56,6 +56,7 @@ type ASNHit struct {
 
 type QueryResponse struct {
 	Domain         string       `json:"domain"`
+	InputType      string       `json:"inputType,omitempty"`
 	IPs            []string     `json:"ips"`
 	ResolveSkipped bool         `json:"resolveSkipped"`
 	ResolveError   string       `json:"resolveError,omitempty"`

@@ -41,8 +41,8 @@ export class GeoQueryComponent extends CmParentComponent implements OnInit {
 	readonly badgeMuted = BADGE_MUTED;
 	readonly badgeWarn = BADGE_WARN;
 
-	/** 查询区 Tab：域名查询 | 分类搜索 */
-	queryTab = signal<'domain' | 'search'>('domain');
+/** 查询区 Tab：域名/IP 查询 | 分类搜索 */
+		queryTab = signal<'domain' | 'search'>('domain');
 
 	override ngOnInit(): void {
 		super.ngOnInit();
@@ -129,10 +129,4 @@ export class GeoQueryComponent extends CmParentComponent implements OnInit {
 			});
 	}
 
-	/** 域名查询结果 → 跳到分类搜索并打开该 GeoSite 分类 */
-	onOpenCategory(category: string): void {
-		this.queryTab.set('search');
-		// 等 *ngIf 挂上分类搜索子组件后再调用
-		setTimeout(() => this.categorySearch?.openGeoSiteCategory(category), 0);
-	}
 }

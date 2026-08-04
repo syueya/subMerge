@@ -258,6 +258,23 @@ func normalizeDomain(raw string) (string, error) {
 	return domain, nil
 }
 
+// normalizeQuery accepts either an IP address or a domain name.
+// IP is preferred when net.ParseIP succeeds after trimming.
+func normalizeQuery(raw string) (inputType string, value string, ip net.IP, err error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "", "", nil, errors.New("invalid domain or IP")
+	}
+	if parsed := net.ParseIP(trimmed); parsed != nil {
+		return "ip", parsed.String(), parsed, nil
+	}
+	domain, err := normalizeDomain(trimmed)
+	if err != nil {
+		return "", "", nil, errors.New("invalid domain or IP")
+	}
+	return "domain", domain, nil, nil
+}
+
 func domainMatch(entry domainRecord, domain string) bool {
 	value := strings.ToLower(strings.TrimSuffix(entry.Value, "."))
 	switch entry.Type {
@@ -275,16 +292,47 @@ func domainMatch(entry domainRecord, domain string) bool {
 	}
 }
 
+func (s *Service) appendIPLookups(result *QueryResponse, ip net.IP) {
+	ipText := ip.String()
+	result.IPs = append(result.IPs, ipText)
+	for _, entry := range s.snap.cidrs {
+		if entry.Network.Contains(ip) {
+			result.GeoIP = append(result.GeoIP, IPHit{IP: ipText, Category: entry.Category, CIDR: entry.Network.String()})
+		}
+	}
+	if s.snap.meta != nil {
+		result.MetaDB = append(result.MetaDB, lookupMMDB(s.snap.meta, ip)...)
+	}
+	if s.snap.asn != nil {
+		result.ASN = append(result.ASN, lookupASN(s.snap.asn, ip)...)
+	}
+}
+
 func (s *Service) Query(rawDomain string, resolve bool) (QueryResponse, error) {
-	domain, err := normalizeDomain(rawDomain)
+	inputType, value, parsedIP, err := normalizeQuery(rawDomain)
 	if err != nil {
 		return QueryResponse{}, err
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	result := QueryResponse{Domain: domain, GeoSite: []GeoSiteHit{}, GeoIP: []IPHit{}, MetaDB: []DBHit{}, ASN: []ASNHit{}}
+	result := QueryResponse{
+		Domain:    value,
+		InputType: inputType,
+		GeoSite:   []GeoSiteHit{},
+		GeoIP:     []IPHit{},
+		MetaDB:    []DBHit{},
+		ASN:       []ASNHit{},
+	}
+
+	if inputType == "ip" {
+		// Direct IP lookup: no GeoSite, no DNS.
+		result.ResolveSkipped = true
+		s.appendIPLookups(&result, parsedIP)
+		return result, nil
+	}
+
 	for _, entry := range s.snap.domains {
-		if domainMatch(entry, domain) {
+		if domainMatch(entry, value) {
 			result.GeoSite = append(result.GeoSite, GeoSiteHit{Category: entry.Category, Type: entry.Type, Value: entry.Value})
 		}
 	}
@@ -292,7 +340,7 @@ func (s *Service) Query(rawDomain string, resolve bool) (QueryResponse, error) {
 		result.ResolveSkipped = true
 		return result, nil
 	}
-	ips, lookupErr := net.LookupIP(domain)
+	ips, lookupErr := net.LookupIP(value)
 	if lookupErr != nil {
 		result.ResolveError = lookupErr.Error()
 		return result, nil
@@ -304,18 +352,7 @@ func (s *Service) Query(rawDomain string, resolve bool) (QueryResponse, error) {
 			continue
 		}
 		seen[ipText] = true
-		result.IPs = append(result.IPs, ipText)
-		for _, entry := range s.snap.cidrs {
-			if entry.Network.Contains(ip) {
-				result.GeoIP = append(result.GeoIP, IPHit{IP: ipText, Category: entry.Category, CIDR: entry.Network.String()})
-			}
-		}
-		if s.snap.meta != nil {
-			result.MetaDB = append(result.MetaDB, lookupMMDB(s.snap.meta, ip)...)
-		}
-		if s.snap.asn != nil {
-			result.ASN = append(result.ASN, lookupASN(s.snap.asn, ip)...)
-		}
+		s.appendIPLookups(&result, ip)
 	}
 	return result, nil
 }

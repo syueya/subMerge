@@ -67,6 +67,13 @@ $utilities-text: (
 
 @include emit-utilities($utilities-text);
 
+// 单行省略：overflow + nowrap + ellipsis（需配合 min-w-0 才能在 flex 子项里生效）
+.text-truncate {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
 h1,
 h2,
 h3,

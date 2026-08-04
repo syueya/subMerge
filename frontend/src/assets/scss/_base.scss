@@ -100,6 +100,12 @@ body,
 
 // 顶栏（cm-page-toolbar）固定在视口内，仅下方内容卡滚动。
 // pageWrapper 上下各 12px padding，故高度用 100dvh - 24px。
+//
+// 可组合：
+//   page-fill > page-fill__body > page-fill__panel
+//     > page-fill__fixed（顶栏/表单）
+//     > page-fill__grow / page-fill__host（占满剩余）
+//       > page-fill__scroll（仅纵向滚动；避免 .row 负 margin 出横向条）
 .page-fill {
   display: flex;
   flex-direction: column;
@@ -115,6 +121,7 @@ body,
   > .page-fill__body.mat-mdc-card,
   > .page-fill__body {
     flex: 1 1 auto;
+    min-width: 0;
     min-height: 0;
     display: flex !important;
     flex-direction: column;
@@ -125,12 +132,43 @@ body,
     overflow: visible;
 
     .mat-mdc-card-content.page-fill__scroll,
+    .mat-mdc-card-content.page-fill__panel,
+    .page-fill__panel {
+      display: flex !important;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .mat-mdc-card-content.page-fill__scroll,
     .page-fill__scroll {
       flex: 1 1 auto;
+      min-width: 0;
       min-height: 0;
-      overflow: auto;
+      // 只滚纵向：.row 负 gutter 在 overflow:auto 里会撑出横向条
+      overflow-x: hidden;
+      overflow-y: auto;
     }
   }
+}
+
+// 固定区（标题/表单），不参与滚动
+.page-fill__fixed {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+// 占满剩余高度的 flex 列（可再嵌套 fixed + scroll）
+.page-fill__grow,
+.page-fill__host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 // --- 移动端打开侧边栏按钮 ---

@@ -11,11 +11,23 @@
     <div class="row">
       @for (row of items; track trackBy($index, row)) {
         <div class="col-24 col-md-6 col-xl-4 m-b-8">
-          <div class="p-12 rounded b-1 h-100 d-flex flex-wrap align-items-center gap-8">
-            <span [class]="badgeMuted" class="text-nowrap">{{ row.type }}</span>
-            <div class="min-w-0 f-s-12 f-w-600" style="word-break: break-all">{{ row.value }}</div>
+          <div class="p-12 rounded b-1 h-100 d-flex align-items-center gap-8 overflow-hidden">
+            <span [class]="badgeMuted" class="text-nowrap flex-shrink-0">{{ row.type }}</span>
+            <div
+              class="min-w-0 flex-1-auto f-s-12 f-w-600 text-truncate"
+              [matTooltip]="row.value"
+              matTooltipShowDelay="500"
+            >
+              {{ row.value }}
+            </div>
             @if (row.detail) {
-              <div class="f-s-12 text-muted m-l-auto text-right" style="word-break: break-all">{{ row.detail }}</div>
+              <div
+                class="min-w-0 max-w-40 flex-shrink-0 f-s-12 text-muted text-truncate text-right"
+                [matTooltip]="row.detail"
+                matTooltipShowDelay="500"
+              >
+                {{ row.detail }}
+              </div>
             }
           </div>
         </div>
