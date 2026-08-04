@@ -68,7 +68,7 @@ func Location() *time.Location {
 }
 
 // Setup 配置标准库 log 的输出目标。
-// outputMode: console（默认）| file | both | none
+// outputMode: console | file | both（配置默认）| none
 // logDir: 按日分文件目录；file/both 时使用
 // retentionDays: 保留天数；<=0 表示不自动清理
 // 时间戳与按日切分使用 InitTimezone 确定的本地时区（默认上海）
@@ -157,7 +157,7 @@ func Output() string {
 	mu.Lock()
 	defer mu.Unlock()
 	if output == "" {
-		return "console"
+		return "both"
 	}
 	return output
 }
@@ -302,18 +302,19 @@ func (w *dailyWriter) rotate(now time.Time) error {
 }
 
 // NormalizeOutput 归一化日志输出目标：console | file | both | none。
+// 空字符串按 both 处理（与 config 默认 LOG_OUTPUT 一致）；未知值回退 both。
 // 供 config 复用，保证两处解析规则一致。
 func NormalizeOutput(raw string) string {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "", "console", "stdout", "stderr", "std":
+	case "console", "stdout", "stderr", "std":
 		return "console"
 	case "file":
 		return "file"
-	case "both", "all", "console+file", "file+console":
+	case "", "both", "all", "console+file", "file+console":
 		return "both"
 	case "none", "off", "disable", "disabled":
 		return "none"
 	default:
-		return "console"
+		return "both"
 	}
 }

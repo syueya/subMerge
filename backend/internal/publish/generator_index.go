@@ -60,22 +60,22 @@ func indexProxies(proxies []map[string]interface{}) proxyIndex {
 	}
 	if dupDropped > 0 {
 		idx.warnings = append(idx.warnings,
-			fmt.Sprintf("dropped %d duplicate proxy name(s); check source name suffixes", dupDropped))
+			fmt.Sprintf("已丢弃 %d 个重名节点，请检查源备注后缀", dupDropped))
 	}
 	if len(idx.byRegion) == 0 {
 		idx.warnings = append(idx.warnings,
-			"no region-prefixed proxies found (expected NAME like US-node / JP-node)")
+			"未找到带地区前缀的节点（期望名称形如 US-node / JP-node）")
 	} else {
 		regions := make([]string, 0, len(idx.byRegion))
 		for r := range idx.byRegion {
 			regions = append(regions, r)
 		}
 		sort.Strings(regions)
-		idx.warnings = append(idx.warnings, "available regions: "+strings.Join(regions, ", "))
+		idx.warnings = append(idx.warnings, "可用地区: "+strings.Join(regions, ", "))
 	}
 	if len(idx.bySourceName) > 0 || len(idx.bySourceID) > 0 {
 		idx.warnings = append(idx.warnings,
-			"available sources: "+strings.Join(sourceLabels(idx.bySourceName, sourceNameByID), ", "))
+			"可用订阅源: "+strings.Join(sourceLabels(idx.bySourceName, sourceNameByID), ", "))
 	}
 	return idx
 }
@@ -166,11 +166,11 @@ func projectGroups(
 			switch mode {
 			case "all":
 				out.warnings = append(out.warnings,
-					fmt.Sprintf("proxy group %q empty after filter; fallback to DIRECT", name))
+					fmt.Sprintf("策略组 %q 过滤后为空；回退到 DIRECT", name))
 				expanded = []string{common.TargetDirect}
 			default: // auto / custom：剪掉空组
 				out.warnings = append(out.warnings,
-					fmt.Sprintf("proxy group %q skipped: empty after expansion", name))
+					fmt.Sprintf("策略组 %q 跳过：展开后为空", name))
 				continue
 			}
 		}

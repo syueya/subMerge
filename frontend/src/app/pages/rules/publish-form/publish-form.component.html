@@ -1,7 +1,7 @@
 <cm-dialog-header modalTitle="发布配置"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content>
+  <div mat-dialog-content class="dialog-body-no-scroll">
     <div class="row">
       <cm-form-field class="col-24" [help]="'可选。只写在发布历史里，方便以后回看这次改了什么。'">
         <mat-label>发布备注</mat-label>
@@ -12,26 +12,24 @@
     </div>
 
     @if (preview(); as p) {
-      <mat-card class="cardWithShadow m-b-16">
-        <mat-card-content class="p-16">
-          <div class="d-flex flex-wrap gap-16 f-s-14 m-b-12">
-            <div>节点：<span class="f-w-600">{{ p.proxyCount }}</span></div>
-            <div>规则：<span class="f-w-600">{{ p.ruleCount }}</span></div>
-            <div>策略组：<span class="f-w-600">{{ p.groups.join(', ') }}</span></div>
-          </div>
-          @if (p.warnings.length) {
-            <div class="f-s-14 text-muted m-b-12">
-              警告：
-              <ul class="m-t-8">
-                @for (w of p.warnings; track w) {
-                  <li>{{ w }}</li>
-                }
-              </ul>
-            </div>
-          }
-          <pre class="f-s-12 p-12 bg-light-primary rounded" style="white-space: pre-wrap; overflow: auto; max-height: 320px">{{ p.yamlPreview }}</pre>
-        </mat-card-content>
-      </mat-card>
+      <div class="d-flex flex-wrap gap-12 f-s-12 m-b-8">
+        <div><span class="f-w-600">节点：</span>{{ p.proxyCount }}</div>
+        <div><span class="f-w-600">规则：</span>{{ p.ruleCount }}</div>
+        <div><span class="f-w-600">策略组：</span>{{ p.groups.join(', ') }}</div>
+      </div>
+      @if (p.warnings.length) {
+        <div class="f-s-12 text-muted m-b-8">
+          <ul class="m-t-8 m-b-0">
+            @for (w of p.warnings; track w) {
+              <li>{{ w }}</li>
+            }
+          </ul>
+        </div>
+      }
+      <pre
+        class="f-s-12 p-12 bg-light-primary rounded text-pre-wrap m-b-0"
+        style="overflow: auto; max-height: min(50vh, 28rem)"
+      >{{ p.yamlPreview }}</pre>
     }
   </div>
 </form>

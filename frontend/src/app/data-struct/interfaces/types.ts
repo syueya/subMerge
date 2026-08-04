@@ -1,38 +1,46 @@
 // Re-export shared contracts used by the panel.
 
 export {
-				 FALLBACK_REGION,
-				 RuleType,
-				 TokenStatus,
-				 TokenGroupMode,
-				 ReleaseStatus,
-				 RefreshStatus,
-				 ProxyGroupType,
-				 regionLabel,
-				 regionOptionText,
-				 RULE_TYPE_OPTIONS,
-				 TOKEN_STATUS_OPTIONS,
-				 TOKEN_STATUS_BADGE,
-				 TOKEN_GROUP_MODE_OPTIONS,
-				 RELEASE_STATUS_OPTIONS,
-				 RELEASE_STATUS_BADGE,
-				 REFRESH_STATUS_OPTIONS,
-				 REFRESH_STATUS_BADGE,
-				 PROXY_GROUP_TYPE_OPTIONS,
-				 BADGE_OK,
-				 BADGE_WARN,
-				 BADGE_ERR,
-				 BADGE_MUTED,
-				 enumText,
-				 enumBadgeClass,
-			} from '../enums/enums';
-		
-		export type {
-		 Region,
-		 Region as RegionValue,
-		 RuleType as RuleTypeValue,
-		 TokenStatus as TokenStatusValue,
-		 TokenGroupMode as TokenGroupModeValue,
+					 FALLBACK_REGION,
+					 RuleType,
+					 TokenStatus,
+					 APIKeyStatus,
+					 APIKeyScope,
+					 TokenGroupMode,
+					 ReleaseStatus,
+					 RefreshStatus,
+					 ProxyGroupType,
+					 regionLabel,
+					 regionOptionText,
+					 RULE_TYPE_OPTIONS,
+					 TOKEN_STATUS_OPTIONS,
+					 TOKEN_STATUS_BADGE,
+					 API_KEY_STATUS_OPTIONS,
+					 API_KEY_STATUS_BADGE,
+					 API_KEY_SCOPE_OPTIONS,
+					 API_KEY_SCOPE_HINTS,
+					 TOKEN_GROUP_MODE_OPTIONS,
+					 RELEASE_STATUS_OPTIONS,
+					 RELEASE_STATUS_BADGE,
+					 REFRESH_STATUS_OPTIONS,
+					 REFRESH_STATUS_BADGE,
+					 PROXY_GROUP_TYPE_OPTIONS,
+					 BADGE_OK,
+					 BADGE_WARN,
+					 BADGE_ERR,
+					 BADGE_MUTED,
+					 enumText,
+					 enumBadgeClass,
+				} from '../enums/enums';
+			
+			export type {
+			 Region,
+			 Region as RegionValue,
+			 RuleType as RuleTypeValue,
+			 TokenStatus as TokenStatusValue,
+			 APIKeyStatus as APIKeyStatusValue,
+			 APIKeyScope as APIKeyScopeValue,
+			 TokenGroupMode as TokenGroupModeValue,
 		 ReleaseStatus as ReleaseStatusValue,
 		 RefreshStatus as RefreshStatusValue,
 		 ProxyGroupType as ProxyGroupTypeValue,
@@ -40,14 +48,16 @@ export {
 		} from '../enums/enums';
 	
 	import type {
-	 Region,
-	 RuleType,
-	 TokenStatus,
-	 TokenGroupMode,
-	 ReleaseStatus,
-	 RefreshStatus,
-	 ProxyGroupType,
-	} from '../enums/enums';
+		 Region,
+		 RuleType,
+		 TokenStatus,
+		 APIKeyStatus,
+		 APIKeyScope,
+		 TokenGroupMode,
+		 ReleaseStatus,
+		 RefreshStatus,
+		 ProxyGroupType,
+		} from '../enums/enums';
 
 export interface ApiError {
  code: string;
@@ -252,25 +262,56 @@ export interface ProxyGroup {
 }
 
 export interface ShareToken {
-		 id: number;
-		 name: string;
-		 token?: string;
-		 tokenMasked: string;
-		 status: TokenStatus;
-		 /** 允许的订阅源；空数组 = 全部源 */
-		 sourceIds: number[];
-		 /** 与 sourceIds 对应的源名（已失效源会带标记） */
-		 sourceNames?: string[];
-		 /** 策略组投影：auto / all / custom */
-		 groupMode: TokenGroupMode;
-		 /** custom 时的策略组白名单 */
-		 groupNames?: string[];
-		 accessCount: number;
-		 lastAccessAt?: string | null;
-		 createdAt: string;
-		 updatedAt: string;
-		 subscribeUrl?: string;
-		}
+			 id: number;
+			 name: string;
+			 token?: string;
+			 tokenMasked: string;
+			 status: TokenStatus;
+			 /** 允许的订阅源；空数组 = 全部源 */
+			 sourceIds: number[];
+			 /** 与 sourceIds 对应的源名（已失效源会带标记） */
+			 sourceNames?: string[];
+			 /** 策略组投影：auto / all / custom */
+			 groupMode: TokenGroupMode;
+			 /** custom 时的策略组白名单 */
+			 groupNames?: string[];
+			 accessCount: number;
+			 lastAccessAt?: string | null;
+			 createdAt: string;
+			 updatedAt: string;
+			 subscribeUrl?: string;
+			}
+
+/** 管理端 API 密钥（agent / 自动化） */
+export interface APIKey {
+	id: number;
+	name: string;
+	/** 仅 create / regenerate / secret 返回 */
+	key?: string;
+	keyMasked: string;
+	scopes: APIKeyScope[];
+	status: APIKeyStatus;
+	note?: string;
+	expiresAt?: string | null;
+	lastUsedAt?: string | null;
+	createdBy: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface APIKeySecret {
+	id: number;
+	key: string;
+}
+
+export interface APIKeyUpsertBody {
+	name?: string;
+	scopes?: APIKeyScope[];
+	status?: APIKeyStatus;
+	note?: string;
+	/** 传 '' 清空过期；RFC3339 设置；省略不改 */
+	expiresAt?: string | null;
+}
 
 export interface Release {
 	 id: number;

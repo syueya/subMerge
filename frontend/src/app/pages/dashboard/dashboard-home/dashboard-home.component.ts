@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { catchError, forkJoin, of } from 'rxjs';
 import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime, localizeBuildError } from '@common/util/format';
+import { formatDateTime } from '@common/util/format';
 import { Release } from '@data-struct';
 import { DraftStatusStore } from '../../releases/services/draft-status.store';
 import { ReleaseService } from '../../releases/services/release.service';
@@ -125,7 +125,7 @@ export class DashboardHomeComponent extends CmParentComponent implements OnInit 
 	publishStatusText(): string {
 		const d = this.draft();
 		if (!d) return '—';
-		const err = localizeBuildError(d.buildError);
+		const err = String(d.buildError || '').trim();
 		if (err) return err;
 		if (!d.hasPublished) return '尚未发布';
 		if (d.dirty) return this.draftSummary() || '有未发布更改';
@@ -134,7 +134,7 @@ export class DashboardHomeComponent extends CmParentComponent implements OnInit 
 	}
 
 	buildErrorDetail(): string {
-		return localizeBuildError(this.draft()?.buildError);
+		return String(this.draft()?.buildError || '').trim();
 	}
 
 	formatTime = formatDateTime;

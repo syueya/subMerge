@@ -1,6 +1,6 @@
 <cm-page-toolbar
-  title="分享令牌"
-  description="为每位朋友生成独立订阅链接；可按源限制节点，并按策略组投影精简配置（默认自动剪掉空组）"
+  title="订阅链接"
+  description="生成独立订阅链接；可按源限制节点，并按策略组投影精简配置（默认自动剪掉空组）"
 >
   <button
     mat-icon-button
@@ -28,7 +28,7 @@
 >
   <ng-template #mobileCard let-row>
     <div class="m-t-20" (click)="selectTableRow(row)">
-      <h5 mat-card-title class="m-y-16 d-flex justify-content-center align-items-center text-center gap-8">
+      <h5 mat-card-title class="m-y-16 d-flex justify-content-center align-items-center text-center gap-8 flex-wrap">
         {{ row.name }}
         <span [class]="statusClass(row.status)">{{ statusText(row.status) }}</span>
       </h5>
@@ -80,23 +80,19 @@
 
   <ng-template #desktopTable>
     <table mat-table [dataSource]="dataSource" [trackBy]="tableTrackBy" class="m-t-0 w-full">
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>状态</th>
-        <td mat-cell *matCellDef="let row" class="f-s-14">
-          <span [class]="statusClass(row.status)">{{ statusText(row.status) }}</span>
-          @if (row.lastAccessAt) {
-            <div class="f-s-12 text-muted m-t-4" [title]="row.lastAccessAt">
-              {{ formatTime(row.lastAccessAt) }}
-            </div>
-          }
-        </td>
-      </ng-container>
-
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef>名称</th>
         <td mat-cell *matCellDef="let row" class="f-s-14">
-          <div class="f-w-600">{{ row.name }}</div>
-          <div class="f-s-12 text-muted m-t-4">{{ formatTime(row.createdAt) }}</div>
+          <div class="d-flex align-items-center flex-wrap gap-8">
+            <span class="f-w-600">{{ row.name }}</span>
+            <span [class]="statusClass(row.status)">{{ statusText(row.status) }}</span>
+          </div>
+          <div class="f-s-12 text-muted m-t-4">
+            {{ formatTime(row.createdAt) }}
+            @if (row.lastAccessAt) {
+              <span class="m-l-8" [title]="row.lastAccessAt">最近 {{ formatTime(row.lastAccessAt) }}</span>
+            }
+          </div>
         </td>
       </ng-container>
 
@@ -104,7 +100,7 @@
         <th mat-header-cell *matHeaderCellDef>订阅源</th>
         <td mat-cell *matCellDef="let row" class="f-s-14" [title]="sourceScopeTitle(row)">
           @for (line of sourceScopeLines(row); track line) {
-            <div class="f-s-12">{{ line }}</div>
+            {{ line }}
           }
         </td>
       </ng-container>
@@ -120,17 +116,30 @@
         <th mat-header-cell *matHeaderCellDef>订阅链接</th>
         <td mat-cell *matCellDef="let row" class="f-s-14">
           @if (row.subscribeUrl) {
-            <div class="d-flex align-items-center gap-8">
+            <div class="d-flex align-items-center gap-4">
               <code class="f-s-12 text-muted" [title]="row.subscribeUrl">{{ maskSubscribeUrl(row.subscribeUrl) }}</code>
-              <button mat-stroked-button color="primary" type="button" (click.debounceTime)="copy(row.subscribeUrl!)">
-                复制
+              <button
+                mat-icon-button
+                color="primary"
+                type="button"
+                matTooltip="复制链接"
+                (click.debounceTime)="copy(row.subscribeUrl!)"
+              >
+                <i-tabler name="copy" class="icon-20 d-flex align-items-center"></i-tabler>
               </button>
             </div>
           } @else {
             <div class="d-flex flex-wrap align-items-center gap-8">
               <span class="f-s-12 text-muted">旧令牌未保存明文，请重新生成后即可复制链接</span>
-              <button mat-stroked-button color="primary" type="button" [disabled]="busy()" (click.debounceTime)="regenerate(row)">
-                重新生成
+              <button
+                mat-icon-button
+                color="primary"
+                type="button"
+                matTooltip="重新生成"
+                [disabled]="busy()"
+                (click.debounceTime)="regenerate(row)"
+              >
+                <i-tabler name="refresh" class="icon-20 d-flex align-items-center"></i-tabler>
               </button>
             </div>
           }

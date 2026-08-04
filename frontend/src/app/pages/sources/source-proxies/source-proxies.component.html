@@ -1,25 +1,15 @@
 <cm-dialog-header [modalTitle]="'节点 · ' + source.name"></cm-dialog-header>
 
-<div mat-dialog-content>
-  <p class="text-muted f-s-12 m-b-12">
-    共 {{ proxies().length }} 个
-    @if (filteredProxies().length !== proxies().length) {
-      · 筛选 {{ filteredProxies().length }}
-    }
-    @if (lastRefreshSummary()) {
-      · 地区 {{ lastRefreshSummary() }}
-    }
-  </p>
-
-  <div class="row m-b-12">
+<div mat-dialog-content class="dialog-body-no-scroll">
+  <div class="row">
     <cm-form-field class="col-24 col-md-8">
       <mat-label>搜索</mat-label>
       <mat-form-field appearance="outline" class="w-full" color="primary">
         <input
           matInput
-          [ngModel]="proxySearch()"
+          [ngModel]="proxySearchInput()"
           (ngModelChange)="onSearchChange($event)"
-          placeholder="名称 / 服务器…"
+          placeholder="名称 / 服务器 / 地区…"
         />
       </mat-form-field>
     </cm-form-field>
@@ -46,29 +36,41 @@
     </cm-form-field>
   </div>
 
-  <div class="d-flex flex-wrap gap-8 m-b-16">
-    <button mat-stroked-button color="primary" type="button" (click.debounceTime)="batchSetFiltered(true)">
-      启用筛选
-    </button>
-    <button mat-stroked-button color="primary" type="button" (click.debounceTime)="batchSetFiltered(false)">
-      禁用筛选
-    </button>
-    <button mat-stroked-button color="primary" type="button" [disabled]="busy()" (click.debounceTime)="refresh()">
-      重新拉取
-    </button>
+  <div class="d-flex flex-wrap align-items-center gap-8 m-b-8">
+    <span class="f-s-12 text-muted">
+      @if (filteredProxies().length !== proxies().length) {
+        筛选 {{ filteredProxies().length }} ·
+      }
+      共 {{ proxies().length }} 个
+      @if (lastRefreshSummary()) {
+        · 地区 {{ lastRefreshSummary() }}
+      }
+    </span>
   </div>
 
-  <div class="table-container">
+  <div class="table-container" style="max-height: min(55vh, 28rem)">
     @if (isLoading) {
       <div class="table-loading-overlay">
         <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
       </div>
     }
-    <table mat-table [dataSource]="dataSource" [trackBy]="tableTrackBy" class="m-t-0 w-full">
+    <table mat-table [dataSource]="filteredProxies()" [trackBy]="tableTrackBy" class="m-t-0 w-full">
       <ng-container matColumnDef="enabled">
-        <th mat-header-cell *matHeaderCellDef>启用</th>
+        <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox
+            [checked]="allFilteredEnabled()"
+            [indeterminate]="someFilteredEnabled()"
+            (change)="toggleAllFiltered($event.checked)"
+            [disabled]="batchBusy() || filteredProxies().length === 0 || isLoading"
+            matTooltip="全选启用/禁用当前筛选"
+          ></mat-checkbox>
+        </th>
         <td mat-cell *matCellDef="let row">
-          <mat-checkbox [checked]="row.enabled" (change)="toggleProxy(row)"></mat-checkbox>
+          <mat-checkbox
+            [checked]="row.enabled"
+            (change)="toggleProxy(row)"
+            [disabled]="batchBusy()"
+          ></mat-checkbox>
         </td>
       </ng-container>
       <ng-container matColumnDef="name">

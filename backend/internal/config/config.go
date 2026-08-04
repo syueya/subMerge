@@ -44,7 +44,7 @@ type Config struct {
 	// HTTPS 反代/公网请设 COOKIE_SECURE=true。不跟 APP_ENV、PUBLIC_BASE_URL 联动。
 	CookieSecure bool
 	Version      string
-	// LogOutput: console | file | both | none
+	// LogOutput: console | file | both | none；未设置时默认 both
 	LogOutput string
 	// LogDir 固定目录（不走环境变量）：backend/log 或 ./log，按日 submerge-YYYY-MM-DD.log
 	LogDir string
@@ -101,7 +101,7 @@ func Load() (*Config, error) {
 	// 数据 / 库 / 静态 / 日志目录一律按工作目录推导，不提供环境变量覆盖
 	// （避免 Docker/.env 再抄一遍路径；部署只需选对工作目录）
 	dataDir := defaultDataDir()
-	logOutput := applog.NormalizeOutput(getEnv("LOG_OUTPUT", "console"))
+	logOutput := applog.NormalizeOutput(getEnv("LOG_OUTPUT", "both"))
 
 	cfg := &Config{
 		Env:                getEnv("APP_ENV", "development"),

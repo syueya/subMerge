@@ -57,8 +57,8 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.RefreshInterval != 24*time.Hour {
 		t.Fatalf("expected RefreshInterval=24h, got %v", cfg.RefreshInterval)
 	}
-	if cfg.LogOutput != "console" {
-		t.Fatalf("expected LogOutput=console, got %q", cfg.LogOutput)
+	if cfg.LogOutput != "both" {
+		t.Fatalf("expected LogOutput=both, got %q", cfg.LogOutput)
 	}
 	if filepath.Base(filepath.Clean(cfg.LogDir)) != "log" {
 		t.Fatalf("expected fixed LogDir base=log, got %q", cfg.LogDir)

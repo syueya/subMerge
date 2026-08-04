@@ -76,7 +76,7 @@ type ProxyGroup struct {
 	SortOrder int            `json:"sortOrder"`
 }
 
-// ShareToken 分享令牌
+// ShareToken 订阅链接
 // SourceIDs 为空表示该链接包含全部启用订阅源；非空则仅包含所列源的节点
 // GroupMode 控制策略组投影：auto / all / custom
 type ShareToken struct {
@@ -98,6 +98,23 @@ type ShareToken struct {
 	CreatedAt    string   `json:"createdAt"`
 	UpdatedAt    string   `json:"updatedAt"`
 	SubscribeURL string   `json:"subscribeUrl,omitempty"`
+}
+
+// APIKey 管理端 API 密钥视图
+// Key 仅在 create / regenerate / secret 接口返回；列表只有 KeyMasked
+type APIKey struct {
+	ID         uint         `json:"id"`
+	Name       string       `json:"name"`
+	Key        string       `json:"key,omitempty"`
+	KeyMasked  string       `json:"keyMasked"`
+	Scopes     []string     `json:"scopes"`
+	Status     APIKeyStatus `json:"status"`
+	Note       string       `json:"note,omitempty"`
+	ExpiresAt  *string      `json:"expiresAt,omitempty"`
+	LastUsedAt *string      `json:"lastUsedAt,omitempty"`
+	CreatedBy  string       `json:"createdBy"`
+	CreatedAt  string       `json:"createdAt"`
+	UpdatedAt  string       `json:"updatedAt"`
 }
 
 // Release 发布版本

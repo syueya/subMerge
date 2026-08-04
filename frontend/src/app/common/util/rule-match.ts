@@ -1,4 +1,7 @@
-/** 浏览器侧规则匹配（域名 / IP-CIDR；GEOSITE/GEOIP 会跳过） */
+/**
+ * 浏览器侧规则匹配（域名 / IP-CIDR；GEOSITE/GEOIP 会跳过）。
+ * 面板「测试规则」主路径已改为 POST /api/rules/match；本文件保留给无后端场景或单测。
+ */
 import type { MatchableRule, RuleMatchResult } from '@data-struct';
 
 export type { MatchableRule, RuleMatchResult };

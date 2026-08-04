@@ -303,6 +303,37 @@ type UpdateTokenRequest struct {
 	GroupNames *[]string       `json:"groupNames"`
 }
 
+// APIKeyListResponse API 密钥列表
+type APIKeyListResponse struct {
+	Items []APIKey `json:"items"`
+}
+
+// CreateAPIKeyRequest 创建 API 密钥
+// Scopes: read / write / publish / *（可多选；* 表示业务全权限）
+// ExpiresAt RFC3339；空或省略 = 不过期
+type CreateAPIKeyRequest struct {
+	Name      string   `json:"name" binding:"required,min=1,max=128"`
+	Scopes    []string `json:"scopes" binding:"required,min=1"`
+	Note      string   `json:"note" binding:"max=512"`
+	ExpiresAt *string  `json:"expiresAt"`
+}
+
+// UpdateAPIKeyRequest 更新 API 密钥元数据
+// ExpiresAt 传 "" 清空过期；传 RFC3339 设置；nil 不改
+type UpdateAPIKeyRequest struct {
+	Name      *string       `json:"name"`
+	Scopes    *[]string     `json:"scopes"`
+	Status    *APIKeyStatus `json:"status"` // 仅 active|disabled；revoked 走专用接口
+	Note      *string       `json:"note"`
+	ExpiresAt *string       `json:"expiresAt"`
+}
+
+// APIKeySecretResponse 查看完整密钥
+type APIKeySecretResponse struct {
+	ID  uint   `json:"id"`
+	Key string `json:"key"`
+}
+
 // ReleaseListResponse 发布列表
 type ReleaseListResponse struct {
 	Items []Release `json:"items"`
@@ -347,4 +378,29 @@ type MeResponse struct {
 type AuditListResponse struct {
 	Items []AuditLog `json:"items"`
 	Total int64      `json:"total"`
+}
+
+// LogFileInfo 按日日志文件元信息（供管理端列表）
+type LogFileInfo struct {
+	Name      string `json:"name"`
+	Size      int64  `json:"size"`
+	UpdatedAt int64  `json:"updatedAt"` // 毫秒时间戳
+}
+
+// LogFileListResponse 日志文件列表
+type LogFileListResponse struct {
+	Files []LogFileInfo `json:"files"`
+}
+
+// LogEntry 解析后的单条应用日志
+type LogEntry struct {
+	Timestamp int64  `json:"timestamp"` // 毫秒时间戳
+	Caller    string `json:"caller"`
+	Content   string `json:"content"`
+	Level     string `json:"level"` // info|warn|error|debug（小写，前端着色）
+}
+
+// LogDetailsResponse 日志详情（尾部 N 条）
+type LogDetailsResponse struct {
+	Items []LogEntry `json:"items"`
 }

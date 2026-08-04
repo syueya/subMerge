@@ -453,10 +453,6 @@ func (s *Service) build() (*BuildResult, error) {
 	return s.buildForToken(nil, "", nil)
 }
 
-func (s *Service) buildForSources(sourceIDs []uint) (*BuildResult, error) {
-	return s.buildForToken(sourceIDs, string(common.TokenGroupModeAuto), nil)
-}
-
 // buildForToken 按源与策略组模式生成配置
 func (s *Service) buildForToken(sourceIDs []uint, groupMode string, groupNames []string) (*BuildResult, error) {
 	proxies, err := s.source.EnabledProxiesBySourceIDs(sourceIDs)

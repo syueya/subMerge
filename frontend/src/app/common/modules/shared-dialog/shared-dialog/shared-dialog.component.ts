@@ -17,8 +17,7 @@ import { IconsModule } from '@common/modules/icons/icons.module';
 @Component({
   selector: 'cm-shared-dialog',
   imports: [MatDialogModule, MatButtonModule, MatDividerModule, MatTooltipModule, IconsModule],
-  templateUrl: './shared-dialog.component.html',
-  styleUrl: './shared-dialog.component.scss'
+  templateUrl: './shared-dialog.component.html'
 })
 export class CmSharedDialogComponent {
   dialogRef = inject<MatDialogRef<CmSharedDialogComponent>>(MatDialogRef);

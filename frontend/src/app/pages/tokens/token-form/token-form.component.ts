@@ -2,14 +2,15 @@ import { Component, WritableSignal, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import {
-		BADGE_WARN,
-		ProxyGroup,
-		SubscriptionSource,
-		TOKEN_GROUP_MODE_OPTIONS,
-		TokenFormDialogData,
-		TokenGroupMode,
-		enumText,
-	} from '@data-struct';
+	BADGE_WARN,
+	ProxyGroup,
+	ShareToken,
+	SubscriptionSource,
+	TOKEN_GROUP_MODE_OPTIONS,
+	TokenFormDialogData,
+	TokenGroupMode,
+	enumText,
+} from '@data-struct';
 import { DialogService } from '@common/services/dialog.service';
 import { TokenService } from '../services/token.service';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
@@ -27,8 +28,11 @@ export class TokenFormComponent extends CmParentFormComponent {
 	private svc = inject(TokenService);
 	private dialog = inject(DialogService);
 
-readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
+	readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
 	readonly badgeWarn = BADGE_WARN;
+
+	/** 编辑模式：data.token 有值 */
+	readonly isEdit = !!this.data.token;
 
 	allSources = signal(true);
 	sourceIds = signal<Set<number>>(new Set());
@@ -37,11 +41,28 @@ readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
 
 	constructor() {
 		super();
-		this.editForm = this.fb.group({
-			name: ['', [Validators.required, Validators.maxLength(64)]],
-		});
-		const list = this.data.sourceList || [];
-		this.sourceIds.set(new Set(list.map((s) => s.id)));
+		if (this.isEdit) {
+			this.editForm = this.fb.group({});
+			this.initFromToken(this.data.token!);
+		} else {
+			this.editForm = this.fb.group({
+				name: ['', [Validators.required, Validators.maxLength(64)]],
+			});
+			const list = this.data.sourceList || [];
+			this.sourceIds.set(new Set(list.map((s) => s.id)));
+			this.allSources.set(true);
+		}
+	}
+
+	get token(): ShareToken | null {
+		return this.data.token || null;
+	}
+
+	get modalTitle(): string {
+		if (this.isEdit && this.token) {
+			return `编辑链接范围 · ${this.token.name}`;
+		}
+		return '创建令牌';
 	}
 
 	get sourceList(): SubscriptionSource[] {
@@ -54,6 +75,23 @@ readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
 
 	groupModeText(v?: string): string {
 		return enumText(TOKEN_GROUP_MODE_OPTIONS, v || 'auto');
+	}
+
+	private initFromToken(item: ShareToken): void {
+		const ids = item.sourceIds || [];
+		if (ids.length === 0) {
+			this.allSources.set(true);
+			this.sourceIds.set(this.allSourceIdSet());
+		} else {
+			this.allSources.set(false);
+			this.sourceIds.set(new Set(ids));
+		}
+		const mode = (item.groupMode || 'auto') as TokenGroupMode;
+		this.groupMode.set(mode);
+		this.groupNames.set(new Set(item.groupNames || []));
+		if (mode === 'custom' && this.groupNames().size === 0) {
+			this.groupNames.set(new Set(this.groupList.filter((g) => g.enabled).map((g) => g.name)));
+		}
 	}
 
 	private allSourceIdSet(): Set<number> {
@@ -129,11 +167,16 @@ readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
 
 	submit(): void {
 		if (this.isSubmitting) return;
-		const name = String(this.editForm.get('name')?.value || '').trim();
-		if (!name) {
-			void this.dialog.error('请填写朋友备注名');
-			return;
+
+		let name = '';
+		if (!this.isEdit) {
+			name = String(this.editForm.get('name')?.value || '').trim();
+			if (!name) {
+				void this.dialog.error('请填写名称');
+				return;
+			}
 		}
+
 		const all = this.allSources();
 		const ids = all ? [] : Array.from(this.sourceIds());
 		if (!all && ids.length === 0) {
@@ -148,8 +191,11 @@ readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
 		}
 
 		this.isSubmitting = true;
-		this.svc
-			.create(name, ids, groupMode, groupNames)
+		const req$ = this.isEdit
+			? this.svc.update(this.token!.id, { sourceIds: ids, groupMode, groupNames })
+			: this.svc.create(name, ids, groupMode, groupNames);
+
+		req$
 			.pipe(
 				takeUntil(this.$destroy),
 				finalize(() => (this.isSubmitting = false)),
@@ -159,11 +205,15 @@ readonly groupModeOptions = TOKEN_GROUP_MODE_OPTIONS;
 					const scope =
 						(t.sourceIds || []).length === 0 ? '全部源' : `指定 ${(t.sourceIds || []).length} 个源`;
 					const gscope = this.groupModeText(t.groupMode);
-					void this.dialog.success(
-						t.subscribeUrl
-							? `令牌「${t.name}」已创建（${scope} · ${gscope}），可直接复制订阅链接`
-							: `令牌「${t.name}」已创建（${scope} · ${gscope}）`,
-					);
+					if (this.isEdit) {
+						void this.dialog.success(`已更新「${t.name}」（${scope} · ${gscope}）`);
+					} else {
+						void this.dialog.success(
+							t.subscribeUrl
+								? `令牌「${t.name}」已创建（${scope} · ${gscope}），可直接复制订阅链接`
+								: `令牌「${t.name}」已创建（${scope} · ${gscope}）`,
+						);
+					}
 					this.dialogRef.close(true);
 				},
 				error: (e: Error) => void this.dialog.error(e.message),

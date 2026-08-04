@@ -1,21 +1,26 @@
 import { HttpParams } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
-import { Observable, shareReplay, tap } from 'rxjs';
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, Subscription, shareReplay, tap } from 'rxjs';
 import { ApiService } from '@common/net/api.service';
 import { CachedRequest } from '@common/net/cached-request';
+import { DialogService } from '@common/services/dialog.service';
 import {
-		ListResponse,
-		ProxyNode,
-		RefreshAllResult,
-		RefreshSourceResult,
-		RegionCatalogResponse,
-		SourceUpsertBody,
-		SubscriptionSource,
-	} from '@data-struct';
+	ListResponse,
+	ProxyNode,
+	RefreshAllResult,
+	RefreshSourceResult,
+	RegionCatalogResponse,
+	SourceUpsertBody,
+	SubscriptionSource,
+} from '@data-struct';
+
+/** 拉取全部可能串行很久；默认 30s 不够，给 10 分钟 */
+const REFRESH_ALL_TIMEOUT_MS = 10 * 60 * 1000;
 
 @Injectable({ providedIn: 'root' })
 export class SourceService {
 	private readonly api = inject(ApiService);
+	private readonly dialog = inject(DialogService);
 
 	/**
 	 * 地区目录来自编译进后端的 regions.yaml，运行期不变。
@@ -30,6 +35,11 @@ export class SourceService {
 	private readonly proxiesCache = new CachedRequest<ListResponse<ProxyNode>>(() =>
 		this.api.get('/proxies'),
 	);
+
+	private refreshAllSub: Subscription | null = null;
+
+	/** 跨页面共享：后台拉取全部进行中，不随页面销毁丢失 */
+	readonly refreshingAll = signal(false);
 
 	list(forceRefresh = false): Observable<ListResponse<SubscriptionSource>> {
 		return this.sourcesCache.get(forceRefresh);
@@ -81,7 +91,48 @@ export class SourceService {
 	}
 
 	refreshAll(): Observable<RefreshAllResult> {
-		return this.api.post<RefreshAllResult>('/sources/refresh-all').pipe(tap(() => this.invalidateSourcesAndProxies()));
+		return this.api
+			.post<RefreshAllResult>('/sources/refresh-all', {}, { timeoutMs: REFRESH_ALL_TIMEOUT_MS })
+			.pipe(tap(() => this.invalidateSourcesAndProxies()));
+	}
+
+	/**
+	 * 启动后台拉取全部：请求挂在 root 服务上，不随页面销毁取消。
+	 * 完成用短 toast（无换行，避免弹阻塞对话框）；关标签页后前端无法再提示，后端仍会继续跑完。
+	 */
+	startBackgroundRefreshAll(): boolean {
+		if (this.refreshingAll()) return false;
+
+		this.refreshingAll.set(true);
+		this.refreshAllSub?.unsubscribe();
+		this.refreshAllSub = this.refreshAll().subscribe({
+			next: (res) => {
+				this.refreshingAll.set(false);
+				this.refreshAllSub = null;
+				void this.dialog[res.failed > 0 ? 'error' : 'success'](this.formatRefreshAllMsg(res));
+			},
+			error: (err: Error) => {
+				this.refreshingAll.set(false);
+				this.refreshAllSub = null;
+				void this.dialog.error(err?.message || '拉取全部失败');
+			},
+		});
+		return true;
+	}
+
+	/** 单行摘要，走 message toast（与 Geo 后台更新同属 DialogService） */
+	private formatRefreshAllMsg(res: RefreshAllResult): string {
+		const total = res.total ?? 0;
+		const ok = res.ok ?? 0;
+		const failed = res.failed ?? 0;
+		if (failed <= 0) return `全部拉取完成：成功 ${ok} / 共 ${total}`;
+		const fails = (res.results || [])
+			.filter((r) => !r.ok)
+			.map((r) => `${r.name}`)
+			.slice(0, 3)
+			.join('、');
+		const more = failed > 3 ? '…' : '';
+		return `全部拉取完成：成功 ${ok}，失败 ${failed} / 共 ${total}${fails ? `（${fails}${more}）` : ''}`;
 	}
 
 	listProxies(sourceId?: number, forceRefresh = false): Observable<ListResponse<ProxyNode>> {

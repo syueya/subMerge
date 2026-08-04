@@ -256,11 +256,6 @@ func migrateSystemCategories(tx *gorm.DB) error {
 		Update("category", systemRuleCategory).Error
 }
 
-// ensureMatchIsLast 兼容旧调用：内部走 ensureSystemRuleOrder。
-func ensureMatchIsLast(tx *gorm.DB) error {
-	return ensureSystemRuleOrder(tx)
-}
-
 // ensureSystemRuleOrder 固定系统规则匹配顺序：
 //  1. 广告 GEOSITE category-ads-all 最先
 //  2. 中间：其余业务规则

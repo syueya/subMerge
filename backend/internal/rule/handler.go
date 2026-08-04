@@ -9,6 +9,7 @@ import (
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/audit"
+	"github.com/submerge/submerge/backend/internal/geo"
 	"github.com/submerge/submerge/backend/internal/middleware"
 )
 
@@ -16,10 +17,34 @@ import (
 type Handler struct {
 	svc   *Service
 	audit *audit.Service
+	geo   *geo.Service
 }
 
-func NewHandler(svc *Service, auditSvc *audit.Service) *Handler {
-	return &Handler{svc: svc, audit: auditSvc}
+func NewHandler(svc *Service, auditSvc *audit.Service, geoSvc *geo.Service) *Handler {
+	return &Handler{svc: svc, audit: auditSvc, geo: geoSvc}
+}
+
+// MatchRules 按调用方传入的规则快照模拟匹配（含 GEOSITE/GEOIP）。
+func (h *Handler) MatchRules(c *gin.Context) {
+	var req struct {
+		Input   string          `json:"input"`
+		Rules   []geo.MatchRule `json:"rules"`
+		Resolve bool            `json:"resolve"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+		return
+	}
+	if h.geo == nil {
+		apiresp.Fail(c, http.StatusServiceUnavailable, "geo_unavailable", "geo service not configured")
+		return
+	}
+	result, err := h.geo.MatchRules(req.Input, req.Rules, req.Resolve)
+	if err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	apiresp.OK(c, result)
 }
 
 func (h *Handler) ListRules(c *gin.Context) {

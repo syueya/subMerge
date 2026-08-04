@@ -61,7 +61,7 @@ type BuildResult struct {
 func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 	warnings := []string{}
 	if len(in.Proxies) == 0 {
-		return nil, fmt.Errorf("no proxies available; refresh sources first")
+		return nil, fmt.Errorf("暂无可用节点，请先添加并刷新订阅源")
 	}
 
 	// 阶段 1：按地区 / 订阅源建立节点索引，供策略组成员展开使用
@@ -80,7 +80,7 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 	groupNames := proj.groupNames
 	groupSet := proj.groupSet
 	if len(proxyGroups) == 0 {
-		return nil, fmt.Errorf("no usable proxy groups after expansion; add nodes or fix REGION:xx refs")
+		return nil, fmt.Errorf("没有可用策略组，请添加节点或检查 REGION/SOURCE 成员引用")
 	}
 
 	// 规则
@@ -92,14 +92,14 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 		target := strings.TrimSpace(r.Target)
 		if _, ok := groupSet[target]; !ok {
 			if strictRules {
-				return nil, fmt.Errorf("rule target %q not found in proxy-groups/DIRECT/REJECT", target)
+				return nil, fmt.Errorf("规则出口「%s」不存在（策略组/DIRECT/REJECT）", target)
 			}
 			fallback := common.TargetDirect
 			if _, ok := groupSet[fallbackProxyGroup]; ok {
 				fallback = fallbackProxyGroup
 			}
 			warnings = append(warnings,
-				fmt.Sprintf("rule target %q missing after filter; fallback to %s", target, fallback))
+				fmt.Sprintf("规则出口「%s」在筛选后不存在，已回退到 %s", target, fallback))
 			r.Target = fallback
 		}
 		line := formatRule(r)
@@ -112,22 +112,22 @@ func (g *Generator) Build(in BuildInput) (*BuildResult, error) {
 		ruleLines = append(ruleLines, line)
 	}
 	if len(ruleLines) == 0 {
-		return nil, fmt.Errorf("no enabled rules")
+		return nil, fmt.Errorf("没有启用的分流规则")
 	}
 	if !hasMatch {
-		return nil, fmt.Errorf("MATCH rule is required and must be last")
+		return nil, fmt.Errorf("必须有 MATCH 兜底规则，且放在最后")
 	}
 	// MATCH 必须在末尾
 	last := ruleLines[len(ruleLines)-1]
 	if !strings.HasPrefix(last, "MATCH,") {
-		return nil, fmt.Errorf("MATCH rule must be the last rule")
+		return nil, fmt.Errorf("MATCH 兜底规则必须放在最后")
 	}
 
 	// 规范化节点字段，避免 yaml 数字变成 float、缺 type 等导致 mihomo 解析失败
 	proxies, droppedReality := sanitizeProxiesForMeta(in.Proxies)
 	if droppedReality > 0 {
 		warnings = append(warnings,
-			fmt.Sprintf("dropped %d proxy(ies) with invalid REALITY short-id", droppedReality))
+			fmt.Sprintf("已丢弃 %d 个 REALITY short-id 无效的节点", droppedReality))
 	}
 	// sanitize 可能丢节点，策略组成员需再滤一次（仅删不存在的节点名；DIRECT/REJECT/组名保留）
 	if droppedReality > 0 {

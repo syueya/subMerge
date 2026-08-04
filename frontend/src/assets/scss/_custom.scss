@@ -75,6 +75,12 @@
     overflow: auto;
   }
 
+  // 内容区内部已有独立滚动区（如表格 max-height）时，关掉外层滚动，避免双滚动条。
+  // 用法：内容根节点加 class="dialog-body-no-scroll"
+  .mat-mdc-dialog-content.dialog-body-no-scroll {
+    overflow: hidden;
+  }
+
   .mat-mdc-dialog-actions {
     flex: 0 0 auto;
   }

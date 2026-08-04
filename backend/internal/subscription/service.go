@@ -21,7 +21,7 @@ import (
 // handler 用 errors.Is 判定为客户端错误（400），而非字符串匹配错误消息。
 var ErrInvalidTokenConfig = errors.New("invalid token config")
 
-// Service 分享令牌与订阅下发
+// Service 订阅链接与订阅下发
 type Service struct {
 	db      *gorm.DB
 	publish *publish.Service

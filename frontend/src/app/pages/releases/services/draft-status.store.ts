@@ -1,5 +1,4 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { draftStatusNote } from '@common/util/format';
 import { DraftChange, DraftStatus } from '@data-struct';
 import { ReleaseService } from './release.service';
 
@@ -21,7 +20,7 @@ export class DraftStatusStore {
 
 	/** 是否有未发布更改 */
 	readonly dirty = computed(() => !!this.state()?.dirty);
-	/** 统一的中文状态文案 */
+	/** 统一的中文状态文案（错误由后端直接返回中文） */
 	readonly note = computed(() => {
 		const s = this.state();
 		return s ? draftStatusNote(s) : '';
@@ -49,6 +48,23 @@ export class DraftStatusStore {
 			},
 		});
 	}
+}
+
+/**
+ * 统一的草稿/发布状态提示文案。规则页、策略组页、发布页共用，避免文案漂移。
+ * buildError 优先（草稿无法生成）；其次未发布过、有未发布更改、已一致。
+ */
+function draftStatusNote(s: DraftStatus): string {
+	if (s.buildError) {
+		return `草稿暂无法生成：${s.buildError}`;
+	}
+	if (!s.hasPublished) {
+		return '尚未发布过配置，订阅链接在发布后才会有内容';
+	}
+	if (s.dirty) {
+		return `有未发布更改（当前生效 v${s.publishedVersion || '?'}）`;
+	}
+	return `已与 v${s.publishedVersion || '?'} 一致`;
 }
 
 /** 把变更列表压成一行中文汇总；无变更返回空串。 */

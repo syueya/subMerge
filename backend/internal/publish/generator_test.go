@@ -482,9 +482,9 @@ func TestGeneratorSourceByName(t *testing.T) {
 	if strings.Contains(res.YAML, "_source_id") || strings.Contains(res.YAML, "_source_name") {
 		t.Fatalf("internal source meta leaked into yaml:\n%s", res.YAML)
 	}
-	// 告警应列出可用源
+// 告警应列出可用源
 	joined := strings.Join(res.Warnings, "\n")
-	if !strings.Contains(joined, "available sources:") {
+	if !strings.Contains(joined, "可用订阅源:") && !strings.Contains(joined, "available sources:") {
 		t.Fatalf("expected available sources warning, got: %v", res.Warnings)
 	}
 }

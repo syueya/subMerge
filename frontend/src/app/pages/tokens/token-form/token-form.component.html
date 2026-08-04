@@ -1,63 +1,78 @@
-<cm-dialog-header modalTitle="创建令牌"></cm-dialog-header>
+<cm-dialog-header [modalTitle]="modalTitle"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
   <div mat-dialog-content>
-    <div class="row">
-      <cm-form-field class="col-24" [help]="'朋友备注名，仅用于管理识别，不会出现在订阅内容中。'">
-        <mat-label>朋友备注名<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
-        <mat-form-field appearance="outline" class="w-full" color="primary">
-          <input matInput type="text" formControlName="name" placeholder="例如：Alice" />
-          <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
-        </mat-form-field>
-      </cm-form-field>
+    @if (isEdit) {
+      <p class="text-muted f-s-12 m-b-16">订阅源决定节点；策略组决定配置里出现哪些组</p>
+    }
 
-      <cm-form-field
-        class="col-24"
-        [help]="'勾选「全部源」时，之后新增的启用源也会自动纳入该链接；否则仅下发勾选的源。'"
-      >
-        <mat-label>包含的订阅源</mat-label>
-        <div class="m-b-8">
-          <mat-checkbox [checked]="allSources()" (change)="setAll($event.checked)">全部源</mat-checkbox>
-        </div>
-        @if (sourceList.length === 0) {
-          <p class="f-s-12 text-muted m-b-16">
-            暂无订阅源；创建后默认为全部源，可在「订阅源」页添加后再编辑令牌。
-          </p>
-        } @else {
-          <mat-card class="cardWithShadow m-b-12">
-            <mat-card-content class="p-16">
-              <div class="d-flex flex-wrap gap-x-16 gap-y-8">
-                @for (src of sourceList; track src.id) {
-                  <mat-checkbox
-                    [checked]="isSourceIdChecked(src.id)"
-                    (change)="toggleSourceId(src.id, $event.checked)"
-                  >
-                    <span class="d-inline-flex align-items-center gap-4">
-                      {{ src.name }}
-                      @if (!src.enabled) {
-                        <span [class]="badgeWarn">已禁用</span>
-                      }
-                      <span class="f-s-12 text-muted">{{ src.proxyCount }} 节点</span>
-                    </span>
-                  </mat-checkbox>
-                }
-              </div>
-            </mat-card-content>
-          </mat-card>
-          @if (allSources()) {
-            <p class="f-s-12 text-muted m-b-16">
-              已全选：包含当前全部源，之后新增的启用源也会自动纳入该链接。
+    <div class="row">
+      @if (!isEdit) {
+        <cm-form-field class="col-24" [help]="'仅用于管理识别，不会出现在订阅内容中。'">
+          <mat-label>名称<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input matInput type="text" formControlName="name" placeholder="例如：Alice" />
+            <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
+          </mat-form-field>
+        </cm-form-field>
+      }
+
+      <div class="col-24 m-b-16">
+        <cm-collapse-panel [expanded]="true">
+          <span cmCollapseTitle class="d-flex align-items-center flex-wrap gap-8">
+            <span class="f-w-600 f-s-14">包含的订阅源</span>
+            @if (sourceList.length) {
+              <span class="f-s-12 text-muted">{{ sourceList.length }} 个</span>
+            }
+          </span>
+          <span cmCollapseDescription class="f-s-12 text-muted">
+            @if (allSources()) {
+              已全选：之后新增的启用源也会自动纳入该链接
+            } @else {
+              仅勾选的源会出现在该订阅链接中
+            }
+          </span>
+          <mat-checkbox
+            cmCollapseAction
+            color="primary"
+            [checked]="allSources()"
+            matTooltip="勾选后包含当前全部源，之后新增的启用源也会自动纳入；取消则仅下发勾选的源。"
+            matTooltipShowDelay="300"
+            (change)="setAll($event.checked)"
+          >
+            全部源
+          </mat-checkbox>
+
+          @if (sourceList.length === 0) {
+            <p class="f-s-12 text-muted m-0">
+              @if (isEdit) {
+                暂无订阅源
+              } @else {
+                暂无订阅源；创建后默认为全部源，可在「订阅源」页添加后再编辑令牌。
+              }
             </p>
           } @else {
-            <p class="f-s-12 text-muted m-b-16">仅勾选的源会出现在该订阅链接中；未勾选源的节点不会下发。</p>
+            <div class="d-flex flex-wrap gap-x-16 gap-y-8">
+              @for (src of sourceList; track src.id) {
+                <mat-checkbox
+                  [checked]="isSourceIdChecked(src.id)"
+                  (change)="toggleSourceId(src.id, $event.checked)"
+                >
+                  <span class="d-inline-flex align-items-center gap-4">
+                    {{ src.name }}
+                    @if (!src.enabled) {
+                      <span [class]="badgeWarn">已禁用</span>
+                    }
+                    <span class="f-s-12 text-muted">{{ src.proxyCount }} 节点</span>
+                  </span>
+                </mat-checkbox>
+              }
+            </div>
           }
-        }
-      </cm-form-field>
+        </cm-collapse-panel>
+      </div>
 
-      <cm-form-field
-        class="col-24"
-        [help]="'自动：按该链接实际节点去掉空地区组（推荐）。\n全部：保留模板中的策略组。\n自定义：只下发勾选的策略组。'"
-      >
+      <cm-form-field class="col-24">
         <mat-label>策略组</mat-label>
         <mat-radio-group
           class="d-flex flex-wrap gap-x-16 gap-y-8 m-b-12"
@@ -65,23 +80,37 @@
           (ngModelChange)="setGroupMode($event)"
           [ngModelOptions]="{ standalone: true }"
         >
-          @for (opt of groupModeOptions; track opt.value) {
-            <mat-radio-button [value]="opt.value" color="primary">{{ opt.text }}</mat-radio-button>
-          }
+          <mat-radio-button
+            value="auto"
+            color="primary"
+            matTooltip="按该链接实际节点去掉空地区组；规则指向被去掉的组时优先回退「节点选择」，否则直连（推荐）。"
+            matTooltipShowDelay="300"
+          >
+            自动
+          </mat-radio-button>
+          <mat-radio-button
+            value="all"
+            color="primary"
+            matTooltip="保留模板里的策略组；没有节点的组会占位为直连。"
+            matTooltipShowDelay="300"
+          >
+            全部
+          </mat-radio-button>
+          <mat-radio-button
+            value="custom"
+            color="primary"
+            matTooltip="只下发勾选的策略组；空组仍会跳过，规则目标缺失同样优先回退「节点选择」。"
+            matTooltipShowDelay="300"
+          >
+            自定义
+          </mat-radio-button>
         </mat-radio-group>
 
-        @if (groupMode() === 'auto') {
-          <p class="f-s-12 text-muted m-b-8">
-            自动：按该链接实际节点去掉空地区组；规则指向被去掉的组时优先回退「节点选择」，否则直连（推荐）。
-          </p>
-        } @else if (groupMode() === 'all') {
-          <p class="f-s-12 text-muted m-b-8">全部：保留模板里的策略组；没有节点的组会占位为直连。</p>
-        } @else {
-          <p class="f-s-12 text-muted m-b-8">
-            自定义：只下发勾选的策略组；空组仍会跳过，规则目标缺失同样优先回退「节点选择」。
-          </p>
+        @if (groupMode() === 'custom') {
           @if (groupList.length === 0) {
-            <p class="f-s-12 text-muted m-b-8">暂无策略组，请先在规则页创建。</p>
+            <p class="f-s-12 text-muted m-b-8">
+              {{ isEdit ? '暂无策略组' : '暂无策略组，请先在规则页创建。' }}
+            </p>
           } @else {
             <mat-card class="cardWithShadow m-b-12">
               <mat-card-content class="p-16">
@@ -106,6 +135,12 @@
         }
       </cm-form-field>
     </div>
+
+    @if (isEdit) {
+      <p class="f-s-12 text-muted">
+        「全部源 + 自动」使用已发布配置快照；指定源或其它策略组模式会按当前规则即时生成。
+      </p>
+    }
   </div>
 </form>
 
@@ -116,6 +151,10 @@
 <div mat-dialog-actions class="text-right p-24 p-t-0">
   <button mat-stroked-button color="primary" type="button" mat-dialog-close>取消</button>
   <button mat-flat-button color="primary" type="button" [disabled]="isSubmitting" (click.debounceTime)="submit()">
-    {{ isSubmitting ? '创建中...' : '创建令牌' }}
+    @if (isEdit) {
+      {{ isSubmitting ? '保存中...' : '保存' }}
+    } @else {
+      {{ isSubmitting ? '创建中...' : '创建令牌' }}
+    }
   </button>
 </div>

@@ -158,6 +158,19 @@ html {
     .mat-mdc-form-field-subscript-wrapper {
       display: none;
     }
+
+    // 窄容器（工具栏等）：Material 默认 infix min-width ~180px 会撑出横向滚动
+    // hide-hint 可挂在外层 div 或 mat-form-field 自身
+    .mat-mdc-form-field-infix,
+    &.mat-mdc-form-field .mat-mdc-form-field-infix {
+      min-width: 0 !important;
+    }
+
+    .mat-mdc-form-field,
+    &.mat-mdc-form-field {
+      width: 100%;
+      min-width: 0;
+    }
   }
 
   .mat-mdc-text-field-wrapper .mat-mdc-form-field-flex .mat-mdc-floating-label {

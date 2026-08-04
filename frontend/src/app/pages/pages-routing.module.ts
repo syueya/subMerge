@@ -45,6 +45,16 @@ const routes: Routes = [
   {
     path: 'account-setting',
     loadChildren: () => import('./account-setting/account-setting.module').then(m => m.AccountSettingModule)
+  },
+  {
+    path: 'settings',
+    loadChildren: () => import('./settings/settings.module').then(m => m.SettingsModule)
+  },
+  // 快捷入口：/main/logs → 系统日志
+  {
+    path: 'logs',
+    loadChildren: () =>
+      import('./settings/setting-logs/setting-logs.module').then(m => m.SettingLogsModule)
   }
 ];
 

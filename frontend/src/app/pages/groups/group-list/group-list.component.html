@@ -21,53 +21,59 @@
   </cm-page-toolbar>
 
   <mat-card class="cardWithShadow page-fill__body">
-    <mat-card-content class="p-16 page-fill__scroll">
-      <span class="f-s-12 text-muted">共 {{ groups().length }} 个策略组</span>
-      <mat-divider class="m-y-12"></mat-divider>
-
-      @if (isLoading) {
-        <div class="d-flex justify-content-center p-24">
-          <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
+    <mat-card-content class="p-16 page-fill__panel">
+      <div class="page-fill__fixed">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-b-4">
+          <span class="f-s-12 text-muted">共 {{ groups().length }} 个策略组</span>
         </div>
-      } @else if (groups().length === 0) {
-        <cm-no-data noDataTitle="暂无策略组，请先新增"></cm-no-data>
-      } @else {
-        @for (g of groups(); track g.id; let last = $last) {
-          <div class="d-flex flex-wrap align-items-start justify-content-between gap-12 p-12" [class.b-b-1]="!last">
-            <div class="flex-1">
-              <div class="d-flex flex-wrap align-items-center gap-8 m-b-8">
-                <span class="f-w-600 f-s-16">{{ g.name }}</span>
-                @if (!g.enabled) {
-                  <span [class]="badgeWarn">已禁用</span>
-                }
-                <span [class]="groupTypeBadgeClass(g.type)" [title]="groupTypeTip(g.type)">
-                  {{ groupTypeText(g.type) }}
-                </span>
-                @if (g.type === 'url-test' || g.type === 'fallback') {
-                  <span [class]="groupTypeBadgeClass(g.type)" title="测速间隔">
-                    {{ g.interval ?? defaultTestInterval }}s
-                  </span>
-                }
-                <span class="text-muted f-s-12">引用规则 {{ rulesOfGroup(g.name) }}</span>
-              </div>
-              <div class="f-s-12 text-muted">
-                成员：{{ g.proxies.join(', ') || '（空）' }}
-                @if ((g.type === 'url-test' || g.type === 'fallback') && g.url) {
-                  <span class="m-l-8">· 测速 {{ g.url }}</span>
-                }
-              </div>
-            </div>
-            <div class="d-flex gap-4">
-              <button mat-icon-button color="primary" type="button" matTooltip="编辑" (click.debounceTime)="openEditGroup(g)">
-                <i-tabler name="edit" class="icon-24 d-flex align-items-center"></i-tabler>
-              </button>
-              <button mat-icon-button color="warn" type="button" matTooltip="删除" (click.debounceTime)="removeGroup(g)">
-                <i-tabler name="trash" class="icon-24 d-flex align-items-center"></i-tabler>
-              </button>
-            </div>
+        <mat-divider class="m-y-12"></mat-divider>
+      </div>
+
+      <div class="page-fill__scroll">
+        @if (isLoading) {
+          <div class="d-flex justify-content-center p-24">
+            <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
           </div>
+        } @else if (groups().length === 0) {
+          <cm-no-data noDataTitle="暂无策略组，请先新增"></cm-no-data>
+        } @else {
+          @for (g of groups(); track g.id; let last = $last) {
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-12 p-12" [class.b-b-1]="!last">
+              <div class="flex-1">
+                <div class="d-flex flex-wrap align-items-center gap-8 m-b-8">
+                  <span class="f-w-600 f-s-16">{{ g.name }}</span>
+                  @if (!g.enabled) {
+                    <span [class]="badgeWarn">已禁用</span>
+                  }
+                  <span [class]="groupTypeBadgeClass(g.type)" [title]="groupTypeTip(g.type)">
+                    {{ groupTypeText(g.type) }}
+                  </span>
+                  @if (g.type === 'url-test' || g.type === 'fallback') {
+                    <span [class]="groupTypeBadgeClass(g.type)" title="测速间隔">
+                      {{ g.interval ?? defaultTestInterval }}s
+                    </span>
+                  }
+                  <span class="text-muted f-s-12">引用规则 {{ rulesOfGroup(g.name) }}</span>
+                </div>
+                <div class="f-s-12 text-muted">
+                  成员：{{ g.proxies.join(', ') || '（空）' }}
+                  @if ((g.type === 'url-test' || g.type === 'fallback') && g.url) {
+                    <span class="m-l-8">· 测速 {{ g.url }}</span>
+                  }
+                </div>
+              </div>
+              <div class="d-flex gap-4">
+                <button mat-icon-button color="primary" type="button" matTooltip="编辑" (click.debounceTime)="openEditGroup(g)">
+                  <i-tabler name="edit" class="icon-24 d-flex align-items-center"></i-tabler>
+                </button>
+                <button mat-icon-button color="warn" type="button" matTooltip="删除" (click.debounceTime)="removeGroup(g)">
+                  <i-tabler name="trash" class="icon-24 d-flex align-items-center"></i-tabler>
+                </button>
+              </div>
+            </div>
+          }
         }
-      }
+      </div>
     </mat-card-content>
   </mat-card>
 </div>

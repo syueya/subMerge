@@ -8,22 +8,20 @@ import {
 		SubscriptionSource,
 		TOKEN_STATUS_BADGE,
 		TOKEN_STATUS_OPTIONS,
-		TokenEditDialogData,
-		TokenFormDialogData,
-		TokenStatus,
-		enumBadgeClass,
-		enumText,
-	} from '@data-struct';
-	import { DialogService } from '@common/services/dialog.service';
-	import { formatDateTime } from '@common/util/format';
-	import { RuleService } from '../../rules/services/rule.service';
-	import { SourceService } from '../../sources/services/source.service';
-	import { TokenService } from '../services/token.service';
-	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-	import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-	import { finalize, takeUntil } from 'rxjs';
-	import { TokenEditComponent } from '../token-edit/token-edit.component';
-	import { TokenFormComponent } from '../token-form/token-form.component';
+TokenFormDialogData,
+			TokenStatus,
+			enumBadgeClass,
+			enumText,
+		} from '@data-struct';
+		import { DialogService } from '@common/services/dialog.service';
+		import { formatDateTime } from '@common/util/format';
+		import { RuleService } from '../../rules/services/rule.service';
+		import { SourceService } from '../../sources/services/source.service';
+		import { TokenService } from '../services/token.service';
+		import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+		import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+		import { finalize, takeUntil } from 'rxjs';
+		import { TokenFormComponent } from '../token-form/token-form.component';
 
 @Component({
 	selector: 'app-token-list',
@@ -38,15 +36,14 @@ export class TokenListComponent extends CmParentTableComponent implements AfterV
 	private dialogOpen = inject(CmDialogOpenService);
 
 	dataSource = new MatTableDataSource<ShareToken>([]);
-	override displayedColumns: string[] = [
-		'status',
-		'name',
-		'sources',
-		'groups',
-		'url',
-		'access',
-		'action',
-	];
+override displayedColumns: string[] = [
+			'name',
+			'sources',
+			'groups',
+			'url',
+			'access',
+			'action',
+		];
 
 	busy = signal(false);
 	sourceList = signal<SubscriptionSource[]>([]);
@@ -171,32 +168,32 @@ export class TokenListComponent extends CmParentTableComponent implements AfterV
 		return names.length ? names.join('\n') : '自定义（未选组）';
 	}
 
-	openCreate(): void {
-		const data: TokenFormDialogData = {
-			sourceList: this.sourceList(),
-			groupList: this.groupList(),
-		};
-		const ref = this.dialogOpen.openForm(TokenFormComponent, data, {
-			width: CM_DIALOG_WIDTH.form,
-		});
-		ref.afterClosed().subscribe((ok) => {
-			if (ok) this.reloadTableDataByFirstPage();
-		});
-	}
+openCreate(): void {
+			const data: TokenFormDialogData = {
+				sourceList: this.sourceList(),
+				groupList: this.groupList(),
+			};
+			const ref = this.dialogOpen.openForm(TokenFormComponent, data, {
+				width: CM_DIALOG_WIDTH.form,
+			});
+			ref.afterClosed().subscribe((ok) => {
+				if (ok) this.reloadTableDataByFirstPage();
+			});
+		}
 
-	openEdit(item: ShareToken): void {
-		const data: TokenEditDialogData = {
-			token: item,
-			sourceList: this.sourceList(),
-			groupList: this.groupList(),
-		};
-		const ref = this.dialogOpen.openForm(TokenEditComponent, data, {
-			width: CM_DIALOG_WIDTH.form,
-		});
-		ref.afterClosed().subscribe((ok) => {
-			if (ok) this.reloadTableDataByFirstPage();
-		});
-	}
+		openEdit(item: ShareToken): void {
+			const data: TokenFormDialogData = {
+				token: item,
+				sourceList: this.sourceList(),
+				groupList: this.groupList(),
+			};
+			const ref = this.dialogOpen.openForm(TokenFormComponent, data, {
+				width: CM_DIALOG_WIDTH.form,
+			});
+			ref.afterClosed().subscribe((ok) => {
+				if (ok) this.reloadTableDataByFirstPage();
+			});
+		}
 
 	disable(item: ShareToken): void {
 		this.busy.set(true);

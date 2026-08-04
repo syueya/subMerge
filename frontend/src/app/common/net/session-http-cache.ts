@@ -177,23 +177,26 @@ export class SessionHttpCacheService {
     if (/\/(login|bootstrap|logout|setup-status|register|initAdminStatus)(\/|$)/.test(path)) {
       return false;
     }
-    // SubMerge 列表多为 GET /api/sources|/rules|/groups|/tokens|/releases|/proxies|/regions|/audit
-    if (
-      path === '/api/sources' ||
-      path === '/api/rules' ||
-      path === '/api/groups' ||
-      path === '/api/tokens' ||
-      path === '/api/releases' ||
-      path === '/api/proxies' ||
-      path === '/api/regions' ||
-      path === '/api/audit' ||
-      path === '/api/geo/status' ||
-      path === '/api/geo/categories' ||
-      path === '/api/auth/me' ||
-      path === '/api/health'
-    ) {
-      return true;
-    }
+	    // SubMerge 列表多为 GET /api/sources|/rules|/groups|/tokens|/apikeys|/releases|/proxies|/regions|/audit|/logs
+	    if (
+	      path === '/api/sources' ||
+	      path === '/api/rules' ||
+	      path === '/api/groups' ||
+	      path === '/api/tokens' ||
+	      path === '/api/apikeys' ||
+	      path === '/api/releases' ||
+	      path === '/api/proxies' ||
+	      path === '/api/regions' ||
+	      path === '/api/audit' ||
+	      path === '/api/logs' ||
+	      path === '/api/logs/details' ||
+	      path === '/api/geo/status' ||
+	      path === '/api/geo/categories' ||
+	      path === '/api/auth/me' ||
+	      path === '/api/health'
+	    ) {
+	      return true;
+	    }
     return (
       path.endsWith('/list') ||
       path.endsWith('/details') ||

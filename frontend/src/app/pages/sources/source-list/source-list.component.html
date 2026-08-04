@@ -1,7 +1,4 @@
-<cm-page-toolbar
-  title="订阅源"
-  description="添加机场 Clash 订阅，加密保存；拉取后按地区前缀合并节点。URL 仅脱敏展示。"
->
+<cm-page-toolbar title="订阅源" description="添加机场 Clash 订阅，拉取后按地区前缀合并节点。URL 仅脱敏展示。">
   <button mat-icon-button color="primary" type="button" matTooltip="刷新" [disabled]="isLoading"
     (click.debounceTime)="reloadTableDataByPage()">
     <i-tabler class="icon-20" name="refresh"></i-tabler>
@@ -15,10 +12,10 @@
     </button>
   }
   <button mat-stroked-button color="primary" type="button"
-    [disabled]="busy() || dataSource.data.length === 0"
+    [disabled]="busy() || refreshingAll() || dataSource.data.length === 0"
     (click.debounceTime)="refreshAll()"
   >
-    拉取全部
+    {{ refreshingAll() ? '拉取中…' : '拉取全部' }}
   </button>
   <button mat-flat-button color="primary" type="button" [disabled]="busy()" (click.debounceTime)="openCreate()">
     新增源
@@ -63,7 +60,7 @@
         </div>
       </div>
       <div class="d-flex justify-content-center gap-8 m-b-16">
-        <button mat-icon-button color="primary" type="button" matTooltip="拉取" [disabled]="busy()" (click.debounceTime)="refresh(row)">
+        <button mat-icon-button color="primary" type="button" matTooltip="拉取" [disabled]="busy() || refreshingAll()" (click.debounceTime)="refresh(row)">
           <i-tabler name="cloud-download" class="icon-24 d-flex align-items-center"></i-tabler>
         </button>
         <button mat-icon-button color="primary" type="button" matTooltip="节点" (click.debounceTime)="openProxies(row)">
@@ -120,9 +117,7 @@
       <ng-container matColumnDef="nodes">
         <th mat-header-cell *matHeaderCellDef>节点</th>
         <td mat-cell *matCellDef="let row">
-          <button mat-stroked-button color="primary" type="button" (click.debounceTime)="openProxies(row)">
-            {{ row.proxyCount }}
-          </button>
+          {{ row.proxyCount }}
         </td>
       </ng-container>
 
@@ -153,10 +148,10 @@
       <ng-container matColumnDef="status">
         <th mat-header-cell *matHeaderCellDef>状态</th>
         <td mat-cell *matCellDef="let row" class="f-s-14">
-          <div class="d-flex flex-wrap align-items-center gap-8">
+          <div>
             <span [class]="statusClass(row.refreshStatus)">{{ statusText(row.refreshStatus) }}</span>
-            <span class="f-s-12 text-muted" [title]="row.lastRefreshAt || ''">{{ formatTime(row.lastRefreshAt) }}</span>
           </div>
+          <div class="f-s-12 text-muted m-t-4" [title]="row.lastRefreshAt || ''">{{ formatTime(row.lastRefreshAt) }}</div>
           @if (row.lastError) {
             <div class="f-s-12 text-error m-t-4" [title]="row.lastError">{{ row.lastError }}</div>
           }
@@ -166,7 +161,7 @@
       <ng-container matColumnDef="action" stickyEnd>
         <th mat-header-cell *matHeaderCellDef>操作</th>
         <td mat-cell *matCellDef="let row">
-          <button mat-icon-button color="primary" type="button" matTooltip="拉取" [disabled]="busy()" (click.debounceTime)="refresh(row)">
+          <button mat-icon-button color="primary" type="button" matTooltip="拉取" [disabled]="busy() || refreshingAll()" (click.debounceTime)="refresh(row)">
             <i-tabler name="cloud-download" class="icon-24 d-flex align-items-center"></i-tabler>
           </button>
           <button mat-icon-button color="primary" type="button" matTooltip="节点" (click.debounceTime)="openProxies(row)">

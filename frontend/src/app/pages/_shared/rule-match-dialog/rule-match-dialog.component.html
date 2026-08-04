@@ -14,18 +14,35 @@
           (keydown.enter)="$event.preventDefault(); runTest()"
         />
       </mat-form-field>
-      <button formFieldAction mat-flat-button color="primary" type="button" (click.debounceTime)="runTest()">
-        测试
+      <button
+        formFieldAction
+        mat-flat-button
+        color="primary"
+        type="button"
+        [disabled]="testing()"
+        (click.debounceTime)="runTest()"
+      >
+        {{ testing() ? '测试中…' : '测试' }}
       </button>
     </cm-form-field>
 
-    <div class="d-flex flex-wrap gap-8 m-y-16">
-      @for (ex of testExamples; track ex) {
-        <button mat-stroked-button color="primary" type="button" (click.debounceTime)="useExample(ex)">
-          {{ ex }}
-        </button>
-      }
+    <div class="m-y-16">
+      <mat-chip-listbox
+        class="example-chip-list"
+        aria-label="示例域名"
+        [disabled]="testing()"
+        [value]="selectedExample"
+        (change)="onExampleChipChange($event)"
+      >
+        @for (ex of testExamples; track ex) {
+          <mat-chip-option [value]="ex">{{ ex }}</mat-chip-option>
+        }
+      </mat-chip-listbox>
     </div>
+
+    @if (testing() && !testResult()) {
+      <span class="text-muted f-s-14">正在匹配…</span>
+    }
 
     @if (testResult(); as r) {
       <mat-card class="cardWithShadow m-b-16">
@@ -46,25 +63,24 @@
           </div>
 
           @if ((r.matched || isFallbackMatch(r)) && r.rule) {
-            <!-- 命中 / MATCH 兜底：只展示规则详情，不再显示「命中域名精确匹配」等说明句 -->
             <div class="m-b-8">
               <div class="row">
-                <div class="col-24 col-md-8 m-b-8">
+                <div [class]="r.geoHit ? 'col-24 col-md-6 m-b-8' : 'col-24 col-md-8 m-b-8'">
                   <div class="f-s-12 text-muted">规则类型</div>
                   <div class="f-s-14 f-w-600">{{ typeText(r.rule!.type) }}</div>
                 </div>
-                <div class="col-24 col-md-8 m-b-8">
+                <div [class]="r.geoHit ? 'col-24 col-md-6 m-b-8' : 'col-24 col-md-8 m-b-8'">
                   <div class="f-s-12 text-muted">匹配内容</div>
                   <div class="f-s-14">{{ r.rule!.payload || (isFallbackMatch(r) ? '（MATCH 无 payload）' : '—') }}</div>
                 </div>
-                <div class="col-24 col-md-8 m-b-8">
+                <div [class]="r.geoHit ? 'col-24 col-md-6 m-b-8' : 'col-24 col-md-8 m-b-8'">
                   <div class="f-s-12 text-muted">目标出口</div>
                   <div class="f-s-14 f-w-600 text-primary">{{ targetText(r.rule!.target) }}</div>
                 </div>
-                @if (r.rule!.raw) {
-                  <div class="col-24 m-b-8">
-                    <div class="f-s-12 text-muted">原文</div>
-                    <div class="f-s-12 text-muted">{{ r.rule!.raw }}</div>
+                @if (r.geoHit) {
+                  <div class="col-24 col-md-6 m-b-8">
+                    <div class="f-s-12 text-muted">Geo 命中</div>
+                    <div class="f-s-14">{{ geoHitText(r) }}</div>
                   </div>
                 }
               </div>

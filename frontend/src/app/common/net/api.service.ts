@@ -1,7 +1,16 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { ApiResponse } from '@data-struct';
+
+export interface ApiRequestOptions {
+	/** 前端 RxJS 超时（ms）；经 timeout 请求头传给 defaultInterceptor，出网前会剥离 */
+	timeoutMs?: number;
+	/** 查询参数 */
+	params?: HttpParams | Record<string, string | number | boolean | readonly (string | number | boolean)[]>;
+	/** 透传 HttpContext（如会话读缓存 bypass） */
+	context?: HttpContext;
+}
 
 /**
  * 管理端 JSON API 封装。
@@ -16,40 +25,64 @@ export class ApiService {
 	private readonly base = '/api';
 	private readonly jsonHeaders = new HttpHeaders({ 'Content-Type': 'application/json' });
 
-	get<T>(path: string): Observable<T> {
+	get<T>(path: string, options?: ApiRequestOptions): Observable<T> {
 		return this.http
-			.get<ApiResponse<T>>(this.base + path, { headers: this.jsonHeaders })
+			.get<ApiResponse<T>>(this.base + path, {
+				headers: this.headers(options),
+				params: options?.params,
+				context: options?.context,
+			})
 			.pipe(
 				map((r) => this.unwrap(r)),
 				catchError((e) => this.handle(e)),
 			);
 	}
 
-	post<T>(path: string, body?: unknown): Observable<T> {
+	post<T>(path: string, body?: unknown, options?: ApiRequestOptions): Observable<T> {
 		return this.http
-			.post<ApiResponse<T>>(this.base + path, body ?? {}, { headers: this.jsonHeaders })
+			.post<ApiResponse<T>>(this.base + path, body ?? {}, {
+				headers: this.headers(options),
+				params: options?.params,
+				context: options?.context,
+			})
 			.pipe(
 				map((r) => this.unwrap(r)),
 				catchError((e) => this.handle(e)),
 			);
 	}
 
-	put<T>(path: string, body?: unknown): Observable<T> {
+	put<T>(path: string, body?: unknown, options?: ApiRequestOptions): Observable<T> {
 		return this.http
-			.put<ApiResponse<T>>(this.base + path, body ?? {}, { headers: this.jsonHeaders })
+			.put<ApiResponse<T>>(this.base + path, body ?? {}, {
+				headers: this.headers(options),
+				params: options?.params,
+				context: options?.context,
+			})
 			.pipe(
 				map((r) => this.unwrap(r)),
 				catchError((e) => this.handle(e)),
 			);
 	}
 
-	delete<T>(path: string): Observable<T> {
+	delete<T>(path: string, options?: ApiRequestOptions): Observable<T> {
 		return this.http
-			.delete<ApiResponse<T>>(this.base + path, { headers: this.jsonHeaders })
+			.delete<ApiResponse<T>>(this.base + path, {
+				headers: this.headers(options),
+				params: options?.params,
+				context: options?.context,
+			})
 			.pipe(
 				map((r) => this.unwrap(r)),
 				catchError((e) => this.handle(e)),
 			);
+	}
+
+	private headers(options?: ApiRequestOptions): HttpHeaders {
+		let h = this.jsonHeaders;
+		if (options?.timeoutMs != null && options.timeoutMs > 0) {
+			h = h.set('timeout', String(options.timeoutMs));
+		}
+		return h;
 	}
 
 	private unwrap<T>(r: ApiResponse<T>): T {

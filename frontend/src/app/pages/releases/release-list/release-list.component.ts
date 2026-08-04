@@ -216,7 +216,7 @@ draftDirty = this.draftStore.dirty;
 				next: (d) => {
 					const data: RuleMatchDialogData = {
 						title: `测试 v${d.version} 规则`,
-						subtitle: `v${d.version} · 按该版本已发布规则从上到下模拟匹配。支持域名；IP 仅 IP-CIDR；GEOSITE/GEOIP 浏览器侧会跳过。`,
+						subtitle: `v${d.version} · 按该版本已发布规则从上到下由服务端模拟匹配（含 GEOSITE/GEOIP）。`,
 						rules: this.toMatchRules(d.rules || []),
 						typeText: (t) => t,
 						targetText: (t) => t,

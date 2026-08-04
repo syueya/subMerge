@@ -1,14 +1,13 @@
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
-import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, DestroyRef, ViewChild, inject } from '@angular/core';
 import { FormBuilder, FormControl } from '@angular/forms';
-import { HttpRespone, ServiceQueryParams } from '@common/interfaces';
-import { withWtHttpCacheBypass } from '@common/net';
+import { ServiceQueryParams } from '@common/interfaces';
 import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
 import { formatDate } from '@common/util';
-import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, takeUntil, timeout } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, takeUntil } from 'rxjs';
 
-import { SystemLogs, SystemLogsContent, SystemLogsType, SystemLogsTypeData } from '@data-struct';
+import { SystemLogs, SystemLogsType } from '@data-struct';
+import { LogService } from '../services/log.service';
 
 @Component({
   standalone: false,
@@ -17,18 +16,31 @@ import { SystemLogs, SystemLogsContent, SystemLogsType, SystemLogsTypeData } fro
 })
 export class SettingLogsComponent extends CmParentTableComponent {
   private fb = inject(FormBuilder);
-  private httpClient = inject(HttpClient);
+  private logService = inject(LogService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
   private viewDestroyed = false;
 
   sidePanelOpened = true;
   systemLogsTypeList: SystemLogsType[] = [];
+  /** 接口返回的完整日志（未按等级过滤） */
+  private allSystemLogsList: SystemLogs[] = [];
+  /** 展示用（已按等级过滤） */
   systemLogsList: SystemLogs[] = [];
   selectedType: SystemLogsType | null = null;
   lineList = [50, 100, 200, 500, 1000];
   lineSelected = 100;
   lineFormControl = new FormControl();
+  // subMerge 实际等级：info|warn|error|debug（见 backend applog / LogEntry 注释）
+  levelList = [
+    { value: '', label: '全部' },
+    { value: 'error', label: 'error' },
+    { value: 'warn', label: 'warn' },
+    { value: 'info', label: 'info' },
+    { value: 'debug', label: 'debug' }
+  ];
+  levelSelected = '';
+  levelFormControl = new FormControl('');
 
   @ViewChild(CdkVirtualScrollViewport) viewport!: CdkVirtualScrollViewport;
 
@@ -60,7 +72,11 @@ export class SettingLogsComponent extends CmParentTableComponent {
 
     this.lineSelected = Number(localStorage.getItem('wt_log_system_defaultLine')) || 100;
     this.lineFormControl.setValue(this.lineSelected);
+    // 等级默认「全部」，不持久化
+    this.levelSelected = '';
+    this.levelFormControl.setValue('');
     this.getSelectedLine();
+    this.getSelectedLevel();
   }
 
   override handlerAfterViewInit() {
@@ -71,11 +87,13 @@ export class SettingLogsComponent extends CmParentTableComponent {
   override reloadTableData(_query?: ServiceQueryParams, _sort?: unknown, options?: { bypassCache?: boolean }): void {
     const name = this.selectedType?.name || this.systemLogsTypeList[0]?.name;
     if (!name) {
+      this.allSystemLogsList = [];
       this.systemLogsList = [];
       this.finishLoading();
       return;
     }
 
+    this.allSystemLogsList = [];
     this.systemLogsList = [];
     this.logLoadError = false;
     this.isLoadingLogs = true;
@@ -84,7 +102,6 @@ export class SettingLogsComponent extends CmParentTableComponent {
     this.loadLogDetails(name, this.lineSelected, options?.bypassCache === true)
       .pipe(
         takeUntil(this.$destroy),
-        timeout(15000),
         catchError(() => {
           if (requestId === this.logRequestId) {
             this.logLoadError = true;
@@ -101,7 +118,8 @@ export class SettingLogsComponent extends CmParentTableComponent {
         if (requestId !== this.logRequestId) {
           return;
         }
-        this.systemLogsList = list;
+        this.allSystemLogsList = list;
+        this.applyLevelFilter();
         queueMicrotask(() => this.viewport?.checkViewportSize());
       });
   }
@@ -112,17 +130,14 @@ export class SettingLogsComponent extends CmParentTableComponent {
     this.logRequestId++;
     this.logLoadError = false;
     this.isLoadingLogs = true;
+    this.allSystemLogsList = [];
     this.systemLogsList = [];
 
-    this.httpClient
-      .get<HttpRespone<SystemLogsTypeData>>('/api/v1/logs/list', {
-        params: value ? { name: value } : undefined,
-        context: options?.bypassCache ? withWtHttpCacheBypass() : undefined
-      })
+    this.logService
+      .list(value || '', options?.bypassCache === true)
       .pipe(
         takeUntil(this.$destroy),
-        timeout(15000),
-        map(res => (res.code === 20000 ? res.data?.files || [] : [])),
+        map(data => data?.files || []),
         catchError(() => {
           if (requestId === this.logTypeRequestId) {
             this.logLoadError = true;
@@ -143,6 +158,7 @@ export class SettingLogsComponent extends CmParentTableComponent {
             this.reloadTableData(undefined, undefined, { bypassCache: options?.bypassCache === true });
             return;
           }
+          this.allSystemLogsList = [];
           this.systemLogsList = [];
           this.finishLoading();
         },
@@ -154,32 +170,44 @@ export class SettingLogsComponent extends CmParentTableComponent {
       });
   }
 
+  /** 按等级过滤已加载日志（不重新请求） */
+  private applyLevelFilter(): void {
+    const level = (this.levelSelected || '').toLowerCase();
+    if (!level) {
+      this.systemLogsList = this.allSystemLogsList;
+      return;
+    }
+    this.systemLogsList = this.allSystemLogsList.filter(item => {
+      const itemLevel = (item.level || '').toLowerCase();
+      if (level === 'warn') {
+        return itemLevel === 'warn' || itemLevel === 'warning';
+      }
+      return itemLevel === level;
+    });
+  }
+
   private loadLogDetails(name: string, line: number, bypassCache = false) {
-    return this.httpClient
-      .get<HttpRespone<SystemLogsContent>>('/api/v1/logs/details', {
-        params: { name, line },
-        context: bypassCache ? withWtHttpCacheBypass() : undefined
-      })
-      .pipe(
-        map(res => {
-          if (res.code !== 20000 || !res.data?.items?.length) {
-            return [] as SystemLogs[];
+    return this.logService.details(name, line, bypassCache).pipe(
+      map(data => {
+        const items = data?.items || [];
+        if (!items.length) {
+          return [] as SystemLogs[];
+        }
+        return items.map((item: SystemLogs) => {
+          let timestampStr = '';
+          try {
+            timestampStr = item.timestamp ? formatDate(item.timestamp, 'yyyy-MM-dd HH:mm:ss') : '';
+          } catch {
+            timestampStr = item.timestamp ? String(item.timestamp) : '';
           }
-          return res.data.items.map((item: SystemLogs) => {
-            let timestampStr = '';
-            try {
-              timestampStr = item.timestamp ? formatDate(item.timestamp, 'yyyy-MM-dd HH:mm:ss') : '';
-            } catch {
-              timestampStr = item.timestamp ? String(item.timestamp) : '';
-            }
-            return {
-              ...item,
-              timestampStr,
-              colorClass: this.getLevelClass(item.level)
-            };
-          });
-        })
-      );
+          return {
+            ...item,
+            timestampStr,
+            colorClass: this.getLevelClass(item.level)
+          };
+        });
+      })
+    );
   }
 
   private finishLoading() {
@@ -207,6 +235,15 @@ export class SettingLogsComponent extends CmParentTableComponent {
     });
   }
 
+  getSelectedLevel() {
+    this.levelFormControl.valueChanges.pipe(takeUntil(this.$destroy)).subscribe(value => {
+      this.levelSelected = value || '';
+      this.applyLevelFilter();
+      this.viewport?.scrollToIndex(0);
+      queueMicrotask(() => this.viewport?.checkViewportSize());
+    });
+  }
+
   selectType(type: SystemLogsType | null = null): void {
     this.selectedType = type;
     this.viewport?.scrollToIndex(0);
@@ -223,17 +260,16 @@ export class SettingLogsComponent extends CmParentTableComponent {
   }
 
   getLevelClass(level: string) {
-    switch (level) {
+    switch ((level || '').toLowerCase()) {
       case 'error':
         return 'level-error';
+      case 'warn':
+      case 'warning':
+        return 'level-warn';
       case 'info':
         return 'level-info';
       case 'debug':
         return 'level-debug';
-      case 'slow':
-        return 'level-slow';
-      case 'fatal':
-        return 'level-fatal';
       default:
         return '';
     }

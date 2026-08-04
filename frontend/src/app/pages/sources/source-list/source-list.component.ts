@@ -1,35 +1,35 @@
-import { AfterViewInit, Component, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import {
-		BADGE_MUTED,
-		BADGE_WARN,
-		FALLBACK_REGION,
-		REFRESH_STATUS_BADGE,
-		REFRESH_STATUS_OPTIONS,
-		RegionCatalogEntry,
-		SourceFormDialogData,
-		SourceProxiesDialogData,
-		SubscriptionSource,
-		enumBadgeClass,
-		enumText,
-		regionOptionText,
-	} from '@data-struct';
-	import { DialogService } from '@common/services/dialog.service';
-	import { formatDateTime } from '@common/util/format';
-	import { SourceService } from '../services/source.service';
-	import { formatRefreshMsg } from '../services/source-refresh.util';
-	import {
-		hasTraffic,
-		trafficExpireText,
-		trafficPercent,
-		trafficText,
-		trafficTitle,
-	} from '../services/source-traffic.util';
-	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-	import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-	import { finalize, takeUntil } from 'rxjs';
-	import { SourceFormComponent } from '../source-form/source-form.component';
-	import { SourceProxiesComponent } from '../source-proxies/source-proxies.component';
+	BADGE_MUTED,
+	BADGE_WARN,
+	FALLBACK_REGION,
+	REFRESH_STATUS_BADGE,
+	REFRESH_STATUS_OPTIONS,
+	RegionCatalogEntry,
+	SourceFormDialogData,
+	SourceProxiesDialogData,
+	SubscriptionSource,
+	enumBadgeClass,
+	enumText,
+	regionOptionText,
+} from '@data-struct';
+import { DialogService } from '@common/services/dialog.service';
+import { formatDateTime } from '@common/util/format';
+import { SourceService } from '../services/source.service';
+import { formatRefreshMsg } from '../services/source-refresh.util';
+import {
+	hasTraffic,
+	trafficExpireText,
+	trafficPercent,
+	trafficText,
+	trafficTitle,
+} from '../services/source-traffic.util';
+import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+import { finalize, firstValueFrom, takeUntil } from 'rxjs';
+import { SourceFormComponent } from '../source-form/source-form.component';
+import { SourceProxiesComponent } from '../source-proxies/source-proxies.component';
 
 @Component({
 	selector: 'app-source-list',
@@ -40,6 +40,7 @@ export class SourceListComponent extends CmParentTableComponent implements After
 	private svc = inject(SourceService);
 	private dialog = inject(DialogService);
 	private dialogOpen = inject(CmDialogOpenService);
+	private cdr = inject(ChangeDetectorRef);
 
 	dataSource = new MatTableDataSource<SubscriptionSource>([]);
 	override displayedColumns: string[] = [
@@ -52,6 +53,8 @@ export class SourceListComponent extends CmParentTableComponent implements After
 	];
 
 	busy = signal(false);
+	/** 后台拉取全部状态来自 SourceService，跨路由共享 */
+	readonly refreshingAll = this.svc.refreshingAll;
 	selectedIds = signal<Set<number>>(new Set());
 	regionCatalog = signal<RegionCatalogEntry[]>([]);
 	fallbackRegion = signal(FALLBACK_REGION);
@@ -79,9 +82,19 @@ export class SourceListComponent extends CmParentTableComponent implements After
 		return n > 0 && !this.allSelected();
 	});
 
+	private wasRefreshingAll = false;
+
 	constructor() {
 		super();
 		this.rememberPageSize(this.constructor.name);
+		// 后台拉取全部结束后若仍在本页，自动刷新列表状态/节点数
+		effect(() => {
+			const busy = this.refreshingAll();
+			if (this.wasRefreshingAll && !busy) {
+				this.reloadTableDataByFirstPage();
+			}
+			this.wasRefreshingAll = busy;
+		});
 	}
 
 	override handlerAfterViewInit(): void {
@@ -105,29 +118,49 @@ export class SourceListComponent extends CmParentTableComponent implements After
 	}
 
 	override reloadTableData(): void {
+		void this.reloadTableDataAsync();
+	}
+
+	/** 列表刷新；在弹窗打开期间完成时也强制刷新视图，避免 isLoading 遮罩卡住 */
+	private reloadTableDataAsync(): Promise<void> {
 		this.isLoading = true;
-		this.svc
-			.list(true)
-			.pipe(
-				takeUntil(this.$destroy),
-				finalize(() => (this.isLoading = false)),
-			)
-			.subscribe({
-				next: (res) => {
-					const list = res.items || [];
-					this.dataSource.data = list;
-					this.paginatorProps.length = list.length;
-					const valid = new Set(list.map((i) => i.id));
-					this.selectedIds.update((prev) => {
-						const next = new Set<number>();
-						for (const id of prev) {
-							if (valid.has(id)) next.add(id);
-						}
-						return next;
-					});
-				},
-				error: (err: Error) => void this.dialog.error(err.message),
-			});
+		this.safeDetectChanges();
+		return new Promise((resolve) => {
+			this.svc
+				.list(true)
+				.pipe(
+					takeUntil(this.$destroy),
+					finalize(() => {
+						this.isLoading = false;
+						this.safeDetectChanges();
+						resolve();
+					}),
+				)
+				.subscribe({
+					next: (res) => {
+						const list = res.items || [];
+						this.dataSource.data = list;
+						this.paginatorProps.length = list.length;
+						const valid = new Set(list.map((i) => i.id));
+						this.selectedIds.update((prev) => {
+							const next = new Set<number>();
+							for (const id of prev) {
+								if (valid.has(id)) next.add(id);
+							}
+							return next;
+						});
+					},
+					error: (err: Error) => void this.dialog.error(err.message),
+				});
+		});
+	}
+
+	private safeDetectChanges(): void {
+		try {
+			this.cdr.detectChanges();
+		} catch {
+			// 组件已销毁时忽略
+		}
 	}
 
 	regionText(v: string): string {
@@ -209,51 +242,43 @@ export class SourceListComponent extends CmParentTableComponent implements After
 		});
 	}
 
-	refresh(item: SubscriptionSource): void {
+	async refresh(item: SubscriptionSource): Promise<void> {
+		const confirmed = await this.dialog.confirm(
+			`确认拉取订阅源「${item.name}」？\n将重新从上游获取节点并覆盖本地数据。`,
+			'拉取确认',
+			'拉取',
+		);
+		if (!confirmed) return;
+
 		this.busy.set(true);
-		this.svc
-			.refresh(item.id)
-			.pipe(
-				takeUntil(this.$destroy),
-				finalize(() => this.busy.set(false)),
-			)
-			.subscribe({
-				next: (res) => {
-					void this.dialog.success(formatRefreshMsg(res, '刷新成功'));
-					this.reloadTableDataByFirstPage();
-				},
-				error: (err: Error) => void this.dialog.error(err.message),
-			});
+		try {
+			const res = await firstValueFrom(this.svc.refresh(item.id).pipe(takeUntil(this.$destroy)));
+			// 先刷新列表再弹结果，避免成功弹窗与 isLoading 叠在一起导致遮罩不消失
+			await this.reloadTableDataAsync();
+			await this.dialog.success(formatRefreshMsg(res, '拉取成功'));
+		} catch (err) {
+			void this.dialog.error((err as Error).message);
+		} finally {
+			this.busy.set(false);
+		}
 	}
 
-	refreshAll(): void {
+	async refreshAll(): Promise<void> {
+		if (this.refreshingAll()) return;
 		const enabled = this.dataSource.data.filter((i) => i.enabled);
 		if (enabled.length === 0) {
 			void this.dialog.error('没有已启用的订阅源');
 			return;
 		}
-		this.busy.set(true);
-		this.svc
-			.refreshAll()
-			.pipe(
-				takeUntil(this.$destroy),
-				finalize(() => this.busy.set(false)),
-			)
-			.subscribe({
-				next: (res) => {
-					const lines = [`全部拉取完成：成功 ${res.ok} / 共 ${res.total}`];
-					if (res.failed > 0) {
-						const fails = (res.results || [])
-							.filter((r) => !r.ok)
-							.map((r) => `· ${r.name}: ${r.error || '失败'}`)
-							.slice(0, 5);
-						lines.push(`失败 ${res.failed}`, ...fails);
-					}
-					void this.dialog.success(lines.join('\n'));
-					this.reloadTableDataByFirstPage();
-				},
-				error: (err: Error) => void this.dialog.error(err.message),
-			});
+		const confirmed = await this.dialog.confirm(
+			`确认拉取全部已启用的订阅源？\n共 ${enabled.length} 个，将重新从上游获取节点并覆盖本地数据。\n拉取在后台进行，切换页面不会中断；完成后以通知提示结果。`,
+			'拉取确认',
+			'拉取全部',
+		);
+		if (!confirmed) return;
+
+		if (!this.svc.startBackgroundRefreshAll()) return;
+		void this.dialog.success('已开始后台拉取全部订阅源');
 	}
 
 	toggle(item: SubscriptionSource): void {

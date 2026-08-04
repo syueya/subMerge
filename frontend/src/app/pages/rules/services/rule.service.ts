@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { ApiService } from '@common/net/api.service';
 import { CachedRequest } from '@common/net/cached-request';
-import { ListResponse, ProxyGroup, Rule } from '@data-struct';
+import { ListResponse, MatchableRule, ProxyGroup, Rule, RuleMatchResult } from '@data-struct';
 
 @Injectable({ providedIn: 'root' })
 export class RuleService {
@@ -82,6 +82,18 @@ export class RuleService {
 
 	reorder(orderedIds: number[]): Observable<{ success: boolean }> {
 		return this.afterWrite(this.api.post('/rules/reorder', { orderedIds }));
+	}
+
+	/**
+	 * 服务端模拟规则匹配（含 GEOSITE/GEOIP，使用面板已加载的 geo 数据）。
+	 * rules 为当前草稿或某次发布快照，不读库。
+	 */
+	matchRules(
+		input: string,
+		rules: MatchableRule[],
+		resolve = false,
+	): Observable<RuleMatchResult> {
+		return this.api.post<RuleMatchResult>('/rules/match', { input, rules, resolve });
 	}
 
 	listGroups(forceRefresh = false): Observable<ListResponse<ProxyGroup>> {

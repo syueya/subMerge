@@ -1,6 +1,5 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { adminGuard } from '@common/guard/AdminGuard';
 
 const routes: Routes = [
   {
@@ -8,11 +7,14 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'user',
+        redirectTo: 'logs',
         pathMatch: 'full'
       },
-      { path: 'user', canActivate: [adminGuard], loadChildren: () => import('./setting-user/setting-user.module').then((m) => m.SettingUserModule) },
-      { path: 'logs', canActivate: [adminGuard], loadChildren: () => import('./setting-logs/setting-logs.module').then((m) => m.SettingLogsModule) }
+      // 用户管理页为遗留脚手架（/api/v1），暂不挂载
+      {
+        path: 'logs',
+        loadChildren: () => import('./setting-logs/setting-logs.module').then((m) => m.SettingLogsModule)
+      }
     ]
   }
 ];
@@ -21,4 +23,4 @@ const routes: Routes = [
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule]
 })
-export class SettingsRoutingModule { }
+export class SettingsRoutingModule {}

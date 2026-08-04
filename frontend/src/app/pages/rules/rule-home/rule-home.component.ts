@@ -374,15 +374,16 @@ draftDirty = this.draftStore.dirty;
 	}
 
 	openTestModal(): void {
-		const data: RuleMatchDialogData = {
-			title: '测试规则匹配',
-			subtitle:'',
-			rules: this.testMatchRules(),
-			typeText: (t) => this.ruleTypeText(t),
-			targetText: (t) => t,
-			showEditAction: true,
-			showLocateAction: false,
-		};
+const data: RuleMatchDialogData = {
+				title: '测试规则匹配',
+				subtitle:
+					'按当前启用规则从上到下由服务端模拟匹配（含 DOMAIN / GEOSITE / GEOIP）。使用面板已加载的 Geo 数据。',
+				rules: this.testMatchRules(),
+				typeText: (t) => this.ruleTypeText(t),
+				targetText: (t) => t,
+				showEditAction: true,
+				showLocateAction: false,
+			};
 		const ref = this.dialogOpen.openContent(RuleMatchDialogComponent, data, {
 			width: CM_DIALOG_WIDTH.large,
 		});

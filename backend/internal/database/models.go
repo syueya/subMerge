@@ -100,7 +100,7 @@ type ProxyGroup struct {
 	UpdatedAt time.Time
 }
 
-// ShareToken 分享令牌（订阅链接密钥）。
+// ShareToken 订阅链接（订阅链接密钥）。
 //
 // 生命周期语义：
 //   - Revoke：Status=revoked，行保留，旧链接立即 403；可再 Regenerate 恢复。
@@ -126,6 +126,28 @@ type ShareToken struct {
 	LastAccessAt   *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+}
+
+// APIKey 自动化 / agent 调用管理 API 的密钥。
+//
+// 与 ShareToken 分离：APIKey 只用于 /api/*，不能拉 /subscribe。
+// KeyHash 鉴权；KeyEncrypted 可再解密以便管理员忘记后查看；
+// 管理 CRUD 仅 Session，API Key 自身不能管理其它 API Key。
+type APIKey struct {
+	ID           uint   `gorm:"primaryKey"`
+	Name         string `gorm:"size:128;not null"`
+	KeyHash      string `gorm:"size:64;uniqueIndex;not null"`
+	KeyPrefix    string `gorm:"size:16;not null"`
+	KeyEncrypted string `gorm:"type:text;not null"`
+	// ScopesJSON 例如 ["read","publish"] 或 ["*"]
+	ScopesJSON string `gorm:"type:text;not null"`
+	Status     string `gorm:"size:16;not null;default:active;index"`
+	Note       string `gorm:"size:512"`
+	ExpiresAt  *time.Time
+	LastUsedAt *time.Time
+	CreatedBy  string `gorm:"size:64;not null"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // Release 发布版本

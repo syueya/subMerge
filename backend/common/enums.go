@@ -1,6 +1,9 @@
 package common
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 // Region 订阅源地区码（自由文本，如 US / PH / JP / HK，不限死）
 type Region string
@@ -25,7 +28,7 @@ const (
 	RuleTypeMatch         RuleType = "MATCH"
 )
 
-// TokenStatus 分享令牌状态
+// TokenStatus 订阅链接状态
 type TokenStatus string
 
 const (
@@ -33,6 +36,74 @@ const (
 	TokenStatusDisabled TokenStatus = "disabled"
 	TokenStatusRevoked  TokenStatus = "revoked"
 )
+
+// APIKeyStatus API 密钥状态（与订阅链接同语义）
+type APIKeyStatus string
+
+const (
+	APIKeyStatusActive   APIKeyStatus = "active"
+	APIKeyStatusDisabled APIKeyStatus = "disabled"
+	APIKeyStatusRevoked  APIKeyStatus = "revoked"
+)
+
+// APIKeyScope 粗粒度权限：read / write / publish / *
+type APIKeyScope string
+
+const (
+	APIKeyScopeRead    APIKeyScope = "read"
+	APIKeyScopeWrite   APIKeyScope = "write"
+	APIKeyScopePublish APIKeyScope = "publish"
+	APIKeyScopeAll     APIKeyScope = "*"
+)
+
+// NormalizeAPIKeyScopes 去重、校验合法 scope；空或非法返回 error。
+func NormalizeAPIKeyScopes(scopes []string) ([]APIKeyScope, error) {
+	if len(scopes) == 0 {
+		return nil, errors.New("scopes required")
+	}
+	seen := map[APIKeyScope]struct{}{}
+	out := make([]APIKeyScope, 0, len(scopes))
+	for _, raw := range scopes {
+		s := APIKeyScope(strings.ToLower(strings.TrimSpace(raw)))
+		switch s {
+		case APIKeyScopeRead, APIKeyScopeWrite, APIKeyScopePublish, APIKeyScopeAll:
+			if _, ok := seen[s]; ok {
+				continue
+			}
+			seen[s] = struct{}{}
+			out = append(out, s)
+		default:
+			return nil, errors.New("invalid scope: " + raw)
+		}
+	}
+	if len(out) == 0 {
+		return nil, errors.New("scopes required")
+	}
+	// * 单独即可覆盖全部
+	if _, ok := seen[APIKeyScopeAll]; ok {
+		return []APIKeyScope{APIKeyScopeAll}, nil
+	}
+	return out, nil
+}
+
+// ScopeStrings 转 []string
+func ScopeStrings(scopes []APIKeyScope) []string {
+	out := make([]string, len(scopes))
+	for i, s := range scopes {
+		out[i] = string(s)
+	}
+	return out
+}
+
+// HasAPIKeyScope 是否具备 required（* 覆盖全部）
+func HasAPIKeyScope(scopes []APIKeyScope, required APIKeyScope) bool {
+	for _, s := range scopes {
+		if s == APIKeyScopeAll || s == required {
+			return true
+		}
+	}
+	return false
+}
 
 // TokenGroupMode 令牌策略组投影：auto=按节点剪空组；all=保留模板组；custom=白名单
 type TokenGroupMode string
@@ -98,11 +169,11 @@ const (
 // 例如 generator 找不到 GroupNameSelectAll 时会静默回退到 TargetDirect，
 // 导致所有规则目标落到直连而不报错。改名时请同步以上各处。
 const (
-	GroupNameDirect    = "直连"     // 仅含 DIRECT 的选择组
-	GroupNameReject    = "拒绝"     // 仅含 REJECT 的选择组
-	GroupNameSelectAll = "节点选择"   // 总选择组，也是规则 target 缺失时的回退组
-	GroupNameOther     = "其他国家"   // 非常用地区节点聚合组
-	GroupNameDefaultUS = "美国US"   // MATCH 兜底默认出口
+	GroupNameDirect    = "直连"   // 仅含 DIRECT 的选择组
+	GroupNameReject    = "拒绝"   // 仅含 REJECT 的选择组
+	GroupNameSelectAll = "节点选择" // 总选择组，也是规则 target 缺失时的回退组
+	GroupNameOther     = "其他国家" // 非常用地区节点聚合组
+	GroupNameDefaultUS = "美国US" // MATCH 兜底默认出口
 )
 
 // 策略组成员展开 token（写入 ProxyGroup.Proxies，由 generator 展开为实际节点）。
