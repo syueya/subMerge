@@ -2,7 +2,7 @@ import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import localeZh from '@angular/common/locales/zh';
 import { ApplicationConfig, provideZoneChangeDetection, importProvidersFrom, isDevMode } from '@angular/core';
-import { provideRouter, withComponentInputBinding, withInMemoryScrolling, withViewTransitions } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { MATERIAL_PROVIDERS } from '@common/material.module';
 import { CustomTablerIcons } from '@common/modules/icons/import-config';
@@ -24,8 +24,7 @@ export const appConfig: ApplicationConfig = {
         scrollPositionRestoration: 'enabled',
         anchorScrolling: 'enabled'
       }),
-      withComponentInputBinding(),
-      withViewTransitions()
+      withComponentInputBinding()
     ),
     // Angular 22 默认走 FetchBackend，且只引入 zone.js 时不会 patch fetch。
     // HTTP 完成回调可能落在 NgZone 外，导致 isLoading 已 false 但进度条不刷新。

@@ -2,7 +2,10 @@
 
 <div mat-dialog-content>
   <div class="row m-b-8">
-    <cm-form-field class="col-24 col-md-12" [help]="'单个目标请求超时时间。'">
+    <cm-form-field
+      class="col-24 col-md-12"
+      [help]="'单个目标单次请求超时。每个目标先发 HEAD，失败再发 GET；失败时最多约 2 倍超时，耗时为两次合计。'"
+    >
       <mat-label>超时（秒）</mat-label>
       <mat-form-field appearance="outline" class="w-full" color="primary">
         <input
@@ -15,8 +18,11 @@
         />
       </mat-form-field>
     </cm-form-field>
-    <cm-form-field class="col-24 col-md-12" [help]="'0 表示关闭自动刷新。'">
-      <mat-label>自动刷新（秒，0 为关闭）</mat-label>
+    <cm-form-field
+      class="col-24 col-md-12"
+      [help]="'停留在网络检测页时，按该间隔自动重新跑一遍检测，离开页面会停止；0 表示关闭，仅手动点「开始检测」。'"
+    >
+      <mat-label>自动刷新（秒）</mat-label>
       <mat-form-field appearance="outline" class="w-full" color="primary">
         <input
           matInput

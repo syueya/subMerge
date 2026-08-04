@@ -32,12 +32,18 @@ export class NetCheckPageComponent extends CmParentComponent implements OnInit, 
   readonly badgeOk = BADGE_OK;
   readonly badgeErr = BADGE_ERR;
   readonly badgeMuted = BADGE_MUTED;
-  readonly displayedColumns = ['name', 'url', 'result', 'code', 'time', 'error'];
+  readonly displayedColumns = ['name', 'url', 'result', 'code', 'time', 'note'];
 
   /** 仅当前页会话有效，不落库、不随路由保留 */
   proxyEnabled = false;
   proxyURL = '';
   private autoTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** 填写代理地址时自动勾选启用；清空则取消勾选（仍可手动改勾选） */
+  onProxyURLChange(value: string): void {
+    this.proxyURL = value;
+    this.proxyEnabled = !!value.trim();
+  }
 
   override ngOnInit(): void {
     super.ngOnInit();

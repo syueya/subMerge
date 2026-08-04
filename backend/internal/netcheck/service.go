@@ -360,9 +360,13 @@ func buildHTTPClient(proxyCfg ProxyConfig, timeoutSec int) (*http.Client, error)
 }
 
 func checkTarget(client *http.Client, target Target, timeoutSec int) TargetResult {
+	// 先 HEAD，失败再 GET；耗时累计两次探测，避免只显示最后一次
 	result := doHTTP(client, target.URL, http.MethodHead, timeoutSec)
 	if !result.OK {
-		result = doHTTP(client, target.URL, http.MethodGet, timeoutSec)
+		second := doHTTP(client, target.URL, http.MethodGet, timeoutSec)
+		second.TimeMs += result.TimeMs
+		second.Timing.TotalMs = second.TimeMs
+		result = second
 	}
 	return TargetResult{
 		Name:      target.Name,
@@ -417,23 +421,25 @@ func failedHTTP(elapsed int, message string) HTTPResult {
 }
 
 func humanError(err error, timeoutSec int) string {
-	message := strings.ToLower(err.Error())
+	raw := err.Error()
+	message := strings.ToLower(raw)
 	switch {
 	case strings.Contains(message, "timeout"), strings.Contains(message, "deadline exceeded"):
 		return fmt.Sprintf("访问超时：%d 秒内没有完成连接或响应", timeoutSec)
 	case strings.Contains(message, "no such host"), strings.Contains(message, "lookup"):
 		return "域名解析失败：无法解析目标网站或代理地址"
-	case strings.Contains(message, "connection refused"):
-		return "连接失败：目标或代理拒绝连接"
+	case strings.Contains(message, "connection refused"),
+		strings.Contains(message, "actively refused"),
+		strings.Contains(message, "connectex"):
+		// Windows connectex 文案不含 "connection refused"，需单独识别
+		return "连接失败：目标或代理拒绝连接（" + raw + "）"
 	case strings.Contains(message, "connection reset"):
 		return "连接中断：连接被重置"
 	case strings.Contains(message, "tls"), strings.Contains(message, "certificate"), strings.Contains(message, "x509"):
 		return "TLS 握手失败：HTTPS 连接没有建立成功"
 	default:
-		if len(err.Error()) > 160 {
-			return "访问失败：" + err.Error()[:160] + "…"
-		}
-		return "访问失败：" + err.Error()
+		// 保留完整原始错误，供前端表格省略 + 悬浮完整展示
+		return "访问失败：" + raw
 	}
 }
 
