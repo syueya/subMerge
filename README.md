@@ -8,7 +8,7 @@
 - 分流在 Clash Meta / Clash Verge 客户端执行
 - 管理端提供 Geo 数据查询与更新页面（`/geo`）
 
-版本见 `backend/version/VERSION`。
+版本见 `frontend/version.ts`（唯一来源；Docker/CI 构建时同步到 `backend/version/VERSION` 供后端 embed）。
 
 ## 本地开发
 

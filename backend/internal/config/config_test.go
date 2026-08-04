@@ -69,28 +69,28 @@ func TestLoadDefaults(t *testing.T) {
 	if filepath.Base(cfg.DBPath) != "submerge.db" {
 		t.Fatalf("expected DBPath .../submerge.db, got %q", cfg.DBPath)
 	}
-	if cfg.LogRetentionDays != 7 {
-		t.Fatalf("expected LogRetentionDays=7, got %d", cfg.LogRetentionDays)
-	}
-	if cfg.Version == "" {
-		t.Fatal("expected Version from VERSION file")
-	}
-	// 环境变量不应覆盖版本 / 路径
-	t.Setenv("APP_VERSION", "9.9.9")
-	t.Setenv("LOG_DIR", "E:/tmp/should-not-use")
-	t.Setenv("DATA_DIR", "E:/tmp/data-should-not-use")
-	t.Setenv("DB_PATH", "E:/tmp/db-should-not-use.db")
-	t.Setenv("STATIC_DIR", "E:/tmp/static-should-not-use")
-	cfg2, err := Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg2.Version == "9.9.9" {
-		t.Fatal("APP_VERSION env must not override VERSION file")
-	}
-	if cfg2.Version != cfg.Version {
-		t.Fatalf("version changed unexpectedly: %q vs %q", cfg.Version, cfg2.Version)
-	}
+		if cfg.LogRetentionDays != 7 {
+			t.Fatalf("expected LogRetentionDays=7, got %d", cfg.LogRetentionDays)
+		}
+		if cfg.Version == "" {
+			t.Fatal("expected Version from embedded VERSION (synced from frontend/version.ts)")
+		}
+		// 环境变量不应覆盖版本 / 路径
+		t.Setenv("APP_VERSION", "9.9.9")
+		t.Setenv("LOG_DIR", "E:/tmp/should-not-use")
+		t.Setenv("DATA_DIR", "E:/tmp/data-should-not-use")
+		t.Setenv("DB_PATH", "E:/tmp/db-should-not-use.db")
+		t.Setenv("STATIC_DIR", "E:/tmp/static-should-not-use")
+		cfg2, err := Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg2.Version == "9.9.9" {
+			t.Fatal("APP_VERSION env must not override embedded VERSION")
+		}
+		if cfg2.Version != cfg.Version {
+			t.Fatalf("version changed unexpectedly: %q vs %q", cfg.Version, cfg2.Version)
+		}
 	if cfg2.LogDir != cfg.LogDir {
 		t.Fatalf("LOG_DIR env must not override fixed log dir: %q vs %q", cfg.LogDir, cfg2.LogDir)
 	}

@@ -1,5 +1,8 @@
-// Package version 提供应用版本号（来自同目录 VERSION 文件，go:embed）。
-// 发版时只改 VERSION 文件即可，不要用环境变量覆盖。
+// Package version 提供应用版本号。
+//
+// 发版唯一来源：frontend/version.ts
+// 本目录 VERSION 由 CI 在 go build 前从 frontend 同步；本地开发可手动同步或与 version.ts 保持一致。
+// 不要用环境变量覆盖。
 package version
 
 import (
