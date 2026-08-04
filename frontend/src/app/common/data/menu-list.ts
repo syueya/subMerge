@@ -27,6 +27,11 @@ export const MenuList: MenuItem[] = [
     route: '/main/geo'
   },
   {
+    displayName: '网络检测',
+    iconName: 'brand-speedtest',
+    route: '/main/net-check'
+  },
+  {
     displayName: '发布',
     iconName: 'rocket',
     route: '/main/releases'

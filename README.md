@@ -16,7 +16,9 @@
 cp .env.example .env   # 改 ENCRYPTION_KEY（≥32 字符）
 
 cd backend && go run .
-cd frontend && npm start   # http://localhost:4200 → API :8080
+
+# http://localhost:4200 → API :8080
+cd frontend && npm start
 ```
 
 首次打开网页创建管理员。探活：`GET /api/health`。

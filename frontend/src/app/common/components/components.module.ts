@@ -17,7 +17,6 @@ import { PageToolbarComponent } from './page-toolbar/page-toolbar.component';
 import { RequiredMarkComponent } from './required-mark/required-mark.component';
 import { ResponsiveTableListComponent } from './responsive-table-list/responsive-table-list.component';
 import { SelectWithCreateComponent } from './select-with-create/select-with-create.component';
-import { SmilesPreviewComponent } from './smiles-preview/smiles-preview.component';
 
 @NgModule({
   declarations: [
@@ -29,7 +28,6 @@ import { SmilesPreviewComponent } from './smiles-preview/smiles-preview.componen
     CmCollapsePanelComponent,
     CmDialogHeaderComponent,
     ResponsiveTableListComponent,
-    SmilesPreviewComponent,
     PageToolbarComponent,
     FilterActionsComponent,
     FilterResultCountComponent,
@@ -52,7 +50,6 @@ import { SmilesPreviewComponent } from './smiles-preview/smiles-preview.componen
     CmCollapsePanelComponent,
     CmDialogHeaderComponent,
     ResponsiveTableListComponent,
-    SmilesPreviewComponent,
     PageToolbarComponent,
     FilterActionsComponent,
     FilterResultCountComponent,

@@ -1,12 +1,22 @@
 import type {
-	GeoEntryRow,
-	ProxyGroup,
-	RegionCatalogEntry,
-	ReleaseDetail,
-	Rule,
-	ShareToken,
-	SubscriptionSource,
+  GeoEntryRow,
+  NetCheckConfig,
+  ProxyGroup,
+  RegionCatalogEntry,
+  ReleaseDetail,
+  Rule,
+  ShareToken,
+  SubscriptionSource,
 } from './types';
+
+export interface NetCheckTargetManageDialogData {
+  config: NetCheckConfig;
+}
+
+export interface NetCheckTargetManageDialogResult {
+  config: NetCheckConfig;
+}
+
 
 export interface TokenFormDialogData {
 	sourceList: SubscriptionSource[];

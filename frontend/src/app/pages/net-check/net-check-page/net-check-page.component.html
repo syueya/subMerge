@@ -1,0 +1,100 @@
+<div class="page-fill">
+  <cm-page-toolbar title="网络检测" description="临时填写代理地址后开始检测；代理地址不会保存，离开页面即清空。检测目标与参数在检测设置中维护。">
+    <button mat-flat-button color="primary" type="button" (click.debounceTime)="openTargetManage()">检测设置</button>
+  </cm-page-toolbar>
+
+  <mat-card class="cardWithShadow page-fill__body">
+    <mat-card-content class="p-16 page-fill__panel">
+      <div class="page-fill__fixed">
+        <cm-form-field [help]="'支持 http、https、socks5、socks5h。代理地址仅当前页有效，不会保存。'">
+          <mat-label>代理 URL</mat-label>
+          <mat-form-field appearance="outline" class="w-full" color="primary">
+            <input
+              matInput
+              [(ngModel)]="proxyURL"
+              placeholder="http://127.0.0.1:7890"
+              (keyup.enter)="runCheck()"
+            />
+          </mat-form-field>
+          <div formFieldAction class="d-flex align-items-center gap-12 flex-wrap">
+            <button
+              mat-flat-button
+              color="primary"
+              type="button"
+              [disabled]="loading()"
+              (click.debounceTime)="runCheck()"
+            >
+              {{ loading() ? '检测中…' : '开始检测' }}
+            </button>
+            <mat-checkbox [(ngModel)]="proxyEnabled" color="primary">启用代理</mat-checkbox>
+          </div>
+        </cm-form-field>
+
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-b-12">
+          <div class="d-flex flex-wrap align-items-center gap-8 min-w-0">
+            <div class="f-w-600 f-s-16 text-nowrap">检测结果</div>
+            @if (summary(); as item) {
+              <span [class]="badgeOk">{{ item.ok }} 成功</span>
+              <span [class]="item.fail ? badgeErr : badgeMuted">{{ item.fail }} 失败</span>
+              <span class="f-s-12 text-muted">共 {{ item.total }} 个目标 · 用时 {{ formatMs(item.durationMs) }}</span>
+            } @else {
+              <span class="f-s-12 text-muted">尚未开始检测</span>
+            }
+          </div>
+          @if (failedCount() > 0) {
+            <button mat-stroked-button color="warn" type="button" [disabled]="loading()" (click.debounceTime)="retryFailed()">
+              {{ loading() ? '重试中…' : '重试失败项' }}
+            </button>
+          }
+        </div>
+        <mat-divider class="m-b-12"></mat-divider>
+      </div>
+
+      <div class="page-fill__scroll">
+        <div class="table-container">
+          <table mat-table [dataSource]="results()" class="m-t-0 w-full">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>名称</th>
+              <td mat-cell *matCellDef="let result">{{ result.name }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="url">
+              <th mat-header-cell *matHeaderCellDef>URL</th>
+              <td mat-cell *matCellDef="let result">{{ result.url }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="result">
+              <th mat-header-cell *matHeaderCellDef>结果</th>
+              <td mat-cell *matCellDef="let result">
+                <span [class]="result.status === 'OK' ? badgeOk : badgeErr">{{ result.status === 'OK' ? '可达' : '失败' }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="code">
+              <th mat-header-cell *matHeaderCellDef>状态码</th>
+              <td mat-cell *matCellDef="let result">{{ result.http?.code || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="time">
+              <th mat-header-cell *matHeaderCellDef>耗时</th>
+              <td mat-cell *matCellDef="let result">{{ formatMs(result.http.timeMs) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="error">
+              <th mat-header-cell *matHeaderCellDef>错误信息</th>
+              <td mat-cell *matCellDef="let result">{{ result.http?.error || '—' }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+                <cm-no-data [isMin]="true" noDataTitle="暂无检测结果"></cm-no-data>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

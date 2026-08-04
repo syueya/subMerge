@@ -13,6 +13,7 @@ import (
 	"github.com/submerge/submerge/backend/internal/database"
 	"github.com/submerge/submerge/backend/internal/geo"
 	"github.com/submerge/submerge/backend/internal/middleware"
+	"github.com/submerge/submerge/backend/internal/netcheck"
 	"github.com/submerge/submerge/backend/internal/publish"
 	"github.com/submerge/submerge/backend/internal/rule"
 	"github.com/submerge/submerge/backend/internal/server"
@@ -74,6 +75,7 @@ func main() {
 		GeoIP: cfg.GeoIPURL, GeoSite: cfg.GeoSiteURL, MetaDB: cfg.MetaDBURL, ASN: cfg.ASNURL,
 	})
 	geoSvc.Load()
+	netCheckSvc := netcheck.NewService(db)
 
 	// 启动后异步拉一次全部启用源，再按间隔定时刷新；首次发布由用户在面板完成
 	go func() {
@@ -104,17 +106,18 @@ func main() {
 	}()
 
 	r := server.NewRouter(server.Deps{
-		Cfg:     cfg,
-		Auth:    auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.CookieSecure),
-		Source:  source.NewHandler(sourceSvc, auditSvc),
-		Rule:    rule.NewHandler(ruleSvc, auditSvc),
-		Publish: publish.NewHandler(publishSvc, auditSvc),
-		Sub:     subscription.NewHandler(subSvc, auditSvc),
-		Geo:     geo.NewHandler(geoSvc, auditSvc),
-		Audit:   auditSvc,
-		AuthMW:  middleware.AuthRequired(db),
-		LoginRL: middleware.RateLimit(cfg.RateLimitLogin),
-		SubRL:   middleware.RateLimit(cfg.RateLimitSub),
+		Cfg:      cfg,
+		Auth:     auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.CookieSecure),
+		Source:   source.NewHandler(sourceSvc, auditSvc),
+		Rule:     rule.NewHandler(ruleSvc, auditSvc),
+		Publish:  publish.NewHandler(publishSvc, auditSvc),
+		Sub:      subscription.NewHandler(subSvc, auditSvc),
+		Geo:      geo.NewHandler(geoSvc, auditSvc),
+		NetCheck: netcheck.NewHandler(netCheckSvc, auditSvc),
+		Audit:    auditSvc,
+		AuthMW:   middleware.AuthRequired(db),
+		LoginRL:  middleware.RateLimit(cfg.RateLimitLogin),
+		SubRL:    middleware.RateLimit(cfg.RateLimitSub),
 	})
 
 	applog.Info("submerge %s listening on %s (db=%s log=%s dir=%s retain=%dd)",

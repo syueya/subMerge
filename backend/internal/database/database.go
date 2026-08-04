@@ -64,6 +64,7 @@ func Open(dbPath string) (*gorm.DB, error) {
 		&ShareToken{},
 		&Release{},
 		&AuditLog{},
+		&NetCheckSetting{},
 	); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}

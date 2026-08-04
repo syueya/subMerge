@@ -155,3 +155,14 @@ type AuditLog struct {
 	IP        string    `gorm:"size:64"`
 	CreatedAt time.Time `gorm:"index"`
 }
+
+// NetCheckSetting 网络检测持久配置（单行 ID=1）。
+// 代理地址不落库，仅检测请求临时传入。
+type NetCheckSetting struct {
+	ID             uint   `gorm:"primaryKey"`
+	TimeoutSec     int    `gorm:"not null;default:10"`
+	AutoRefreshSec int    `gorm:"not null;default:0"`
+	TargetsJSON    string `gorm:"type:text;not null"` // [{name,url,enabled}]
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}

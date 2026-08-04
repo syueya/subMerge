@@ -17,6 +17,7 @@ import (
 	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/geo"
 	"github.com/submerge/submerge/backend/internal/middleware"
+	"github.com/submerge/submerge/backend/internal/netcheck"
 	"github.com/submerge/submerge/backend/internal/publish"
 	"github.com/submerge/submerge/backend/internal/rule"
 	"github.com/submerge/submerge/backend/internal/source"
@@ -25,17 +26,18 @@ import (
 
 // Deps 路由依赖
 type Deps struct {
-	Cfg     *config.Config
-	Auth    *auth.Handler
-	Source  *source.Handler
-	Rule    *rule.Handler
-	Publish *publish.Handler
-	Sub     *subscription.Handler
-	Geo     *geo.Handler
-	Audit   *audit.Service
-	AuthMW  gin.HandlerFunc
-	LoginRL gin.HandlerFunc
-	SubRL   gin.HandlerFunc
+	Cfg      *config.Config
+	Auth     *auth.Handler
+	Source   *source.Handler
+	Rule     *rule.Handler
+	Publish  *publish.Handler
+	Sub      *subscription.Handler
+	Geo      *geo.Handler
+	NetCheck *netcheck.Handler
+	Audit    *audit.Service
+	AuthMW   gin.HandlerFunc
+	LoginRL  gin.HandlerFunc
+	SubRL    gin.HandlerFunc
 }
 
 func safeLogFormatter() gin.LogFormatter {
@@ -119,6 +121,11 @@ func NewRouter(d Deps) *gin.Engine {
 			secured.POST("/geo/reverse", d.Geo.Reverse)
 			secured.POST("/geo/search", d.Geo.Search)
 			secured.POST("/geo/update", d.Geo.Update)
+
+			secured.GET("/net-check/config", d.NetCheck.GetConfig)
+			secured.PUT("/net-check/config", d.NetCheck.SaveConfig)
+			secured.POST("/net-check/check", d.NetCheck.Check)
+			secured.POST("/net-check/reset", d.NetCheck.ResetConfig)
 
 			secured.GET("/rules", d.Rule.ListRules)
 			secured.POST("/rules", d.Rule.CreateRule)

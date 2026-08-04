@@ -28,6 +28,9 @@
               <span [class]="item.available ? badgeOk : badgeErr">{{ item.available ? '可用' : '不可用' }}</span>
             </div>
             <div class="f-s-12 text-muted">{{ item.name }} · {{ formatBytes(item.size) }}</div>
+            <div class="f-s-12 text-muted m-t-4" [title]="item.modifiedAt || ''">
+              更新于 {{ formatTime(item.modifiedAt) }}
+            </div>
             <div class="f-s-12 text-muted m-t-4 text-truncate" [title]="statusDetailTitle(item)">
               {{ statusDetail(item) }}
             </div>

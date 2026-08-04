@@ -39,6 +39,10 @@ const routes: Routes = [
     loadChildren: () => import('./geo/geo.module').then((m) => m.GeoModule)
   },
   {
+    path: 'net-check',
+    loadChildren: () => import('./net-check/net-check.module').then((m) => m.NetCheckModule)
+  },
+  {
     path: 'account-setting',
     loadChildren: () => import('./account-setting/account-setting.module').then(m => m.AccountSettingModule)
   }
