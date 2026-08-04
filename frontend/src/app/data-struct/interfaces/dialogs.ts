@@ -1,23 +1,19 @@
-import type {
-	  APIKey,
-	  GeoEntryRow,
-	  NetCheckConfig,
-	  ProxyGroup,
-	  RegionCatalogEntry,
-	  ReleaseDetail,
-	  Rule,
-	  ShareToken,
-	  SubscriptionSource,
-	} from './types';
+import type { APIKey } from './api-key';
+import type { GeoEntryRow } from './geo';
+import type { NetCheckConfig } from './net-check';
+import type { ProxyGroup } from './proxy-group';
+import type { ReleaseDetail } from './release';
+import type { Rule } from './rule';
+import type { RegionCatalogEntry, SubscriptionSource } from './source';
+import type { ShareToken } from './token';
 
 export interface NetCheckTargetManageDialogData {
-  config: NetCheckConfig;
+	config: NetCheckConfig;
 }
 
 export interface NetCheckTargetManageDialogResult {
-  config: NetCheckConfig;
+	config: NetCheckConfig;
 }
-
 
 /** 创建 / 编辑令牌共用弹窗数据；token 有值时为编辑模式 */
 export interface TokenFormDialogData {
