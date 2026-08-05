@@ -1,15 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, of, takeUntil } from 'rxjs';
 import { DialogService } from '@common/services/dialog.service';
 import { formatDateTime } from '@common/util';
-import { Release } from '@data-struct';
+import { BADGE_WARN, Release } from '@data-struct';
 import { DraftStatusStore } from '../../releases/services/draft-status.store';
 import { ReleaseService } from '../../releases/services/release.service';
 import { RuleService } from '../../rules/services/rule.service';
 import { SourceService } from '../../sources/services/source.service';
 import { TokenService } from '../../tokens/services/token.service';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
-import { takeUntil } from 'rxjs';
 
 @Component({
 	selector: 'app-dashboard-home',
@@ -38,6 +37,7 @@ export class DashboardHomeComponent extends CmParentComponent implements OnInit 
 	// 草稿状态来自共享 store（模板沿用 draft() 读取）
 	draft = this.draftStore.status;
 	draftSummary = this.draftStore.summary;
+	readonly badgeWarn = BADGE_WARN;
 
 	readonly steps = [
 		{

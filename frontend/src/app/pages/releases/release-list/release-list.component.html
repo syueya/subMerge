@@ -1,4 +1,4 @@
-<cm-page-toolbar title="发布"  description="查看历史配置与回滚。">
+<cm-page-toolbar title="版本发布"  description="查看历史配置与回滚。">
   <button
     mat-icon-button
     color="primary"
@@ -10,6 +10,18 @@
   >
     <i-tabler class="icon-20" name="refresh"></i-tabler>
   </button>
+  @if (draftDirty() && draftChanges().length) {
+    <button
+      mat-stroked-button
+      color="primary"
+      type="button"
+      class="m-r-10 d-inline-flex align-items-center gap-8"
+      (click.debounceTime)="openDraftChanges()"
+    >
+      查看差异
+      <span [class]="badgeWarn">{{ draftChanges().length }}</span>
+    </button>
+  }
   <button mat-flat-button color="primary" type="button" [disabled]="publishing()" (click.debounceTime)="publishNow()">
     @if (publishing()) {
       发布中...
@@ -20,42 +32,13 @@
     }
   </button>
 </cm-page-toolbar>
-@if (draftDirty() && draftChanges().length) {
-  <mat-card class="cardWithShadow m-b-16">
-    <mat-card-content class="p-12">
-      <p class="f-s-12 f-w-600 text-warning m-b-8">
-        自上次发布以来的更改（{{ draftChanges().length }}）
-      </p>
-      @if (draftSummary()) {
-        <p class="f-s-12 text-warning m-b-8">{{ draftSummary() }}</p>
-      }
-      <ul class="m-b-0 p-l-0" style="list-style: none">
-        @for (ch of visibleChanges(); track $index) {
-          <li class="d-flex flex-wrap align-items-start gap-8 f-s-12 m-b-4">
-            <span [class]="changeActionClass(ch.action)">{{ changeActionText(ch.action) }}</span>
-            <span class="text-muted">{{ changeKindText(ch.kind) }}</span>
-            <span>{{ ch.name }}</span>
-            @if (ch.detail) {
-              <span class="text-muted">（{{ ch.detail }}）</span>
-            }
-          </li>
-        }
-      </ul>
-      @if (draftChanges().length > changesCollapsedLimit) {
-        <button mat-button color="primary" type="button" class="m-t-4" (click)="changesExpanded.set(!changesExpanded())">
-          {{ changesExpanded() ? '收起' : '展开其余 ' + hiddenChangeCount() + ' 项' }}
-        </button>
-      }
-    </mat-card-content>
-  </mat-card>
-}
 
 <cm-responsive-table-list
   [data]="dataSource.data"
   [isMobile]="isMobileScreen"
   [isLoading]="isLoading"
   [trackBy]="tableTrackBy"
-  tableHeight="calc(100vh - 280px)"
+  tableHeight="calc(100vh - 240px)"
   noDataTitle="尚无发布记录"
 >
   <ng-template #mobileCard let-row>

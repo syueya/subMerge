@@ -1,29 +1,27 @@
 import { AfterViewInit, Component, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import {
-		BADGE_ERR,
-		BADGE_MUTED,
-		BADGE_OK,
-		BADGE_WARN,
-		DraftChange,
-		MatchableRule,
-		RELEASE_STATUS_BADGE,
-		RELEASE_STATUS_OPTIONS,
-		Release,
-		ReleaseDetailDialogData,
-		ReleaseRuleLine,
-		RuleMatchDialogData,
-		enumBadgeClass,
-		enumText,
-	} from '@data-struct';
-	import { DialogService } from '@common/services/dialog.service';
-	import { DraftStatusStore } from '../services/draft-status.store';
-	import { ReleaseService } from '../services/release.service';
-	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-	import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-	import { finalize, takeUntil } from 'rxjs';
-	import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
-	import { ReleaseDetailComponent } from '../release-detail/release-detail.component';
+	BADGE_WARN,
+	DraftChangesDialogData,
+	MatchableRule,
+	RELEASE_STATUS_BADGE,
+	RELEASE_STATUS_OPTIONS,
+	Release,
+	ReleaseDetailDialogData,
+	ReleaseRuleLine,
+	RuleMatchDialogData,
+	enumBadgeClass,
+	enumText,
+} from '@data-struct';
+import { DialogService } from '@common/services/dialog.service';
+import { DraftStatusStore } from '../services/draft-status.store';
+import { ReleaseService } from '../services/release.service';
+import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+import { finalize, takeUntil } from 'rxjs';
+import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
+import { DraftChangesComponent } from '../draft-changes/draft-changes.component';
+import { ReleaseDetailComponent } from '../release-detail/release-detail.component';
 
 @Component({
 	selector: 'app-release-list',
@@ -40,11 +38,11 @@ export class ReleaseListComponent extends CmParentTableComponent implements Afte
 	override displayedColumns = ['version', 'status', 'counts', 'note', 'hash', 'createdBy', 'time', 'action'];
 
 	publishing = signal(false);
-draftDirty = this.draftStore.dirty;
-		draftChanges = this.draftStore.changes;
+	draftDirty = this.draftStore.dirty;
+	draftChanges = this.draftStore.changes;
 	draftSummary = this.draftStore.summary;
-	changesExpanded = signal(false);
-	readonly changesCollapsedLimit = 20;
+	readonly badgeWarn = BADGE_WARN;
+	readonly changesPreviewLimit = 20;
 
 	constructor() {
 		super();
@@ -58,22 +56,21 @@ draftDirty = this.draftStore.dirty;
 	}
 
 	refreshDraft(): void {
-		this.changesExpanded.set(false);
 		this.draftStore.refresh();
 	}
 
-	visibleChanges(): DraftChange[] {
-		const all = this.draftChanges();
-		if (this.changesExpanded() || all.length <= this.changesCollapsedLimit) return all;
-		return all.slice(0, this.changesCollapsedLimit);
+	openDraftChanges(): void {
+		const data: DraftChangesDialogData = {
+			changes: this.draftChanges(),
+			summary: this.draftSummary(),
+			publishedVersion: this.draftStore.status()?.publishedVersion,
+		};
+		this.dialogOpen.openContent(DraftChangesComponent, data, {
+			width: CM_DIALOG_WIDTH.medium,
+		});
 	}
 
-	hiddenChangeCount(): number {
-		const n = this.draftChanges().length - this.changesCollapsedLimit;
-		return n > 0 && !this.changesExpanded() ? n : 0;
-	}
-
-	changeActionText(a: string): string {
+	private changeActionText(a: string): string {
 		switch (a) {
 			case 'added':
 				return '新增';
@@ -86,7 +83,7 @@ draftDirty = this.draftStore.dirty;
 		}
 	}
 
-	changeKindText(k: string): string {
+	private changeKindText(k: string): string {
 		switch (k) {
 			case 'proxy':
 				return '节点';
@@ -99,30 +96,17 @@ draftDirty = this.draftStore.dirty;
 		}
 	}
 
-	changeActionClass(a: string): string {
-		switch (a) {
-			case 'added':
-				return BADGE_OK;
-			case 'removed':
-				return BADGE_ERR;
-			case 'modified':
-				return BADGE_WARN;
-			default:
-				return BADGE_MUTED;
-		}
-	}
-
 	private buildPublishConfirmMessage(): string {
 		const head = '确认发布当前草稿配置？\n发布后「全部源 + 自动」的订阅链接将使用新配置。';
 		const changes = this.draftChanges();
 		if (!changes.length) return head;
 		const summary = this.draftSummary();
-		const lines = changes.slice(0, this.changesCollapsedLimit).map((c) => {
+		const lines = changes.slice(0, this.changesPreviewLimit).map((c) => {
 			const detail = c.detail ? `（${c.detail}）` : '';
 			return `· ${this.changeActionText(c.action)} ${this.changeKindText(c.kind)} ${c.name}${detail}`;
 		});
 		const more =
-			changes.length > this.changesCollapsedLimit ? `\n… 等共 ${changes.length} 项` : '';
+			changes.length > this.changesPreviewLimit ? `\n… 等共 ${changes.length} 项` : '';
 		const summaryLine = summary ? `\n本次更改：${summary}` : '';
 		return `${head}\n${summaryLine}\n\n${lines.join('\n')}${more}`;
 	}

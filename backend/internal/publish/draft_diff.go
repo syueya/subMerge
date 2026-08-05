@@ -81,38 +81,38 @@ func diffConfigs(publishedYAML, draftYAML string) []common.DraftChange {
 			Kind: "proxy", Action: "added", Name: name,
 		})
 	}
-	for _, name := range removedProxies {
-		changes = append(changes, common.DraftChange{
-			Kind: "proxy", Action: "removed", Name: name,
-		})
-	}
+for _, name := range removedProxies {
+			changes = append(changes, common.DraftChange{
+				Kind: "proxy", Action: "removed", Name: name,
+			})
+		}
 
-	// 策略组：增 / 删 / 成员修改（成员修改时列出具体增减）
-	for _, name := range newSnap.order {
-		newMembers := newSnap.groups[name]
-		oldMembers, existed := oldSnap.groups[name]
-		if !existed {
-			changes = append(changes, common.DraftChange{
-				Kind: "group", Action: "added", Name: name,
-				Detail: memberSummary(newMembers),
-			})
-			continue
+		// 策略组：增 / 删 / 成员修改（成员细节只记数量，节点名已在 proxy 变更中列出）
+		for _, name := range newSnap.order {
+			newMembers := newSnap.groups[name]
+			oldMembers, existed := oldSnap.groups[name]
+			if !existed {
+				changes = append(changes, common.DraftChange{
+					Kind: "group", Action: "added", Name: name,
+					Detail: memberSummary(newMembers),
+				})
+				continue
+			}
+			if strings.Join(oldMembers, ",") != strings.Join(newMembers, ",") {
+				addedM, removedM := diffStringSlices(oldMembers, newMembers)
+				changes = append(changes, common.DraftChange{
+					Kind: "group", Action: "modified", Name: name,
+					Detail: memberDiffSummary(addedM, removedM),
+				})
+			}
 		}
-		if strings.Join(oldMembers, ",") != strings.Join(newMembers, ",") {
-			addedM, removedM := diffStringSlices(oldMembers, newMembers)
-			changes = append(changes, common.DraftChange{
-				Kind: "group", Action: "modified", Name: name,
-				Detail: memberDiffSummary(addedM, removedM),
-			})
+		for _, name := range oldSnap.order {
+			if _, ok := newSnap.groups[name]; !ok {
+				changes = append(changes, common.DraftChange{
+					Kind: "group", Action: "removed", Name: name,
+				})
+			}
 		}
-	}
-	for _, name := range oldSnap.order {
-		if _, ok := newSnap.groups[name]; !ok {
-			changes = append(changes, common.DraftChange{
-				Kind: "group", Action: "removed", Name: name,
-			})
-		}
-	}
 
 	// 规则：按内容集合比较增删（保留顺序展示）
 	oldRuleSet := make(map[string]struct{}, len(oldSnap.rules))
@@ -164,36 +164,25 @@ func diffStringSlices(older, newer []string) (added, removed []string) {
 	return added, removed
 }
 
-const maxListedNames = 8
-
-// joinTruncated 拼接名称列表，超过上限时以「…等 N 项」收尾，避免 detail 过长。
-func joinTruncated(names []string) string {
-	if len(names) <= maxListedNames {
-		return strings.Join(names, "、")
-	}
-	shown := strings.Join(names[:maxListedNames], "、")
-	return fmt.Sprintf("%s… 等 %d 项", shown, len(names))
-}
-
-// memberSummary 新增策略组时描述其成员。
+// memberSummary 新增策略组时只记成员数量（节点级变更已单独列出，不必再展开名单）。
 func memberSummary(members []string) string {
 	if len(members) == 0 {
-		return ""
+		return "无成员"
 	}
-	return "成员：" + joinTruncated(members)
+	return fmt.Sprintf("%d 个成员", len(members))
 }
 
-// memberDiffSummary 策略组成员修改时描述具体增减。
+// memberDiffSummary 策略组成员修改时只记数量摘要，避免与节点增删重复罗列长名。
 func memberDiffSummary(added, removed []string) string {
 	parts := []string{}
 	if len(added) > 0 {
-		parts = append(parts, "新增成员 "+joinTruncated(added))
+		parts = append(parts, fmt.Sprintf("+%d", len(added)))
 	}
 	if len(removed) > 0 {
-		parts = append(parts, "移除成员 "+joinTruncated(removed))
+		parts = append(parts, fmt.Sprintf("-%d", len(removed)))
 	}
 	if len(parts) == 0 {
 		return "成员顺序调整"
 	}
-	return strings.Join(parts, "；")
+	return "成员 " + strings.Join(parts, "/")
 }

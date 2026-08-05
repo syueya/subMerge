@@ -2,7 +2,7 @@ import type { APIKey } from './api-key';
 import type { GeoEntryRow } from './geo';
 import type { NetCheckConfig } from './net-check';
 import type { ProxyGroup } from './proxy-group';
-import type { ReleaseDetail } from './release';
+import type { DraftChange, ReleaseDetail } from './release';
 import type { Rule } from './rule';
 import type { RegionCatalogEntry, SubscriptionSource } from './source';
 import type { ShareToken } from './token';
@@ -74,6 +74,13 @@ export interface GroupFormDialogData {
 
 export interface ReleaseDetailDialogData {
 	detail: ReleaseDetail;
+}
+
+/** 草稿相对已发布版本的差异弹窗 */
+export interface DraftChangesDialogData {
+	changes: DraftChange[];
+	summary?: string;
+	publishedVersion?: number;
 }
 
 export interface GeoEntriesDialogData {
