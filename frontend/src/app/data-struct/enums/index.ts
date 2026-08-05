@@ -6,4 +6,3 @@ export * from './api-key';
 export * from './release';
 export * from './source';
 export * from './proxy-group';
-export * from './UserRoleEnum';

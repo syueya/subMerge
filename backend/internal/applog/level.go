@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync/atomic"
 )
 
 // 日志级别前缀（统一大写，便于检索 / 高亮）
@@ -14,6 +15,13 @@ const (
 	prefixError = "[ERROR] "
 	prefixDebug = "[DEBUG] "
 )
+
+var debugEnabled atomic.Bool
+
+// SetDebugEnabled 控制详细 DEBUG 日志（地区识别样本、过滤明细等）。
+func SetDebugEnabled(enabled bool) {
+	debugEnabled.Store(enabled)
+}
 
 // Info 常规运行信息
 func Info(format string, args ...any) {
@@ -32,6 +40,9 @@ func Error(format string, args ...any) {
 
 // Debug 明细（过滤清单、样本等）
 func Debug(format string, args ...any) {
+	if !debugEnabled.Load() {
+		return
+	}
 	writeLevel(2, prefixDebug, format, args...)
 }
 

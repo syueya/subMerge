@@ -81,7 +81,7 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 	}
 
 	// 事务重写节点 + 更新源状态/流量；失败保留旧快照
-	oldCount, err := s.persistRefresh(&row, stats.kept, body, fetched.UserInfo)
+	changeStats, err := s.persistRefresh(&row, stats.kept, body, fetched.UserInfo)
 	if err != nil {
 		return s.failRefresh(row, err)
 	}
@@ -90,49 +90,74 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 	if err != nil {
 		return common.RefreshSourceResponse{}, err
 	}
-	applog.Info("[refresh] ok source id=%d name=%q kept=%d removed=%d skipped=%d upstream=%d parsed=%d filterDropped=%v",
-		row.ID, row.Name, len(stats.kept), oldCount, stats.skipped, parseStats.Total, parseStats.Valid, stats.filterDropped)
+	applog.Info("[refresh] ok source id=%d name=%q previous=%d kept=%d added=%d removed=%d modified=%d skipped=%d upstream=%d parsed=%d filterDropped=%v regionConflicts=%d",
+		row.ID, row.Name, changeStats.previous, changeStats.kept, changeStats.added,
+		changeStats.removed, changeStats.modified, stats.skipped, parseStats.Total, parseStats.Valid,
+		stats.filterDropped, stats.regionConflictTotal)
 	if len(stats.filteredNames) > 0 {
-		applog.Info("[refresh] filtered source id=%d name=%q total=%d samples=%d omitted=%d reasons=%v",
+		applog.Debug("[refresh] filtered source id=%d name=%q total=%d samples=%d omitted=%d reasons=%v",
 			row.ID, row.Name, stats.filteredTotal, len(stats.filteredNames),
 			stats.filteredTotal-len(stats.filteredNames), stats.filterDropped)
 	}
+	if stats.regionConflictTotal > 0 {
+		applog.Debug("[region-detect] conflict source id=%d total=%d samples=%d",
+			row.ID, stats.regionConflictTotal, len(stats.regionConflicts))
+		for i, conflict := range stats.regionConflicts {
+			applog.Debug("[region-detect] conflict sample=%d name=%q flag=%s keyword=%s resolved=%s",
+				i+1, conflict.Name, conflict.FlagRegion, conflict.KeywordRegion, conflict.ResolvedRegion)
+		}
+	}
 
 	return common.RefreshSourceResponse{
-		Source:               view,
-		UpstreamTotal:        parseStats.Total,
-		Parsed:               parseStats.Valid,
-		Added:                len(stats.kept),
-		Removed:              oldCount,
-		Skipped:              stats.skipped,
-		ParseDropped:         parseStats.Dropped,
-		FilterDropped:        stats.filterDropped,
-		FilteredNames:        stats.filteredNames,
-		FilteredNamesOmitted: stats.filteredTotal - len(stats.filteredNames),
-		RegionCounts:         stats.regionCounts,
+		Source:                view,
+		UpstreamTotal:         parseStats.Total,
+		Parsed:                parseStats.Valid,
+		Previous:              changeStats.previous,
+		Kept:                  changeStats.kept,
+		Added:                 changeStats.added,
+		Removed:               changeStats.removed,
+		Modified:              changeStats.modified,
+		Skipped:               stats.skipped,
+		ParseDropped:          parseStats.Dropped,
+		FilterDropped:         stats.filterDropped,
+		FilteredNames:         stats.filteredNames,
+		FilteredNamesOmitted:  stats.filteredTotal - len(stats.filteredNames),
+		RegionCounts:          stats.regionCounts,
+		RegionConflictTotal:   stats.regionConflictTotal,
+		RegionConflicts:       stats.regionConflicts,
+		RegionConflictOmitted: stats.regionConflictTotal - len(stats.regionConflicts),
 	}, nil
 }
 
+// proxyChangeStats 新旧快照差分。指纹标识同一节点；enabled 不计入 modified。
+type proxyChangeStats struct {
+	previous int
+	kept     int
+	added    int
+	removed  int
+	modified int
+}
+
 // persistRefresh 在单事务里整批重写某源的节点并更新源状态/流量。
-// 返回被替换掉的旧节点数量（用于统计 removed）。保留旧节点的 enabled 状态。
+// 顺带基于旧快照计算 previous/kept/added/removed/modified，避免重复查库。
 func (s *Service) persistRefresh(
 	row *database.Source,
 	kept []preparedProxy,
 	body []byte,
 	userInfo SubscriptionUserInfo,
-) (int, error) {
-	// 旧节点 fingerprint → enabled，用于保留用户禁用状态
+) (proxyChangeStats, error) {
 	var oldProxies []database.Proxy
 	if err := s.db.Where("source_id = ?", row.ID).Find(&oldProxies).Error; err != nil {
-		return 0, fmt.Errorf("load existing proxies: %w", err)
+		return proxyChangeStats{}, fmt.Errorf("load existing proxies: %w", err)
 	}
+	changeStats := diffProxySnapshots(oldProxies, kept)
+
 	oldEnabled := map[string]bool{}
 	for _, op := range oldProxies {
 		if op.Fingerprint != "" {
 			oldEnabled[op.Fingerprint] = op.Enabled
 		}
 	}
-	oldCount := len(oldProxies)
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Unscoped().Where("source_id = ?", row.ID).Delete(&database.Proxy{}).Error; err != nil {
@@ -177,9 +202,46 @@ func (s *Service) persistRefresh(
 		return tx.Save(row).Error
 	})
 	if err != nil {
-		return 0, err
+		return proxyChangeStats{}, err
 	}
-	return oldCount, nil
+	return changeStats, nil
+}
+
+func diffProxySnapshots(old []database.Proxy, next []preparedProxy) proxyChangeStats {
+	stats := proxyChangeStats{previous: len(old)}
+	oldByFingerprint := make(map[string]database.Proxy, len(old))
+	for _, proxy := range old {
+		oldByFingerprint[proxy.Fingerprint] = proxy
+	}
+	seen := make(map[string]struct{}, len(next))
+	for _, proxy := range next {
+		seen[proxy.fingerprint] = struct{}{}
+		previous, ok := oldByFingerprint[proxy.fingerprint]
+		if !ok {
+			stats.added++
+			continue
+		}
+		if proxyContentChanged(previous, proxy) {
+			stats.modified++
+		} else {
+			stats.kept++
+		}
+	}
+	for _, proxy := range old {
+		if _, ok := seen[proxy.Fingerprint]; !ok {
+			stats.removed++
+		}
+	}
+	return stats
+}
+
+func proxyContentChanged(old database.Proxy, next preparedProxy) bool {
+	return old.Name != next.name ||
+		old.Region != next.region ||
+		old.Type != next.typ ||
+		old.Server != next.server ||
+		old.Port != next.port ||
+		old.RawJSON != next.rawJSON
 }
 
 // ResetStuckRefresh 启动时把残留的 running 状态复位为 failed。
@@ -223,10 +285,16 @@ func (s *Service) RefreshAll() common.RefreshAllResponse {
 			applog.Warn("[refresh-all] fail id=%d name=%q: %v", r.ID, r.Name, err)
 		} else {
 			item.OK = true
+			item.Previous = res.Previous
+			item.Kept = res.Kept
 			item.Added = res.Added
+			item.Removed = res.Removed
+			item.Modified = res.Modified
 			item.Skipped = res.Skipped
+			item.RegionConflictTotal = res.RegionConflictTotal
 			out.OK++
 		}
+
 		out.Results = append(out.Results, item)
 	}
 	applog.Info("[refresh-all] done ok=%d failed=%d total=%d", out.OK, out.Failed, out.Total)
@@ -281,7 +349,7 @@ func logRegionDetectSummary(
 				msg += fmt.Sprintf(" …(+%d)", n-len(fallbackSamples))
 			}
 		}
-		applog.Warn("%s", msg)
+		applog.Debug("%s", msg)
 	}
 }
 

@@ -14,7 +14,7 @@ TokenFormDialogData,
 			enumText,
 		} from '@data-struct';
 		import { DialogService } from '@common/services/dialog.service';
-		import { formatDateTime } from '@common/util/format';
+		import { formatDateTime } from '@common/util';
 		import { RuleService } from '../../rules/services/rule.service';
 		import { SourceService } from '../../sources/services/source.service';
 		import { TokenService } from '../services/token.service';

@@ -370,7 +370,7 @@ $swift-ease-out-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
   gap: 4px;
 }
 
-// 第一行：用户名 + 角色
+// 第一行：用户名
 .profile-card__line {
   display: flex;
   align-items: center;
@@ -388,14 +388,6 @@ $swift-ease-out-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
   text-overflow: ellipsis;
   color: var(--mat-sys-on-surface, inherit);
   min-width: 0;
-}
-
-.profile-card__role {
-  flex: 0 0 auto;
-  font-size: 12px;
-  line-height: 1.2;
-  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.55));
-  white-space: nowrap;
 }
 
 // 第二行：版本号

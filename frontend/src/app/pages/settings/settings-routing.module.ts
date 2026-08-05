@@ -10,7 +10,6 @@ const routes: Routes = [
         redirectTo: 'logs',
         pathMatch: 'full'
       },
-      // 用户管理页为遗留脚手架（/api/v1），暂不挂载
       {
         path: 'logs',
         loadChildren: () => import('./setting-logs/setting-logs.module').then((m) => m.SettingLogsModule)

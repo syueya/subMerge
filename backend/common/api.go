@@ -111,9 +111,17 @@ type RefreshSourceResponse struct {
 	// UpstreamTotal 上游 proxies 列表原始条数
 	UpstreamTotal int `json:"upstreamTotal"`
 	// Parsed 解析成功（具备 name/type/server/port）条数
-	Parsed  int `json:"parsed"`
-	Added   int `json:"added"`
+	Parsed int `json:"parsed"`
+	// Previous 刷新前本地节点数。
+	Previous int `json:"previous"`
+	// Kept 新旧指纹都存在且未发生内容变化的节点数。
+	Kept int `json:"kept"`
+	// Added 本次新增节点数（按节点指纹计算）。
+	Added int `json:"added"`
+	// Removed 本次移除节点数（按节点指纹计算）。
 	Removed int `json:"removed"`
+	// Modified 指纹相同但节点内容发生变化的节点数。
+	Modified int `json:"modified"`
 	// Skipped 过滤规则丢弃条数
 	Skipped int `json:"skipped"`
 	// ParseDropped 解析阶段丢弃原因 → 数量（缺字段/端口非法/重名等）
@@ -127,6 +135,22 @@ type RefreshSourceResponse struct {
 	// ParseDroppedNames 解析失败的条目摘要（最多 20 条）
 	ParseDroppedNames []string       `json:"parseDroppedNames,omitempty"`
 	RegionCounts      map[string]int `json:"regionCounts,omitempty"`
+	// RegionConflictTotal 地区国旗与节点名称关键词冲突的节点总数。
+	RegionConflictTotal int `json:"regionConflictTotal,omitempty"`
+	// RegionConflicts 地区冲突样本（有上限）。
+	RegionConflicts []RegionConflict `json:"regionConflicts,omitempty"`
+	// RegionConflictOmitted 未返回的地区冲突样本数。
+	RegionConflictOmitted int `json:"regionConflictOmitted,omitempty"`
+}
+
+// RegionConflict 地区国旗和节点名称关键词识别结果冲突。
+type RegionConflict struct {
+	Name           string `json:"name"`
+	FlagRegion     string `json:"flagRegion"`
+	FlagMatched    string `json:"flagMatched,omitempty"`
+	KeywordRegion  string `json:"keywordRegion"`
+	KeywordMatched string `json:"keywordMatched,omitempty"`
+	ResolvedRegion string `json:"resolvedRegion"`
 }
 
 // RefreshAllItem 批量刷新单项结果
@@ -134,9 +158,15 @@ type RefreshAllItem struct {
 	SourceID uint   `json:"sourceId"`
 	Name     string `json:"name"`
 	OK       bool   `json:"ok"`
+	Previous int    `json:"previous,omitempty"`
+	Kept     int    `json:"kept,omitempty"`
 	Added    int    `json:"added,omitempty"`
+	Removed  int    `json:"removed,omitempty"`
+	Modified int    `json:"modified,omitempty"`
 	Skipped  int    `json:"skipped,omitempty"`
-	Error    string `json:"error,omitempty"`
+	// RegionConflictTotal 地区国旗与节点名称关键词冲突的节点数。
+	RegionConflictTotal int    `json:"regionConflictTotal,omitempty"`
+	Error               string `json:"error,omitempty"`
 }
 
 // RefreshAllResponse 批量刷新结果

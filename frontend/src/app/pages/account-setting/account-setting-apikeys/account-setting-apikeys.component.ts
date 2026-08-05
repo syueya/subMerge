@@ -12,7 +12,7 @@ import {
 	enumText,
 } from '@data-struct';
 import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime } from '@common/util/format';
+import { formatDateTime } from '@common/util';
 import { CmDialogOpenService } from '@common/modules/dialog';
 import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
 import { finalize, takeUntil } from 'rxjs';

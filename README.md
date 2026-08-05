@@ -75,6 +75,70 @@ Clash 规则行只含 `TYPE,payload,target`（`MATCH,target`），不含业务�
 - `ENCRYPTION_KEY` 至少 32 字符（`openssl rand -hex 32`）；`PUBLIC_BASE_URL` 填对外访问根地址（生成订阅链接用）
 - `TRUSTED_PROXIES`：可信反代 IP/CIDR。管限流/审计的真实客户端 IP；无反代留空
 - `COOKIE_SECURE`：`true` 时 Cookie 仅 HTTPS 发送。与 `TRUSTED_PROXIES` **独立**——HTTPS 反代通常两个都配；`http://IP` 访问保持默认 `false`
+- 单管理员模型：首次 bootstrap 建号；无多用户 / 角色体系。自动化用 API Key 作用域，客户端用分享 Token
+
+## 上线检查清单
+
+### 1. 环境变量（必改）
+
+| 变量 | 生产建议 |
+|------|----------|
+| `ENCRYPTION_KEY` | `openssl rand -hex 32`，≥32 字符；**切勿**沿用 compose 示例占位 |
+| `APP_ENV` | `production` |
+| `PUBLIC_BASE_URL` | 浏览器实际访问根地址（如 `https://sub.example.com`），影响订阅链接生成 |
+| `COOKIE_SECURE` | 纯 HTTP/`IP:端口` 保持 `false`；HTTPS 反代设 `true` |
+| `TRUSTED_PROXIES` | 有 Nginx/Caddy/NPM/Docker 网桥时填反代 CIDR；裸跑留空 |
+| `SOURCE_REFRESH_INTERVAL` | 按需（小时）；改后重启 |
+| `LOG_RETENTION_DAYS` | 建议 ≥7；磁盘紧可缩短 |
+| `TZ` | 与运维时区一致，默认 `Asia/Shanghai` |
+
+本地可直接改 `.env`；Docker 改 `docker-public/docker-submerge/docker-compose.yaml` 的 `environment`。
+
+### 2. Docker Compose 示例改法
+
+```yaml
+environment:
+  - APP_ENV=production
+  - ENCRYPTION_KEY=<openssl rand -hex 32 的结果>
+  - PUBLIC_BASE_URL=https://你的域名
+  - TRUSTED_PROXIES=172.16.0.0/12   # 按实际反代网段改；无反代删此行或留空
+  - COOKIE_SECURE=true              # 仅 HTTPS 时
+  - SOURCE_REFRESH_INTERVAL=24
+  - LOG_OUTPUT=both
+  - LOG_RETENTION_DAYS=7
+  - TZ=Asia/Shanghai
+volumes:
+  - ./data:/app/data   # SQLite 与密钥材料，务必备份
+  - ./log:/app/log
+```
+
+管理端口不要直接裸暴露公网；更稳妥是反代只对内网开放面板，公网仅放行 `/subscribe/*`（按你的反代策略裁剪）。
+
+### 3. 发布前冒烟
+
+```text
+1. GET /api/health → ok
+2. 首次打开 → bootstrap 管理员（或已有账号登录）
+3. 添加订阅源 → 拉取成功 → 节点有地区前缀
+4. 策略组 / 分流规则可编辑
+5. 发布版本成功
+6. 创建分享 Token → 客户端 /subscribe/{token} 能拉到 YAML
+7. 账户：改昵称 / 改密码 / 改头像成功
+8. （可选）API Key 只读 scope 能调列表接口
+```
+
+### 4. 运维与备份
+
+- **备份**：定期拷贝 `data/`（含 SQLite 与加密 salt）；升级或改 `ENCRYPTION_KEY` 前必须先备份
+- **日志**：`log/` 按 `LOG_RETENTION_DAYS` 清理；排障时看审计与应用日志
+- **Geo**：管理端 `/geo` 可在线更新；进程需对 `defaults/geo`（镜像内路径）有写权限
+- **密钥轮换**：更换 `ENCRYPTION_KEY` 会导致已加密字段无法解密，需有迁移方案；日常不要随意改
+
+### 5. 已知产品边界
+
+- 单机 SQLite，适合自托管；非多租户 SaaS
+- 单管理员；协作可用共享账号或 API Key，无「普通成员」角色
+- Docker/CI 构建文件在同级 `docker-public/docker-submerge/`
 
 ## 技术栈
 

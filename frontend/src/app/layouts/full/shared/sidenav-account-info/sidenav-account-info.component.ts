@@ -10,7 +10,6 @@ import { IconsModule } from '@common/modules/icons/icons.module';
 import { CmSharedDialogService, CmSharedDialogDataModel } from '@common/modules/shared-dialog';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
 import { AuthService } from '@common/services';
-import { UserRoleEnum, UserRoleEnumToName } from '@data-struct';
 import { takeUntil } from 'rxjs';
 
 import { AppVersionComponent } from '../app-version/app-version.component';
@@ -34,11 +33,6 @@ export class SidenavAccountInfoComponent  extends CmParentComponent{
     })
   }
 
-  roleLabel(): string {
-    return UserRoleEnumToName[Number(this.userInfo?.role)] || UserRoleEnumToName[UserRoleEnum.Normal];
-  }
-
-  
   /**
    * 退出登录
    */

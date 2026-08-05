@@ -15,8 +15,7 @@
           />
           <div class="profile-card__meta">
             <div class="profile-card__line">
-              <h5 class="profile-card__name">{{ userInfo.nickName || '未知用户' }}</h5>
-              <span class="profile-card__role">{{ roleLabel() }}</span>
+              <h5 class="profile-card__name">{{ userInfo.nickName || userInfo.userName || '管理员' }}</h5>
             </div>
             <div class="profile-card__version-row">
               <app-app-version class="profile-card__version"></app-app-version>

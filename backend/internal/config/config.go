@@ -50,11 +50,13 @@ type Config struct {
 	LogDir string
 	// LogRetentionDays 日志保留天数；默认 7，0 表示不自动清理
 	LogRetentionDays int
-	GeoDir           string
-	GeoIPURL         string
-	GeoSiteURL       string
-	MetaDBURL        string
-	ASNURL           string
+	// DebugLogging 是否输出地区/过滤等详细 DEBUG 日志。
+	DebugLogging bool
+	GeoDir       string
+	GeoIPURL     string
+	GeoSiteURL   string
+	MetaDBURL    string
+	ASNURL       string
 }
 
 // Load 从环境变量加载配置
@@ -92,6 +94,12 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	// 开发环境默认开启详细日志，生产环境默认关闭；显式配置优先。
+	appEnv := getEnv("APP_ENV", "development")
+	debugLogging, err := getBool("DEBUG_LOGGING", !strings.EqualFold(strings.TrimSpace(appEnv), "production"))
+	if err != nil {
+		return nil, err
+	}
 	// 默认 false：http://IP 可登录；HTTPS 部署显式 COOKIE_SECURE=true
 	cookieSecure, err := getBool("COOKIE_SECURE", false)
 	if err != nil {
@@ -104,7 +112,7 @@ func Load() (*Config, error) {
 	logOutput := applog.NormalizeOutput(getEnv("LOG_OUTPUT", "both"))
 
 	cfg := &Config{
-		Env:                getEnv("APP_ENV", "development"),
+		Env:                appEnv,
 		HTTPAddr:           getEnv("HTTP_ADDR", ":8080"),
 		PublicBaseURL:      strings.TrimRight(getEnv("PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
 		DataDir:            dataDir,
@@ -127,6 +135,7 @@ func Load() (*Config, error) {
 		LogOutput:        logOutput,
 		LogDir:           defaultLogDir(),
 		LogRetentionDays: logRetentionDays,
+		DebugLogging:     debugLogging,
 		GeoDir:           defaultGeoDir(),
 		GeoIPURL:         getEnv("GEOIP_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat"),
 		GeoSiteURL:       getEnv("GEOSITE_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"),

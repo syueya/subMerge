@@ -12,5 +12,4 @@ export interface MenuItem {
     route?: string;   // 路由地址
     children?: MenuItem[];  // 子菜单
     ddType?: string;    // 下拉菜单类型
-    isAdminOnly?: boolean;  // 是否仅管理员可见
 }

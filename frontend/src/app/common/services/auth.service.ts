@@ -8,13 +8,13 @@ import { STORAGE_USERINFO_KEY } from '@common/util';
 import { BehaviorSubject, Observable, lastValueFrom, map, tap } from 'rxjs';
 
 import { ApiService } from '../net/api.service';
-	import { AdminUser } from '@data-struct';
+import { AdminUser } from '@data-struct';
 
 /**
- * SubMerge 鉴权：
+ * SubMerge 鉴权（单管理员）：
  * - 真实会话在 HttpOnly Cookie `submerge_session`（JS 读不到）
  * - 本地仅缓存非敏感 AdminUser，供 UI/Guard 快速判断
- * - 兼容模板 AuthService 接口（token 占位、UserInfo 映射）
+ * - token 为 Cookie 会话占位，不向 Authorization 注入真实值
  */
 @Injectable({
   providedIn: 'root'
@@ -135,7 +135,6 @@ export class AuthService {
   }
 
   private processUserInfo(userInfo: UserInfo): UserInfo {
-    userInfo.role = Number(userInfo.role ?? 1);
     if (userInfo.avatar && !userInfo.avatar.startsWith('data:') && !userInfo.avatar.startsWith('http') && !userInfo.avatar.startsWith('/')) {
       const avatar = AvatarList.find(item => item.value === userInfo.avatar);
       userInfo.avatarSrc = avatar?.src || '/assets/images/avatar/default.jpg';
@@ -196,7 +195,6 @@ export class AuthService {
       id: user.id,
       userName: user.username,
       nickName: user.displayName || user.username,
-      role: 1,
       avatar: user.avatar || '',
       createdAt: Date.parse(user.createdAt) || Date.now(),
       updatedAt: Date.now(),

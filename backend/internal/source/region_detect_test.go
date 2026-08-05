@@ -70,18 +70,20 @@ func TestDetectRegionDetailedMethods(t *testing.T) {
 	}
 }
 
-func TestEnsureRegionPrefixStripsOld(t *testing.T) {
-	if got := EnsureRegionPrefix("🇯🇵日本01", "JP"); got != "JP-🇯🇵日本01" {
-		t.Fatalf("got %s", got)
+func TestRegionConflictPrefersKeyword(t *testing.T) {
+	d := DetectRegionDetailed("🇨🇳台湾高速01")
+	if d.Region != "TW" || d.Method != "conflict" || !d.Conflict {
+		t.Fatalf("conflict resolution: %+v", d)
 	}
-	if got := EnsureRegionPrefix("JP-foo", "JP"); got != "JP-foo" {
-		t.Fatalf("got %s", got)
+	if d.FlagRegion != "CN" || d.KeywordRegion != "TW" {
+		t.Fatalf("conflict regions: %+v", d)
 	}
-	if got := EnsureRegionPrefix("PH-baz", "US"); got != "US-baz" {
-		t.Fatalf("got %s", got)
-	}
-	if got := EnsureRegionPrefix("HK-🇭🇰香港01", "HK"); got != "HK-🇭🇰香港01" {
-		t.Fatalf("got %s", got)
+	// 多国旗时匹配顺序应稳定（按 flag 排序后取第一个）
+	first := DetectRegion("🇯🇵🇭🇰node")
+	for i := 0; i < 10; i++ {
+		if got := DetectRegion("🇯🇵🇭🇰node"); got != first {
+			t.Fatalf("non-deterministic flag match: first=%q got=%q", first, got)
+		}
 	}
 }
 

@@ -15,6 +15,30 @@ export const formatDate = (date: number | Date, formatStr = 'yyyy-MM-dd HH:mm'):
 };
 
 /**
+ * 格式化日期时间（兼容 ISO 字符串 / 时间戳 / Date / 空值）
+ * @param value ISO 字符串、秒/毫秒时间戳或 Date；空值返回 empty
+ * @param formatStr date-fns 格式，默认 'yyyy-MM-dd HH:mm'
+ * @param empty 空值占位，默认 '—'
+ */
+export function formatDateTime(
+  value?: string | number | Date | null,
+  formatStr = 'yyyy-MM-dd HH:mm',
+  empty = '—'
+): string {
+  if (value === null || value === undefined || value === '') {
+    return empty;
+  }
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) {
+      return value;
+    }
+    return format(d, formatStr);
+  }
+  return formatDate(value, formatStr);
+}
+
+/**
  * 将秒数转换为小时和分钟\天、年表示
  * @param seconds 要转换的秒数
  * @returns 小时和分钟表示的字符串

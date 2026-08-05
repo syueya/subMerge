@@ -13,7 +13,6 @@ import { AuthService } from '@common/services';
 import { CoreService } from '@common/services/core.service';
 import { ScreenSizeService } from '@common/services/screen-size.service';
 import { ScrollService } from '@common/services/scroll.service';
-import { UserRoleEnum } from '@data-struct';
 import { NgScrollbarModule } from 'ngx-scrollbar';
 import { fromEvent, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, map, takeUntil } from 'rxjs/operators';
@@ -105,28 +104,9 @@ export class FullComponent extends CmParentComponent implements OnDestroy {
       }
     });
 
-    //订阅用户信息 生成权限菜单
+    // 登录后展示全部菜单（单管理员面板，无角色过滤）
     this.authService.$userInfo.pipe(takeUntil(this.$destroy)).subscribe(userInfo => {
-      const OrgMenuList = JSON.parse(JSON.stringify(MenuList)) || [];
-      // 根据 userInfo 过滤 sidebarMenu
-      if (userInfo) {
-        if (Number(userInfo.role) === UserRoleEnum.Admin) {
-          // 管理员返回全部菜单
-          this.mainMenuList = OrgMenuList;
-        } else {
-          this.mainMenuList = OrgMenuList.filter((item: MenuItem) => {
-            if (item.isAdminOnly) {
-              return false; // 过滤掉 isAdminOnly 为 true 的对象
-            } else if (item.children) {
-              // 过滤子对象数组中的 isAdminOnly 为 true 的对象
-              item.children = item.children.filter((child: MenuItem) => !child.isAdminOnly);
-            }
-            return true;
-          });
-        }
-      } else {
-        this.mainMenuList = []; // 如果 userInfo 不存在，则清空 sidebarMenu
-      }
+      this.mainMenuList = userInfo ? (JSON.parse(JSON.stringify(MenuList)) as MenuItem[]) : [];
     });
 
     // 初始化主题

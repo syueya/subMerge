@@ -15,7 +15,7 @@ import {
 	regionOptionText,
 } from '@data-struct';
 import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime } from '@common/util/format';
+import { formatDateTime } from '@common/util';
 import { SourceService } from '../services/source.service';
 import { formatRefreshMsg } from '../services/source-refresh.util';
 import {

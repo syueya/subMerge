@@ -14,8 +14,16 @@ func TestLevelPrefixes(t *testing.T) {
 	defer func() {
 		log.SetOutput(nil)
 		log.SetFlags(log.LstdFlags)
+		SetDebugEnabled(false)
 	}()
 
+	// DEBUG 默认关闭
+	Debug("hidden")
+	if buf.Len() != 0 {
+		t.Fatalf("disabled debug wrote output: %q", buf.String())
+	}
+
+	SetDebugEnabled(true)
 	Info("hello %s", "world")
 	Warn("careful")
 	Error("boom")

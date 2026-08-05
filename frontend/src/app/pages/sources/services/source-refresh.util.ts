@@ -27,10 +27,20 @@ export function formatRefreshMsg(res: RefreshResultLike, title: string): string 
 		: '';
 	const up = res.upstreamTotal ?? res.added + (res.skipped ?? 0);
 	const parsed = res.parsed ?? up;
-	const lines = [
-		`${res.source.name} ${title}`,
-		`上游 ${up} → 解析 ${parsed} → 入库 ${res.added}（过滤 ${res.skipped ?? 0}）`,
-	];
+	const hasDiffStats = res.previous !== undefined || res.kept !== undefined || res.modified !== undefined;
+	const lines = [`${res.source.name} ${title}`];
+	if (hasDiffStats) {
+		const previous = res.previous ?? 0;
+		const kept = res.kept ?? 0;
+		const modified = res.modified ?? 0;
+		const current = res.added + kept + modified;
+		lines.push(
+			`上游 ${up} → 解析 ${parsed} → 当前 ${current}（保留 ${kept}，新增 ${res.added}，移除 ${res.removed ?? 0}，修改 ${modified}）`,
+		);
+		lines.push(`刷新前 ${previous}，过滤 ${res.skipped ?? 0}`);
+	} else {
+		lines.push(`上游 ${up} → 解析 ${parsed} → 入库 ${res.added}（过滤 ${res.skipped ?? 0}）`);
+	}
 	const parseDrop = formatDropMap(res.parseDropped, {
 		missing_name: '缺名称',
 		missing_type: '缺type',
@@ -56,5 +66,15 @@ export function formatRefreshMsg(res: RefreshResultLike, title: string): string 
 		}
 	}
 	if (regions) lines.push(`地区 ${regions}`);
+	const conflicts = res.regionConflictTotal ?? 0;
+	if (conflicts > 0) {
+		lines.push(`地区标记冲突 ${conflicts} 条（已按名称关键词归类）`);
+		for (const item of (res.regionConflicts || []).slice(0, 5)) {
+			lines.push(`· ${item.name}：国旗 ${item.flagRegion}，名称 ${item.keywordRegion} → ${item.resolvedRegion}`);
+		}
+		if ((res.regionConflictOmitted ?? 0) > 0) {
+			lines.push(`· 另有 ${res.regionConflictOmitted} 条冲突未显示`);
+		}
+	}
 	return lines.join('\n');
 }

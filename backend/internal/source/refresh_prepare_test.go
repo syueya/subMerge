@@ -37,6 +37,28 @@ func TestPrepareProxiesLimitsFilteredNameSamples(t *testing.T) {
 	}
 }
 
+func TestPrepareProxiesCollectsRegionConflicts(t *testing.T) {
+	filter, err := CompileFilter(FilterOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stats, err := prepareProxies(1, "source", "auto", "UNK", []ParsedProxy{
+		{Name: "🇨🇳台湾高速01", Type: "vless", Server: "example.com", Port: 443},
+	}, filter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stats.kept) != 1 || stats.kept[0].region != "TW" {
+		t.Fatalf("prepared region = %q, stats=%+v", stats.kept[0].region, stats)
+	}
+	if stats.regionConflictTotal != 1 || len(stats.regionConflicts) != 1 {
+		t.Fatalf("conflicts = %d samples=%d", stats.regionConflictTotal, len(stats.regionConflicts))
+	}
+	if got := stats.regionConflicts[0]; got.FlagRegion != "CN" || got.KeywordRegion != "TW" || got.ResolvedRegion != "TW" {
+		t.Fatalf("conflict = %+v", got)
+	}
+}
+
 func TestCleanFilteredNameTruncatesLongNames(t *testing.T) {
 	name := cleanFilteredName(strings.Repeat("中", maxFilteredNameLen+20))
 	if got := len([]rune(name)); got != maxFilteredNameLen+3 {

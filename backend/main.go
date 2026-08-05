@@ -41,6 +41,7 @@ func main() {
 	if err := applog.Setup(cfg.LogOutput, cfg.LogDir, cfg.LogRetentionDays); err != nil {
 		applog.Fatalf("log setup: %v", err)
 	}
+	applog.SetDebugEnabled(cfg.DebugLogging)
 	defer applog.Close()
 
 	db, err := database.Open(cfg.DBPath)
@@ -72,13 +73,13 @@ func main() {
 		applog.Fatalf("seed rules: %v", err)
 	}
 	publishSvc := publish.NewService(db, sourceSvc, ruleSvc)
-		subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
-		apiKeySvc := apikey.NewService(db, box)
-		geoSvc := geo.NewService(cfg.GeoDir, geo.URLs{
-			GeoIP: cfg.GeoIPURL, GeoSite: cfg.GeoSiteURL, MetaDB: cfg.MetaDBURL, ASN: cfg.ASNURL,
-		})
-		geoSvc.Load()
-		netCheckSvc := netcheck.NewService(db)
+	subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
+	apiKeySvc := apikey.NewService(db, box)
+	geoSvc := geo.NewService(cfg.GeoDir, geo.URLs{
+		GeoIP: cfg.GeoIPURL, GeoSite: cfg.GeoSiteURL, MetaDB: cfg.MetaDBURL, ASN: cfg.ASNURL,
+	})
+	geoSvc.Load()
+	netCheckSvc := netcheck.NewService(db)
 
 	// 启动后异步拉一次全部启用源，再按间隔定时刷新；首次发布由用户在面板完成
 	go func() {
@@ -108,22 +109,22 @@ func main() {
 		}
 	}()
 
-		r := server.NewRouter(server.Deps{
-			Cfg:      cfg,
-			Auth:     auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.CookieSecure),
-			Source:   source.NewHandler(sourceSvc, auditSvc),
-			Rule:     rule.NewHandler(ruleSvc, auditSvc, geoSvc),
-			Publish:  publish.NewHandler(publishSvc, auditSvc),
-			Sub:      subscription.NewHandler(subSvc, auditSvc),
-			APIKey:   apikey.NewHandler(apiKeySvc, auditSvc),
-			Geo:      geo.NewHandler(geoSvc, auditSvc),
-			NetCheck: netcheck.NewHandler(netCheckSvc, auditSvc),
-			Logs:     logs.NewHandler(logs.NewService(cfg.LogDir)),
-			Audit:    auditSvc,
-			AuthMW:   middleware.AuthRequired(db, apiKeySvc),
-			LoginRL:  middleware.RateLimit(cfg.RateLimitLogin),
-			SubRL:    middleware.RateLimit(cfg.RateLimitSub),
-		})
+	r := server.NewRouter(server.Deps{
+		Cfg:      cfg,
+		Auth:     auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.CookieSecure),
+		Source:   source.NewHandler(sourceSvc, auditSvc),
+		Rule:     rule.NewHandler(ruleSvc, auditSvc, geoSvc),
+		Publish:  publish.NewHandler(publishSvc, auditSvc),
+		Sub:      subscription.NewHandler(subSvc, auditSvc),
+		APIKey:   apikey.NewHandler(apiKeySvc, auditSvc),
+		Geo:      geo.NewHandler(geoSvc, auditSvc),
+		NetCheck: netcheck.NewHandler(netCheckSvc, auditSvc),
+		Logs:     logs.NewHandler(logs.NewService(cfg.LogDir)),
+		Audit:    auditSvc,
+		AuthMW:   middleware.AuthRequired(db, apiKeySvc),
+		LoginRL:  middleware.RateLimit(cfg.RateLimitLogin),
+		SubRL:    middleware.RateLimit(cfg.RateLimitSub),
+	})
 
 	applog.Info("submerge %s listening on %s (db=%s log=%s dir=%s retain=%dd)",
 		cfg.Version, cfg.HTTPAddr, filepath.Clean(cfg.DBPath),

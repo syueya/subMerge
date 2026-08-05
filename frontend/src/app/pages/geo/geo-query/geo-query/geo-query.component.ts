@@ -9,7 +9,7 @@ import {
 	GeoStatus,
 } from '@data-struct';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
-import { formatDateTime } from '@common/util/format';
+import { formatDateTime } from '@common/util';
 import { takeUntil } from 'rxjs';
 import { GeoService } from '../../services/geo.service';
 import { GeoCategorySearchComponent } from '../geo-category-search/geo-category-search.component';

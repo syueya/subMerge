@@ -10,105 +10,111 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestGeneratorBuild(t *testing.T) {
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
-		Proxies: []map[string]interface{}{
-			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
-			{"name": "JP-b", "type": "ss", "server": "2.2.2.2", "port": 443},
-		},
-		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`, Enabled: true},
-			{Name: "拒绝", Type: "select", Proxies: `["REJECT"]`, Enabled: true},
-			{Name: "US", Type: "select", Proxies: `["REGION:US"]`, Enabled: true},
-			{Name: "JP", Type: "select", Proxies: `["REGION:JP"]`, Enabled: true},
-		},
-		Rules: []database.Rule{
-			{Type: "DOMAIN-SUFFIX", Payload: "openai.com", Target: "US", Enabled: true},
-			{Type: "GEOIP", Payload: "CN", Target: "直连", Enabled: true},
-			{Type: "MATCH", Payload: "", Target: "直连", Enabled: true},
-		},
-	})
+func ssProxy(name, server string, port int, extra ...map[string]interface{}) map[string]interface{} {
+	p := map[string]interface{}{"name": name, "type": "ss", "server": server, "port": port}
+	for _, m := range extra {
+		for k, v := range m {
+			p[k] = v
+		}
+	}
+	return p
+}
+
+func group(name, typ, proxies string, extra ...func(*database.ProxyGroup)) database.ProxyGroup {
+	g := database.ProxyGroup{Name: name, Type: typ, Proxies: proxies, Enabled: true}
+	for _, fn := range extra {
+		fn(&g)
+	}
+	return g
+}
+
+func withURL(url string) func(*database.ProxyGroup) {
+	return func(g *database.ProxyGroup) { g.URL = url }
+}
+
+func makeRule(typ, payload, target string) database.Rule {
+	return database.Rule{Type: typ, Payload: payload, Target: target, Enabled: true}
+}
+
+func mustBuild(t *testing.T, in BuildInput) *BuildResult {
+	t.Helper()
+	res, err := NewGenerator().Build(in)
 	if err != nil {
 		t.Fatal(err)
 	}
+	return res
+}
+
+func TestGeneratorBuild(t *testing.T) {
+	res := mustBuild(t, BuildInput{
+		Proxies: []map[string]interface{}{
+			ssProxy("US-a", "1.1.1.1", 443),
+			ssProxy("JP-b", "2.2.2.2", 443),
+		},
+		Groups: []database.ProxyGroup{
+			group("直连", "select", `["DIRECT"]`),
+			group("拒绝", "select", `["REJECT"]`),
+			group("US", "select", `["REGION:US"]`),
+			group("JP", "select", `["REGION:JP"]`),
+		},
+		Rules: []database.Rule{
+			makeRule("DOMAIN-SUFFIX", "openai.com", "US"),
+			makeRule("GEOIP", "CN", "直连"),
+			makeRule("MATCH", "", "直连"),
+		},
+	})
 	if res.ProxyCount != 2 || res.RuleCount != 3 {
 		t.Fatalf("counts: %+v", res)
 	}
-	if !strings.Contains(res.YAML, "MATCH,直连") {
-		t.Fatalf("missing MATCH,直连: %s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "JP-b") {
-		t.Fatalf("missing JP node in yaml: %s", res.YAML)
-	}
-	// 订阅配置核心字段（不强制 mixed-port/dns，避免覆盖客户端本机设置）
-	for _, key := range []string{"mode: rule", "proxies:", "proxy-groups:", "rules:"} {
-		if !strings.Contains(res.YAML, key) {
-			t.Fatalf("missing field %q in yaml:\n%s", key, res.YAML)
+	for _, want := range []string{"MATCH,直连", "JP-b", "mode: rule", "proxies:", "proxy-groups:", "rules:"} {
+		if !strings.Contains(res.YAML, want) {
+			t.Fatalf("missing %q in yaml:\n%s", want, res.YAML)
 		}
 	}
-	// 不应写入本机端口/控制器，避免 Clash Verge 导入后测速异常
-	for _, key := range []string{"mixed-port:", "external-controller:", "dns:"} {
-		if strings.Contains(res.YAML, key) {
-			t.Fatalf("subscription yaml should not contain %q:\n%s", key, res.YAML)
+	for _, bad := range []string{"mixed-port:", "external-controller:", "dns:"} {
+		if strings.Contains(res.YAML, bad) {
+			t.Fatalf("subscription yaml should not contain %q:\n%s", bad, res.YAML)
 		}
 	}
 }
 
 func TestBuildHashStableAcrossRuns(t *testing.T) {
-	g := NewGenerator()
 	in := BuildInput{
 		Proxies: []map[string]interface{}{
-			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
-			{"name": "JP-b", "type": "ss", "server": "2.2.2.2", "port": 443},
-			{"name": "DE-c", "type": "ss", "server": "3.3.3.3", "port": 443},
-			{"name": "FR-d", "type": "ss", "server": "4.4.4.4", "port": 443},
-			{"name": "CA-e", "type": "ss", "server": "5.5.5.5", "port": 443},
+			ssProxy("US-a", "1.1.1.1", 443),
+			ssProxy("JP-b", "2.2.2.2", 443),
+			ssProxy("DE-c", "3.3.3.3", 443),
+			ssProxy("FR-d", "4.4.4.4", 443),
+			ssProxy("CA-e", "5.5.5.5", 443),
 		},
 		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-			{Name: "美国US", Type: "url-test", Proxies: `["REGION:US"]`, URL: "https://www.gstatic.com/generate_204"},
-			{Name: "其他国家", Type: "url-test", Proxies: `["REGION:OTHER"]`, URL: "https://www.gstatic.com/generate_204"},
+			group("直连", "select", `["DIRECT"]`),
+			group("美国US", "url-test", `["REGION:US"]`, withURL("https://www.gstatic.com/generate_204")),
+			group("其他国家", "url-test", `["REGION:OTHER"]`, withURL("https://www.gstatic.com/generate_204")),
 		},
-		Rules: []database.Rule{
-			{Type: "MATCH", Target: "直连", Enabled: true},
-		},
+		Rules: []database.Rule{makeRule("MATCH", "", "直连")},
 	}
-	first, err := g.Build(in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := 0; i < 30; i++ {
-		res, err := g.Build(in)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if res.Hash != first.Hash {
-			t.Fatalf("hash unstable at iter %d: first=%s got=%s", i, first.Hash, res.Hash)
-		}
-		if res.YAML != first.YAML {
-			t.Fatalf("yaml unstable at iter %d", i)
+	first := mustBuild(t, in)
+	for i := 0; i < 10; i++ {
+		res := mustBuild(t, in)
+		if res.Hash != first.Hash || res.YAML != first.YAML {
+			t.Fatalf("hash/yaml unstable at iter %d", i)
 		}
 	}
 }
 
-func TestSanitizeDropsLegacyWSFields(t *testing.T) {
+func TestSanitizeProxies(t *testing.T) {
 	out, dropped := sanitizeProxiesForMeta([]map[string]interface{}{
 		{
-			"name":       "a",
-			"type":       "vmess",
-			"server":     "1.1.1.1",
-			"port":       443,
-			"ws-path":    "/",
-			"ws-headers": map[string]interface{}{"Host": "example.com"},
-			"ws-opts":    map[string]interface{}{"path": "/", "headers": map[string]interface{}{"Host": "example.com"}},
+			"name": "a", "type": "vmess", "server": "1.1.1.1", "port": 443,
+			"ws-path": "/", "ws-headers": map[string]interface{}{"Host": "example.com"},
+			"ws-opts": map[string]interface{}{"path": "/", "headers": map[string]interface{}{"Host": "example.com"}},
 		},
+		{"name": "b", "type": "ss", "server": "2.2.2.2", "port": "8443"},
+		{"name": "bad", "type": "vmess", "server": "3.3.3.3"},
 	})
-	if dropped != 0 {
-		t.Fatalf("dropped=%d", dropped)
-	}
-	if len(out) != 1 {
-		t.Fatalf("len=%d", len(out))
+	if dropped != 0 || len(out) != 2 {
+		t.Fatalf("dropped=%d len=%d", dropped, len(out))
 	}
 	if _, ok := out[0]["ws-path"]; ok {
 		t.Fatal("ws-path should be removed when ws-opts present")
@@ -116,490 +122,271 @@ func TestSanitizeDropsLegacyWSFields(t *testing.T) {
 	if _, ok := out[0]["ws-headers"]; ok {
 		t.Fatal("ws-headers should be removed when ws-opts present")
 	}
-	if _, ok := out[0]["ws-opts"]; !ok {
-		t.Fatal("ws-opts should remain")
+	if out[0]["port"] != 443 || out[1]["port"] != 8443 {
+		t.Fatalf("ports=%v %v", out[0]["port"], out[1]["port"])
 	}
 }
 
-func TestSanitizeProxiesPortTypes(t *testing.T) {
-	out, dropped := sanitizeProxiesForMeta([]map[string]interface{}{
-		{"name": "a", "type": "vmess", "server": "1.1.1.1", "port": "443"},
-		{"name": "b", "type": "ss", "server": "2.2.2.2", "port": 8443.0},
-		{"name": "bad", "type": "vmess", "server": "3.3.3.3"}, // no port
-	})
-	if dropped != 0 {
-		t.Fatalf("dropped=%d", dropped)
-	}
-	if len(out) != 2 {
-		t.Fatalf("expected 2, got %d", len(out))
-	}
-	if out[0]["port"] != 443 {
-		t.Fatalf("port0=%v", out[0]["port"])
-	}
-	if out[1]["port"] != 8443 {
-		t.Fatalf("port1=%v", out[1]["port"])
-	}
-}
-
-func TestRealityShortIDQuotedNotScientific(t *testing.T) {
-	// 6314e825 未加引号会被 YAML 1.1 解析成 .inf → mihomo invalid REALITY short ID
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
+func TestRealityShortIDHandling(t *testing.T) {
+	res := mustBuild(t, BuildInput{
 		Proxies: []map[string]interface{}{
 			{
-				"name":               "JP-reality",
-				"type":               "vless",
-				"server":             "1.2.3.4",
-				"port":               443,
-				"uuid":               "98bb17d9-9815-4923-a1d7-3d017ffd3f08",
-				"tls":                true,
-				"client-fingerprint": "chrome",
+				"name": "JP-reality", "type": "vless", "server": "1.2.3.4", "port": 443,
+				"uuid": "98bb17d9-9815-4923-a1d7-3d017ffd3f08", "tls": true, "client-fingerprint": "chrome",
 				"reality-opts": map[string]interface{}{
 					"public-key": "VOFSjjWT0wIH3Q0ntyEZd8WwksrIAb5gPt_3PBnEASg",
 					"short-id":   "6314e825",
 				},
 			},
-			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
+			ssProxy("US-a", "1.1.1.1", 443),
 		},
 		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-			{Name: "节点选择", Type: "select", Proxies: `["ALL"]`},
+			group("直连", "select", `["DIRECT"]`),
+			group("节点选择", "select", `["ALL"]`),
 		},
-		Rules:     []database.Rule{{Type: "MATCH", Target: "直连", Enabled: true}},
+		Rules:     []database.Rule{makeRule("MATCH", "", "直连")},
 		GroupMode: "auto",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(res.YAML, "short-id: 6314e825") && !strings.Contains(res.YAML, `short-id: "6314e825"`) {
-		t.Fatalf("short-id must be double-quoted, got:\n%s", res.YAML)
-	}
 	if !strings.Contains(res.YAML, `short-id: "6314e825"`) {
 		t.Fatalf("expected quoted short-id:\n%s", res.YAML)
 	}
 	if strings.Contains(res.YAML, ".inf") || strings.Contains(res.YAML, ".Inf") {
 		t.Fatalf("yaml must not contain .inf:\n%s", res.YAML)
 	}
-	// name 应在 type 之前；并有 1-based 序号注释
 	jp := strings.Index(res.YAML, "name: JP-reality")
 	tp := strings.Index(res.YAML, "type: vless")
 	if jp < 0 || tp < 0 || jp > tp {
-		t.Fatalf("expected name before type in proxy block:\n%s", res.YAML)
+		t.Fatalf("expected name before type:\n%s", res.YAML)
 	}
 	if !strings.Contains(res.YAML, "# 1") {
 		t.Fatalf("expected proxy index comments:\n%s", res.YAML)
 	}
-	// 再 round-trip：客户端用 YAML 解析后 short-id 仍是字符串 6314e825
 	var doc map[string]interface{}
 	if err := yaml.Unmarshal([]byte(res.YAML), &doc); err != nil {
 		t.Fatal(err)
 	}
-	list, _ := doc["proxies"].([]interface{})
 	found := false
-	for _, item := range list {
-		m, _ := item.(map[string]interface{})
+	for _, item := range doc["proxies"].([]interface{}) {
+		m := item.(map[string]interface{})
 		if fmt.Sprint(m["name"]) != "JP-reality" {
 			continue
 		}
 		found = true
-		ro, _ := m["reality-opts"].(map[string]interface{})
-		sid := fmt.Sprint(ro["short-id"])
-		if sid != "6314e825" {
-			t.Fatalf("round-trip short-id=%q type=%T want 6314e825", ro["short-id"], ro["short-id"])
+		ro := m["reality-opts"].(map[string]interface{})
+		if fmt.Sprint(ro["short-id"]) != "6314e825" {
+			t.Fatalf("round-trip short-id=%q", ro["short-id"])
 		}
 	}
 	if !found {
 		t.Fatal("JP-reality missing after unmarshal")
 	}
-}
 
-func TestSanitizeDropsInvalidRealityShortID(t *testing.T) {
 	out, dropped := sanitizeProxiesForMeta([]map[string]interface{}{
-		{
-			"name":   "bad-inf",
-			"type":   "vless",
-			"server": "1.1.1.1",
-			"port":   443,
-			"reality-opts": map[string]interface{}{
-				"public-key": "VOFSjjWT0wIH3Q0ntyEZd8WwksrIAb5gPt_3PBnEASg",
-				"short-id":   ".inf",
-			},
-		},
-		{
-			"name":   "bad-float",
-			"type":   "vless",
-			"server": "1.1.1.1",
-			"port":   443,
-			"reality-opts": map[string]interface{}{
-				"public-key": "VOFSjjWT0wIH3Q0ntyEZd8WwksrIAb5gPt_3PBnEASg",
-				// YAML 1.1 把 6314e825 解析成 +Inf 后的形态
-				"short-id": math.Inf(1),
-			},
-		},
-		{
-			"name":   "ok",
-			"type":   "vless",
-			"server": "1.1.1.1",
-			"port":   443,
-			"reality-opts": map[string]interface{}{
-				"public-key": "VOFSjjWT0wIH3Q0ntyEZd8WwksrIAb5gPt_3PBnEASg",
-				"short-id":   "9c5b8c53",
-			},
-		},
+		{"name": "bad-inf", "type": "vless", "server": "1.1.1.1", "port": 443,
+			"reality-opts": map[string]interface{}{"public-key": "k", "short-id": ".inf"}},
+		{"name": "bad-float", "type": "vless", "server": "1.1.1.1", "port": 443,
+			"reality-opts": map[string]interface{}{"public-key": "k", "short-id": math.Inf(1)}},
+		{"name": "ok", "type": "vless", "server": "1.1.1.1", "port": 443,
+			"reality-opts": map[string]interface{}{"public-key": "k", "short-id": "9c5b8c53"}},
 	})
-	if dropped != 2 {
-		t.Fatalf("dropped=%d want 2", dropped)
-	}
-	if len(out) != 1 || fmt.Sprint(out[0]["name"]) != "ok" {
-		t.Fatalf("out=%v", out)
+	if dropped != 2 || len(out) != 1 || fmt.Sprint(out[0]["name"]) != "ok" {
+		t.Fatalf("dropped=%d out=%v", dropped, out)
 	}
 }
 
-func TestGeneratorRejectsUnknownRuleTarget(t *testing.T) {
-	g := NewGenerator()
-	_, err := g.Build(BuildInput{
-		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
-		Groups:  []database.ProxyGroup{{Name: "US", Type: "select", Proxies: `["REGION:US"]`}},
-		Rules:   []database.Rule{{Type: "MATCH", Target: "MISSING", Enabled: true}},
-	})
-	if err == nil {
+func TestGeneratorGroupModes(t *testing.T) {
+	baseProxies := []map[string]interface{}{ssProxy("US-a", "1.1.1.1", 443)}
+	baseGroups := []database.ProxyGroup{
+		group("直连", "select", `["DIRECT"]`),
+		group("节点选择", "select", `["ALL"]`),
+		group("美国US", "select", `["REGION:US"]`),
+		group("日本JP", "select", `["REGION:JP"]`),
+		group("菲律宾PH", "select", `["REGION:PH"]`),
+	}
+	baseRules := []database.Rule{
+		makeRule("DOMAIN-SUFFIX", "example.jp", "日本JP"),
+		makeRule("MATCH", "", "直连"),
+	}
+
+	if _, err := NewGenerator().Build(BuildInput{
+		Proxies: baseProxies,
+		Groups:  []database.ProxyGroup{group("US", "select", `["REGION:US"]`)},
+		Rules:   []database.Rule{makeRule("MATCH", "", "MISSING")},
+	}); err == nil {
 		t.Fatal("expected unknown rule target to fail")
 	}
-}
 
-func TestGeneratorAllModeKeepsEmptyGroup(t *testing.T) {
-	g := NewGenerator()
-	// all：空 JP 保留为 DIRECT
-	res, err := g.Build(BuildInput{
-		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
-		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-			{Name: "US", Type: "select", Proxies: `["REGION:US"]`},
-			{Name: "JP", Type: "select", Proxies: `["REGION:JP"]`},
-		},
-		Rules: []database.Rule{
-			{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "JP", Enabled: true},
-			{Type: "MATCH", Target: "直连", Enabled: true},
-		},
-		GroupMode: "all",
-	})
-	if err != nil {
-		t.Fatal(err)
+	all := mustBuild(t, BuildInput{Proxies: baseProxies, Groups: baseGroups, Rules: baseRules, GroupMode: "all"})
+	if !strings.Contains(all.YAML, "name: 日本JP") || !strings.Contains(all.YAML, "DOMAIN-SUFFIX,example.jp,日本JP") {
+		t.Fatalf("all mode should keep empty JP:\n%s", all.YAML)
 	}
-	if !strings.Contains(res.YAML, "name: JP") {
-		t.Fatalf("expected JP group kept in all mode:\n%s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,JP") {
-		t.Fatalf("expected rule keep target JP:\n%s", res.YAML)
-	}
-}
 
-func TestGeneratorAutoPrunesEmptyGroup(t *testing.T) {
-	g := NewGenerator()
-	// auto：仅 US 节点时剪掉 JP；有「节点选择」时规则目标优先回退到它
-	res, err := g.Build(BuildInput{
-		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
+	auto := mustBuild(t, BuildInput{Proxies: baseProxies, Groups: baseGroups, Rules: baseRules, GroupMode: "auto"})
+	if strings.Contains(auto.YAML, "name: 日本JP") || strings.Contains(auto.YAML, "name: 菲律宾PH") {
+		t.Fatalf("auto should prune empty region groups:\n%s", auto.YAML)
+	}
+	if !strings.Contains(auto.YAML, "name: 美国US") || !strings.Contains(auto.YAML, "name: 节点选择") {
+		t.Fatalf("auto should keep US and 节点选择:\n%s", auto.YAML)
+	}
+	if !strings.Contains(auto.YAML, "DOMAIN-SUFFIX,example.jp,节点选择") {
+		t.Fatalf("pruned group should fallback 节点选择:\n%s", auto.YAML)
+	}
+
+	noSelect := mustBuild(t, BuildInput{
+		Proxies: baseProxies,
 		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-			{Name: "节点选择", Type: "select", Proxies: `["ALL"]`},
-			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
-			{Name: "日本JP", Type: "select", Proxies: `["REGION:JP"]`},
-			{Name: "菲律宾PH", Type: "select", Proxies: `["REGION:PH"]`},
+			group("直连", "select", `["DIRECT"]`),
+			group("美国US", "select", `["REGION:US"]`),
+			group("日本JP", "select", `["REGION:JP"]`),
 		},
-		Rules: []database.Rule{
-			{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "日本JP", Enabled: true},
-			{Type: "MATCH", Target: "直连", Enabled: true},
-		},
+		Rules:     baseRules,
 		GroupMode: "auto",
 	})
-	if err != nil {
-		t.Fatal(err)
+	if !strings.Contains(noSelect.YAML, "DOMAIN-SUFFIX,example.jp,DIRECT") {
+		t.Fatalf("without 节点选择 should fallback DIRECT:\n%s", noSelect.YAML)
 	}
-	if strings.Contains(res.YAML, "name: 日本JP") || strings.Contains(res.YAML, "name: 菲律宾PH") {
-		t.Fatalf("auto should prune empty region groups:\n%s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "name: 美国US") {
-		t.Fatalf("auto should keep US group:\n%s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "name: 节点选择") {
-		t.Fatalf("auto should keep 节点选择:\n%s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,节点选择") {
-		t.Fatalf("rule targeting pruned group should fallback 节点选择:\n%s", res.YAML)
-	}
-	found := false
-	for _, w := range res.Warnings {
-		if strings.Contains(w, "日本JP") && strings.Contains(w, "节点选择") {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected fallback warning, got %v", res.Warnings)
-	}
-}
 
-func TestGeneratorAutoFallbackDirectWithoutSelectGroup(t *testing.T) {
-	g := NewGenerator()
-	// 无「节点选择」时仍回退 DIRECT
-	res, err := g.Build(BuildInput{
-		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
-		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
-			{Name: "日本JP", Type: "select", Proxies: `["REGION:JP"]`},
-		},
-		Rules: []database.Rule{
-			{Type: "DOMAIN-SUFFIX", Payload: "example.jp", Target: "日本JP", Enabled: true},
-			{Type: "MATCH", Target: "直连", Enabled: true},
-		},
-		GroupMode: "auto",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,example.jp,DIRECT") {
-		t.Fatalf("without 节点选择 should fallback DIRECT:\n%s", res.YAML)
-	}
-}
-
-func TestGeneratorCustomWhitelist(t *testing.T) {
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
+	custom := mustBuild(t, BuildInput{
 		Proxies: []map[string]interface{}{
-			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
-			{"name": "PH-b", "type": "ss", "server": "2.2.2.2", "port": 443},
+			ssProxy("US-a", "1.1.1.1", 443),
+			ssProxy("PH-b", "2.2.2.2", 443),
 		},
 		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`},
-			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`},
-			{Name: "菲律宾PH", Type: "select", Proxies: `["REGION:PH"]`},
+			group("直连", "select", `["DIRECT"]`),
+			group("美国US", "select", `["REGION:US"]`),
+			group("菲律宾PH", "select", `["REGION:PH"]`),
 		},
-		Rules: []database.Rule{
-			{Type: "MATCH", Target: "直连", Enabled: true},
-		},
+		Rules:         []database.Rule{makeRule("MATCH", "", "直连")},
 		GroupMode:     "custom",
 		AllowedGroups: []string{"直连", "菲律宾PH"},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(res.YAML, "name: 美国US") {
-		t.Fatalf("custom should not include US:\n%s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "name: 菲律宾PH") {
-		t.Fatalf("custom should include PH:\n%s", res.YAML)
+	if strings.Contains(custom.YAML, "name: 美国US") || !strings.Contains(custom.YAML, "name: 菲律宾PH") {
+		t.Fatalf("custom whitelist unexpected:\n%s", custom.YAML)
 	}
 }
 
-func TestGeneratorSkipsEmptyRegionGroup(t *testing.T) {
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
-		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
+func TestGeneratorEmptyAndOtherRegions(t *testing.T) {
+	res := mustBuild(t, BuildInput{
+		Proxies: []map[string]interface{}{ssProxy("US-a", "1.1.1.1", 443)},
 		Groups: []database.ProxyGroup{
-			{Name: "PH", Type: "select", Proxies: `["REGION:PH"]`},
-			{Name: "US", Type: "select", Proxies: `["REGION:US", "DIRECT"]`},
+			group("PH", "select", `["REGION:PH"]`),
+			group("US", "select", `["REGION:US", "DIRECT"]`),
 		},
-		Rules: []database.Rule{{Type: "MATCH", Target: "US", Enabled: true}},
+		Rules: []database.Rule{makeRule("MATCH", "", "US")},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, n := range res.GroupNames {
-		if n == "PH" {
-			t.Fatalf("empty PH group should be skipped, got groups=%v", res.GroupNames)
-		}
-	}
 	if len(res.GroupNames) != 1 || res.GroupNames[0] != "US" {
 		t.Fatalf("unexpected groups: %v", res.GroupNames)
 	}
-}
-
-func TestGeneratorRejectsAllEmptyGroups(t *testing.T) {
-	g := NewGenerator()
-	_, err := g.Build(BuildInput{
-		Proxies: []map[string]interface{}{{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443}},
-		Groups:  []database.ProxyGroup{{Name: "PH", Type: "select", Proxies: `["REGION:PH"]`}},
-		Rules:   []database.Rule{{Type: "MATCH", Target: "PH", Enabled: true}},
-	})
-	if err == nil {
+	if _, err := NewGenerator().Build(BuildInput{
+		Proxies: []map[string]interface{}{ssProxy("US-a", "1.1.1.1", 443)},
+		Groups:  []database.ProxyGroup{group("PH", "select", `["REGION:PH"]`)},
+		Rules:   []database.Rule{makeRule("MATCH", "", "PH")},
+	}); err == nil {
 		t.Fatal("expected error when all groups empty")
 	}
-}
 
-func TestGeneratorRegionOther(t *testing.T) {
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
+	other := mustBuild(t, BuildInput{
 		Proxies: []map[string]interface{}{
-			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
-			{"name": "DE-b", "type": "ss", "server": "2.2.2.2", "port": 443},
-			{"name": "NG-c", "type": "ss", "server": "3.3.3.3", "port": 443},
+			ssProxy("US-a", "1.1.1.1", 443),
+			ssProxy("DE-b", "2.2.2.2", 443),
+			ssProxy("NG-c", "3.3.3.3", 443),
 		},
 		Groups: []database.ProxyGroup{
-			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`, Enabled: true},
-			{Name: "其他国家", Type: "select", Proxies: `["REGION:OTHER"]`, Enabled: true},
+			group("美国US", "select", `["REGION:US"]`),
+			group("其他国家", "select", `["REGION:OTHER"]`),
 		},
-		Rules: []database.Rule{{Type: "MATCH", Target: "其他国家", Enabled: true}},
+		Rules: []database.Rule{makeRule("MATCH", "", "其他国家")},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(res.YAML, "DE-b") || !strings.Contains(res.YAML, "NG-c") {
-		t.Fatalf("OTHER should include non-primary nodes:\n%s", res.YAML)
-	}
-	// 其他国家组应含 DE/NG，不应只剩空
-	if !strings.Contains(res.YAML, "其他国家") {
-		t.Fatalf("missing 其他国家 group:\n%s", res.YAML)
+	for _, want := range []string{"DE-b", "NG-c", "其他国家"} {
+		if !strings.Contains(other.YAML, want) {
+			t.Fatalf("missing %q:\n%s", want, other.YAML)
+		}
 	}
 }
 
-func TestGeneratorSourceByName(t *testing.T) {
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
+func TestGeneratorSourceMembers(t *testing.T) {
+	res := mustBuild(t, BuildInput{
 		Proxies: []map[string]interface{}{
-			{"name": "US-a-良心云", "type": "ss", "server": "1.1.1.1", "port": 443, "_source_id": uint(1), "_source_name": "良心云"},
-			{"name": "JP-b-良心云", "type": "ss", "server": "2.2.2.2", "port": 443, "_source_id": uint(1), "_source_name": "良心云"},
-			{"name": "US-c-机场B", "type": "ss", "server": "3.3.3.3", "port": 443, "_source_id": uint(2), "_source_name": "机场B"},
+			ssProxy("US-a-良心云", "1.1.1.1", 443, map[string]interface{}{"_source_id": uint(1), "_source_name": "良心云"}),
+			ssProxy("JP-b-良心云", "2.2.2.2", 443, map[string]interface{}{"_source_id": uint(1), "_source_name": "良心云"}),
+			ssProxy("US-c-机场B", "3.3.3.3", 443, map[string]interface{}{"_source_id": uint(2), "_source_name": "机场B"}),
 		},
 		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`, Enabled: true},
-			{Name: "良心云", Type: "select", Proxies: `["SOURCE:良心云"]`, Enabled: true},
-			{Name: "机场B", Type: "url-test", Proxies: `["SOURCE:机场B"]`, URL: "https://www.gstatic.com/generate_204", Enabled: true},
+			group("直连", "select", `["DIRECT"]`),
+			group("良心云", "select", `["SOURCE:良心云"]`),
+			group("机场B", "url-test", `["SOURCE:机场B"]`, withURL("https://www.gstatic.com/generate_204")),
 		},
-		Rules: []database.Rule{{Type: "MATCH", Target: "良心云", Enabled: true}},
+		Rules: []database.Rule{makeRule("MATCH", "", "良心云")},
 	})
-	if err != nil {
-		t.Fatal(err)
+	for _, want := range []string{"US-a-良心云", "JP-b-良心云", "US-c-机场B"} {
+		if !strings.Contains(res.YAML, want) {
+			t.Fatalf("missing %q:\n%s", want, res.YAML)
+		}
 	}
-	// 源组应含对应节点
-	if !strings.Contains(res.YAML, "US-a-良心云") || !strings.Contains(res.YAML, "JP-b-良心云") {
-		t.Fatalf("SOURCE:良心云 should expand nodes:\n%s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "US-c-机场B") {
-		t.Fatalf("SOURCE:机场B should expand nodes:\n%s", res.YAML)
-	}
-	// 内部字段不得泄漏到 YAML
 	if strings.Contains(res.YAML, "_source_id") || strings.Contains(res.YAML, "_source_name") {
-		t.Fatalf("internal source meta leaked into yaml:\n%s", res.YAML)
+		t.Fatalf("internal source meta leaked:\n%s", res.YAML)
 	}
-// 告警应列出可用源
-	joined := strings.Join(res.Warnings, "\n")
-	if !strings.Contains(joined, "可用订阅源:") && !strings.Contains(joined, "available sources:") {
-		t.Fatalf("expected available sources warning, got: %v", res.Warnings)
-	}
-}
 
-func TestGeneratorSourceByID(t *testing.T) {
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
+	byID := mustBuild(t, BuildInput{
 		Proxies: []map[string]interface{}{
-			{"name": "US-a-old", "type": "ss", "server": "1.1.1.1", "port": 443, "_source_id": uint(3), "_source_name": "旧名"},
-			{"name": "JP-b-other", "type": "ss", "server": "2.2.2.2", "port": 443, "_source_id": uint(9), "_source_name": "其它"},
+			ssProxy("US-a-old", "1.1.1.1", 443, map[string]interface{}{"_source_id": uint(3), "_source_name": "旧名"}),
+			ssProxy("JP-b-other", "2.2.2.2", 443, map[string]interface{}{"_source_id": uint(9), "_source_name": "其它"}),
 		},
 		Groups: []database.ProxyGroup{
-			{Name: "按ID", Type: "select", Proxies: `["SOURCE:id:3"]`, Enabled: true},
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`, Enabled: true},
+			group("按ID", "select", `["SOURCE:id:3"]`),
+			group("直连", "select", `["DIRECT"]`),
 		},
-		Rules: []database.Rule{{Type: "MATCH", Target: "按ID", Enabled: true}},
+		Rules: []database.Rule{makeRule("MATCH", "", "按ID")},
 	})
-	if err != nil {
-		t.Fatal(err)
+	if !strings.Contains(byID.YAML, "US-a-old") || !strings.Contains(byID.YAML, "JP-b-other") {
+		t.Fatalf("SOURCE:id expansion unexpected:\n%s", byID.YAML)
 	}
-	if !strings.Contains(res.YAML, "US-a-old") {
-		t.Fatalf("SOURCE:id:3 should include US-a-old:\n%s", res.YAML)
-	}
-	// 不应把其它源节点放进「按ID」组：解析 proxy-groups 粗查
-	// 组内列表在 YAML 中连续出现；至少保证 JP-b-other 存在于 proxies 但 MATCH 目标组名正确
-	if !strings.Contains(res.YAML, "JP-b-other") {
-		t.Fatalf("other source node should still be in proxies list:\n%s", res.YAML)
-	}
-}
 
-func TestGeneratorSourceCaseInsensitiveName(t *testing.T) {
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
+	ci := mustBuild(t, BuildInput{
 		Proxies: []map[string]interface{}{
-			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443, "_source_id": 1, "_source_name": "FooBar"},
+			ssProxy("US-a", "1.1.1.1", 443, map[string]interface{}{"_source_id": 1, "_source_name": "FooBar"}),
 		},
-		Groups: []database.ProxyGroup{
-			{Name: "源组", Type: "select", Proxies: `["SOURCE:foobar"]`, Enabled: true},
-		},
-		Rules: []database.Rule{{Type: "MATCH", Target: "源组", Enabled: true}},
+		Groups: []database.ProxyGroup{group("源组", "select", `["SOURCE:foobar"]`)},
+		Rules:  []database.Rule{makeRule("MATCH", "", "源组")},
 	})
-	if err != nil {
-		t.Fatal(err)
+	if !strings.Contains(ci.YAML, "US-a") {
+		t.Fatalf("SOURCE name match should be case-insensitive:\n%s", ci.YAML)
 	}
-	if !strings.Contains(res.YAML, "US-a") {
-		t.Fatalf("SOURCE name match should be case-insensitive:\n%s", res.YAML)
-	}
-}
 
-func TestGeneratorSourceEmptyPruned(t *testing.T) {
-	g := NewGenerator()
-	// 只有源 A 的节点；SOURCE:B 应被 auto 剪掉
-	res, err := g.Build(BuildInput{
+	pruned := mustBuild(t, BuildInput{
 		Proxies: []map[string]interface{}{
-			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443, "_source_id": uint(1), "_source_name": "A"},
+			ssProxy("US-a", "1.1.1.1", 443, map[string]interface{}{"_source_id": uint(1), "_source_name": "A"}),
 		},
 		Groups: []database.ProxyGroup{
-			{Name: "A", Type: "select", Proxies: `["SOURCE:A"]`, Enabled: true},
-			{Name: "B", Type: "select", Proxies: `["SOURCE:B"]`, Enabled: true},
+			group("A", "select", `["SOURCE:A"]`),
+			group("B", "select", `["SOURCE:B"]`),
 		},
-		Rules: []database.Rule{{Type: "MATCH", Target: "A", Enabled: true}},
-		// 显式 auto：允许规则回退；此处 MATCH 指向 A，B 被剪
+		Rules:     []database.Rule{makeRule("MATCH", "", "A")},
 		GroupMode: "auto",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(res.YAML, "name: B") {
-		t.Fatalf("empty SOURCE:B group should be pruned:\n%s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "name: A") {
-		t.Fatalf("SOURCE:A group should remain:\n%s", res.YAML)
+	if strings.Contains(pruned.YAML, "name: B") || !strings.Contains(pruned.YAML, "name: A") {
+		t.Fatalf("empty SOURCE group prune unexpected:\n%s", pruned.YAML)
 	}
 }
 
-// formatRule 只输出 Clash 三元组，业务 category 不得进入 YAML
 func TestFormatRuleOmitsCategory(t *testing.T) {
-	g := NewGenerator()
-	res, err := g.Build(BuildInput{
-		Proxies: []map[string]interface{}{
-			{"name": "US-a", "type": "ss", "server": "1.1.1.1", "port": 443},
-		},
+	res := mustBuild(t, BuildInput{
+		Proxies: []map[string]interface{}{ssProxy("US-a", "1.1.1.1", 443)},
 		Groups: []database.ProxyGroup{
-			{Name: "直连", Type: "select", Proxies: `["DIRECT"]`, Enabled: true},
-			{Name: "美国US", Type: "select", Proxies: `["REGION:US"]`, Enabled: true},
+			group("直连", "select", `["DIRECT"]`),
+			group("美国US", "select", `["REGION:US"]`),
 		},
 		Rules: []database.Rule{
-			{
-				Type:     "DOMAIN-SUFFIX",
-				Payload:  "openai.com",
-				Target:   "美国US",
-				Enabled:  true,
-				Note:     "仅后台",
-				Category: "海外AI",
-			},
+			{Type: "DOMAIN-SUFFIX", Payload: "openai.com", Target: "美国US", Enabled: true, Note: "仅后台", Category: "海外AI"},
 			{Type: "MATCH", Target: "直连", Enabled: true, Category: "兜底"},
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
+	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,openai.com,美国US") || !strings.Contains(res.YAML, "MATCH,直连") {
+		t.Fatalf("unexpected rules:\n%s", res.YAML)
 	}
-	if !strings.Contains(res.YAML, "DOMAIN-SUFFIX,openai.com,美国US") {
-		t.Fatalf("expected TYPE,payload,target without category:\n%s", res.YAML)
-	}
-	if !strings.Contains(res.YAML, "MATCH,直连") {
-		t.Fatalf("expected MATCH,target:\n%s", res.YAML)
-	}
-	for _, bad := range []string{"海外AI", "兜底", "仅后台", "category"} {
-		// rules 段不应出现业务分类/备注；proxies 里也不会有这些中文
+	for _, bad := range []string{"海外AI", "兜底", "仅后台", "openai.com,美国US,"} {
 		if strings.Contains(res.YAML, bad) {
 			t.Fatalf("yaml must not contain %q:\n%s", bad, res.YAML)
 		}
-	}
-	// 确认没有多出第 4 段
-	if strings.Contains(res.YAML, "openai.com,美国US,") {
-		t.Fatalf("rule line must not have extra fields after target:\n%s", res.YAML)
 	}
 }

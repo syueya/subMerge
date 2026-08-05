@@ -91,14 +91,19 @@ proxies:
 }
 
 func TestEnsureRegionPrefix(t *testing.T) {
-	if got := EnsureRegionPrefix("foo", "US"); got != "US-foo" {
-		t.Fatalf("got %s", got)
+	cases := map[string]struct {
+		name, region, want string
+	}{
+		"plain":     {"foo", "US", "US-foo"},
+		"same":      {"US-bar", "US", "US-bar"},
+		"replace":   {"PH-baz", "US", "US-baz"},
+		"emoji":     {"🇯🇵日本01", "JP", "JP-🇯🇵日本01"},
+		"keep-flag": {"HK-🇭🇰香港01", "HK", "HK-🇭🇰香港01"},
 	}
-	if got := EnsureRegionPrefix("US-bar", "US"); got != "US-bar" {
-		t.Fatalf("got %s", got)
-	}
-	if got := EnsureRegionPrefix("PH-baz", "US"); got != "US-baz" {
-		t.Fatalf("got %s", got)
+	for label, c := range cases {
+		if got := EnsureRegionPrefix(c.name, c.region); got != c.want {
+			t.Fatalf("%s: got %q want %q", label, got, c.want)
+		}
 	}
 }
 

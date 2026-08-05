@@ -84,10 +84,10 @@ func TestEnsureMatchIsLastAfterSeedSync(t *testing.T) {
 			secondLast.Type, secondLast.Payload, summarizeOrders(rows))
 	}
 
-	// 应从 rules.yaml 补上缺失公共规则（如 docker.io），且排在 MATCH 前
+	// 应从 rules.yaml 补上缺失公共规则（当前为 GEOSITE docker），且排在 MATCH 前
 	foundDocker := false
 	for _, r := range rows {
-		if r.Payload == "docker.io" {
+		if r.Payload == "docker" || r.Payload == "hub.dockerhub.com" {
 			foundDocker = true
 			if r.SortOrder >= last.SortOrder {
 				t.Fatalf("docker rule order %d must be before MATCH %d", r.SortOrder, last.SortOrder)
@@ -95,7 +95,7 @@ func TestEnsureMatchIsLastAfterSeedSync(t *testing.T) {
 		}
 	}
 	if !foundDocker {
-		t.Fatal("expected docker.io filled from rules.yaml")
+		t.Fatal("expected docker rule filled from rules.yaml")
 	}
 
 	// 旧分类名应迁成「系统分类」

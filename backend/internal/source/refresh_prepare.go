@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/applog"
 )
 
@@ -22,12 +23,14 @@ type preparedProxy struct {
 
 // refreshStats 刷新过程中的过滤/识别统计（用于响应与日志）
 type refreshStats struct {
-	kept          []preparedProxy
-	skipped       int
-	filterDropped map[string]int
-	filteredNames []string
-	filteredTotal int
-	regionCounts  map[string]int
+	kept                []preparedProxy
+	skipped             int
+	filterDropped       map[string]int
+	filteredNames       []string
+	filteredTotal       int
+	regionCounts        map[string]int
+	regionConflictTotal int
+	regionConflicts     []common.RegionConflict
 }
 
 // maxDetectSamples 地区识别样本日志上限（节点过多时避免刷屏）
@@ -35,6 +38,9 @@ const maxDetectSamples = 40
 
 // maxFallbackSamples 回退地区样本日志上限
 const maxFallbackSamples = 20
+
+// maxRegionConflictSamples 地区冲突响应样本上限
+const maxRegionConflictSamples = 20
 
 // maxFilteredNameSamples 过滤节点名称响应样本上限
 const maxFilteredNameSamples = 1000
@@ -51,10 +57,11 @@ func prepareProxies(
 	filter *CompiledFilter,
 ) (refreshStats, error) {
 	stats := refreshStats{
-		kept:          make([]preparedProxy, 0, len(proxies)),
-		filterDropped: map[string]int{},
-		filteredNames: make([]string, 0, 16),
-		regionCounts:  map[string]int{},
+		kept:            make([]preparedProxy, 0, len(proxies)),
+		filterDropped:   map[string]int{},
+		filteredNames:   make([]string, 0, 16),
+		regionCounts:    map[string]int{},
+		regionConflicts: make([]common.RegionConflict, 0, maxRegionConflictSamples),
 	}
 	detectMethodCounts := map[string]int{}
 	detectSamples := make([]string, 0, maxDetectSamples)
@@ -93,6 +100,19 @@ func prepareProxies(
 		}
 		detectMethodCounts[methodKey]++
 		stats.regionCounts[region]++
+		if resolved.Detect.Conflict {
+			stats.regionConflictTotal++
+			if len(stats.regionConflicts) < maxRegionConflictSamples {
+				stats.regionConflicts = append(stats.regionConflicts, common.RegionConflict{
+					Name:           cleanFilteredName(p.Name),
+					FlagRegion:     resolved.Detect.FlagRegion,
+					FlagMatched:    resolved.Detect.FlagMatched,
+					KeywordRegion:  resolved.Detect.KeywordRegion,
+					KeywordMatched: resolved.Detect.KeywordMatched,
+					ResolvedRegion: region,
+				})
+			}
+		}
 
 		// 逐节点样本：原名 → 地区 (方式:命中) → 最终名
 		if len(detectSamples) < maxDetectSamples {

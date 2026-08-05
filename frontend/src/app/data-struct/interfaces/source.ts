@@ -63,8 +63,11 @@ export interface RefreshSourceResult {
 	source: SubscriptionSource;
 	upstreamTotal?: number;
 	parsed?: number;
+	previous?: number;
+	kept?: number;
 	added: number;
 	removed: number;
+	modified?: number;
 	skipped: number;
 	parseDropped?: Record<string, number>;
 	filterDropped?: Record<string, number>;
@@ -74,14 +77,31 @@ export interface RefreshSourceResult {
 	filteredNamesOmitted?: number;
 	parseDroppedNames?: string[];
 	regionCounts?: Record<string, number>;
+	regionConflictTotal?: number;
+	regionConflicts?: RegionConflict[];
+	regionConflictOmitted?: number;
+}
+
+export interface RegionConflict {
+	name: string;
+	flagRegion: string;
+	flagMatched?: string;
+	keywordRegion: string;
+	keywordMatched?: string;
+	resolvedRegion: string;
 }
 
 export interface RefreshAllItem {
 	sourceId: number;
 	name: string;
 	ok: boolean;
+	previous?: number;
+	kept?: number;
 	added?: number;
+	removed?: number;
+	modified?: number;
 	skipped?: number;
+	regionConflictTotal?: number;
 	error?: string;
 }
 
@@ -107,11 +127,18 @@ export interface RefreshResultLike {
 	source: SubscriptionSource;
 	upstreamTotal?: number;
 	parsed?: number;
+	previous?: number;
+	kept?: number;
 	added: number;
+	removed?: number;
+	modified?: number;
 	skipped: number;
 	parseDropped?: Record<string, number>;
 	filterDropped?: Record<string, number>;
 	filteredNames?: string[];
 	filteredNamesOmitted?: number;
 	regionCounts?: Record<string, number>;
+	regionConflictTotal?: number;
+	regionConflicts?: RegionConflict[];
+	regionConflictOmitted?: number;
 }

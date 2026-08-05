@@ -380,46 +380,6 @@ func (s *Service) EnabledProxiesBySourceIDs(sourceIDs []uint) ([]map[string]inte
 	return out, nil
 }
 
-func uniqueProxyName(base string, used map[string]struct{}) string {
-	if _, exists := used[base]; !exists {
-		return base
-	}
-	for i := 2; ; i++ {
-		candidate := fmt.Sprintf("%s-%d", base, i)
-		if _, exists := used[candidate]; !exists {
-			return candidate
-		}
-	}
-}
-
-// stripSourceSuffix 若 name 以 -{源后缀} 结尾则剥掉（用于改名后重写）
-func stripSourceSuffix(name, sourceName string) string {
-	suffix := SanitizeSourceSuffix(sourceName)
-	if suffix == "" || name == "" {
-		return name
-	}
-	// 精确后缀（中文等大小写不变）
-	if strings.HasSuffix(name, "-"+suffix) {
-		return strings.TrimRight(strings.TrimSuffix(name, "-"+suffix), "-")
-	}
-	// ASCII 大小写不敏感
-	upper := strings.ToUpper(name)
-	tail := "-" + strings.ToUpper(suffix)
-	if strings.HasSuffix(upper, tail) {
-		return strings.TrimRight(name[:len(name)-len(tail)], "-")
-	}
-	return name
-}
-
-func normalizeRegionMode(raw string) string {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case string(common.RegionModeFixed):
-		return string(common.RegionModeFixed)
-	default:
-		return string(common.RegionModeAuto)
-	}
-}
-
 func (s *Service) toView(r database.Source) (common.SubscriptionSource, error) {
 	urlPlain := ""
 	if r.URLEncrypted != "" {

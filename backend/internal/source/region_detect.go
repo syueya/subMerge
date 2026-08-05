@@ -1,6 +1,7 @@
 package source
 
 import (
+	"sort"
 	"strings"
 	"sync"
 	"unicode"
@@ -16,6 +17,7 @@ type regionKeyword struct {
 
 var (
 	flagToRegion     map[string]string
+	orderedFlags     []string
 	keywordToRegion  []regionKeyword
 	knownRegionCodes map[string]struct{}
 	regionDictOnce   sync.Once
@@ -33,6 +35,13 @@ func loadRegionDict() {
 			return
 		}
 		flagToRegion = regioncatalog.Flags()
+		orderedFlags = make([]string, 0, len(flagToRegion))
+		for flag := range flagToRegion {
+			orderedFlags = append(orderedFlags, flag)
+		}
+		sort.SliceStable(orderedFlags, func(i, j int) bool {
+			return orderedFlags[i] < orderedFlags[j]
+		})
 		kws := regioncatalog.Keywords()
 		keywordToRegion = make([]regionKeyword, 0, len(kws))
 		for _, k := range kws {
@@ -69,10 +78,18 @@ func RegionDictError() error {
 type DetectMatch struct {
 	// Region 识别到的地区码；失败为空
 	Region string
-	// Method 匹配方式：flag | keyword | prefix | none
+	// Method 匹配方式：flag | keyword | prefix | conflict | none
 	Method string
 	// Matched 命中的关键词/国旗/前缀原文
 	Matched string
+	// FlagRegion / FlagMatched 国旗识别结果。
+	FlagRegion  string
+	FlagMatched string
+	// KeywordRegion / KeywordMatched 节点名称关键词识别结果。
+	KeywordRegion  string
+	KeywordMatched string
+	// Conflict 表示国旗和关键词识别到了不同地区。
+	Conflict bool
 }
 
 // DetectRegion 仅识别节点名中的地区（不套源默认）
@@ -87,13 +104,63 @@ func DetectRegionDetailed(name string) DetectMatch {
 	if name == "" {
 		return DetectMatch{Method: "none"}
 	}
-	// 1) 国旗 emoji
-	for flag, code := range flagToRegion {
-		if flag != "" && strings.Contains(name, flag) {
-			return DetectMatch{Region: code, Method: "flag", Matched: flag}
+
+	flagRegion, flagMatched := matchFlagRegion(name)
+	keywordRegion, keywordMatched := matchKeywordRegion(name)
+
+	if flagRegion != "" {
+		if keywordRegion != "" && flagRegion != keywordRegion {
+			// 国旗与关键词冲突时优先关键词（常见于错误国旗）
+			return DetectMatch{
+				Region:         keywordRegion,
+				Method:         "conflict",
+				Matched:        keywordMatched,
+				FlagRegion:     flagRegion,
+				FlagMatched:    flagMatched,
+				KeywordRegion:  keywordRegion,
+				KeywordMatched: keywordMatched,
+				Conflict:       true,
+			}
+		}
+		return DetectMatch{
+			Region:         flagRegion,
+			Method:         "flag",
+			Matched:        flagMatched,
+			FlagRegion:     flagRegion,
+			FlagMatched:    flagMatched,
+			KeywordRegion:  keywordRegion,
+			KeywordMatched: keywordMatched,
 		}
 	}
-	// 2) 关键词（已按长度排序）
+	if keywordRegion != "" {
+		return DetectMatch{
+			Region:         keywordRegion,
+			Method:         "keyword",
+			Matched:        keywordMatched,
+			FlagRegion:     flagRegion,
+			FlagMatched:    flagMatched,
+			KeywordRegion:  keywordRegion,
+			KeywordMatched: keywordMatched,
+		}
+	}
+
+	// 3) 已有地区前缀 US- / JP-
+	if code, ok := regionPrefixFromName(name); ok {
+		return DetectMatch{Region: code, Method: "prefix", Matched: code}
+	}
+	return DetectMatch{Method: "none"}
+}
+
+func matchFlagRegion(name string) (region, matched string) {
+	for _, flag := range orderedFlags {
+		if flag != "" && strings.Contains(name, flag) {
+			return flagToRegion[flag], flag
+		}
+	}
+	return "", ""
+}
+
+func matchKeywordRegion(name string) (region, matched string) {
 	lower := strings.ToLower(name)
 	for _, item := range keywordToRegion {
 		kw := item.Keyword
@@ -103,19 +170,15 @@ func DetectRegionDetailed(name string) DetectMatch {
 		// 短码（<=3 且全 alnum）要求词边界，避免 in 命中 singapore 等
 		if isShortCode(kw) {
 			if matchShortCode(lower, strings.ToLower(kw)) {
-				return DetectMatch{Region: item.Region, Method: "keyword", Matched: kw}
+				return item.Region, kw
 			}
 			continue
 		}
 		if strings.Contains(lower, strings.ToLower(kw)) {
-			return DetectMatch{Region: item.Region, Method: "keyword", Matched: kw}
+			return item.Region, kw
 		}
 	}
-	// 3) 已有地区前缀 US- / JP-
-	if code, ok := regionPrefixFromName(name); ok {
-		return DetectMatch{Region: code, Method: "prefix", Matched: code}
-	}
-	return DetectMatch{Method: "none"}
+	return "", ""
 }
 
 func isShortCode(s string) bool {

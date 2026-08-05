@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { catchError, forkJoin, of } from 'rxjs';
 import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime } from '@common/util/format';
+import { formatDateTime } from '@common/util';
 import { Release } from '@data-struct';
 import { DraftStatusStore } from '../../releases/services/draft-status.store';
 import { ReleaseService } from '../../releases/services/release.service';
