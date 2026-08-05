@@ -32,9 +32,16 @@ cd frontend && npm start
 
 ## Geo 数据
 
-管理端 `/geo` 页面读取 `backend/defaults/geo/` 下的四个文件，并显示文件大小、SHA256、MMDB build 时间或数据哈希版本。域名查询默认只匹配 `geosite.dat` 的分类；勾选 DNS 解析后，还会用解析出的 IP 查询 `geoip.dat`、`geoip.metadb` 和 `GeoLite2-ASN.mmdb`。
+管理端 `/geo` 页面读取 Geo 目录下的四个文件，并显示文件大小、SHA256、MMDB build 时间或数据哈希版本。域名查询默认只匹配 `geosite.dat` 的分类；勾选 DNS 解析后，还会用解析出的 IP 查询 `geoip.dat`、`geoip.metadb` 和 `GeoLite2-ASN.mmdb`。
 
-页面的「更新数据」会从以下地址下载并校验后原子覆盖 `backend/defaults/geo/`，服务随后重载索引。地址可通过环境变量覆盖：`GEOIP_URL`、`GEOSITE_URL`、`GEODB_URL`、`GEOASN_URL`。运行进程必须对该目录有写权限。
+| 运行方式 | Geo 目录 |
+|----------|----------|
+| 本地开发（项目根 / `backend/`） | `backend/defaults/geo/`（仓库可带默认文件） |
+| Docker（`WORKDIR=/app`） | `/app/defaults/geo`（**镜像不含默认数据**） |
+
+页面的「更新数据」会从以下地址下载并校验后原子覆盖该目录，服务随后重载索引。地址可通过环境变量覆盖：`GEOIP_URL`、`GEOSITE_URL`、`GEODB_URL`、`GEOASN_URL`。运行进程必须对该目录有写权限。
+
+Docker 部署请挂载 volume 到 `/app/defaults/geo`（见 compose 的 `./geo`）。首次启动若目录为空（或任一必需文件不可用），进程会**后台自动拉取一次**；失败只记日志，可稍后在 `/geo` 点「更新数据」或重启。不挂 volume 时容器重建会丢已下载文件并再次自动拉取。
 
 `geosite.dat` 支持按分类反查域名条目；GeoIP 文件反查的是其实际保存的 CIDR。`geoip.metadb` 与 ASN 数据库不保存域名，因此不能从分类反查域名。
 
@@ -110,6 +117,7 @@ environment:
 volumes:
   - ./data:/app/data   # SQLite 与密钥材料，务必备份
   - ./log:/app/log
+  - ./geo:/app/defaults/geo  # 首次 /geo「更新数据」后保留；镜像不自带
 ```
 
 管理端口不要直接裸暴露公网；更稳妥是反代只对内网开放面板，公网仅放行 `/subscribe/*`（按你的反代策略裁剪）。
@@ -119,19 +127,20 @@ volumes:
 ```text
 1. GET /api/health → ok
 2. 首次打开 → bootstrap 管理员（或已有账号登录）
-3. 添加订阅源 → 拉取成功 → 节点有地区前缀
-4. 策略组 / 分流规则可编辑
-5. 发布版本成功
-6. 创建分享 Token → 客户端 /subscribe/{token} 能拉到 YAML
-7. 账户：改昵称 / 改密码 / 改头像成功
-8. （可选）API Key 只读 scope 能调列表接口
+3. （Docker）等约 1–3 分钟后管理端 /geo 四个资源 Available（空 volume 会自动 bootstrap；失败可手动「更新数据」）
+4. 添加订阅源 → 拉取成功 → 节点有地区前缀
+5. 策略组 / 分流规则可编辑
+6. 发布版本成功
+7. 创建分享 Token → 客户端 /subscribe/{token} 能拉到 YAML
+8. 账户：改昵称 / 改密码 / 改头像成功
+9. （可选）API Key 只读 scope 能调列表接口
 ```
 
 ### 4. 运维与备份
 
 - **备份**：定期拷贝 `data/`（含 SQLite 与加密 salt）；升级或改 `ENCRYPTION_KEY` 前必须先备份
 - **日志**：`log/` 按 `LOG_RETENTION_DAYS` 清理；排障时看审计与应用日志
-- **Geo**：管理端 `/geo` 可在线更新；进程需对 `defaults/geo`（镜像内路径）有写权限
+- **Geo**：Docker 镜像不含默认 geo；挂载 `/app/defaults/geo`；首次缺失时启动后台自动下载，也可在 `/geo` 手动更新；进程需对该目录有写权限（entrypoint 会 chown）
 - **密钥轮换**：更换 `ENCRYPTION_KEY` 会导致已加密字段无法解密，需有迁移方案；日常不要随意改
 
 ### 5. 已知产品边界

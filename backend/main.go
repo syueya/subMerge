@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
@@ -80,6 +81,31 @@ func main() {
 	})
 	geoSvc.Load()
 	netCheckSvc := netcheck.NewService(db)
+
+	// Geo：任一必需文件不可用时后台自动拉取一次（Docker 空 volume 首次启动）；失败只记日志
+	go func() {
+		if !geoSvc.NeedsBootstrap() {
+			return
+		}
+		applog.Info("geo: required data missing under %s, bootstrapping from remote", filepath.Clean(cfg.GeoDir))
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		defer cancel()
+		result := geoSvc.Update(ctx)
+		ok, fail := 0, 0
+		for _, item := range result.Items {
+			if item.Updated {
+				ok++
+				continue
+			}
+			fail++
+			applog.Warn("geo bootstrap %s: %s", item.Name, item.Error)
+		}
+		if fail == 0 {
+			applog.Info("geo bootstrap completed (%d resources)", ok)
+		} else {
+			applog.Warn("geo bootstrap finished with failures (ok=%d fail=%d); use /geo「更新数据」or restart", ok, fail)
+		}
+	}()
 
 	// 启动后异步拉一次全部启用源，再按间隔定时刷新；首次发布由用户在面板完成
 	go func() {

@@ -52,6 +52,28 @@ func TestParseGeoFixtures(t *testing.T) {
 	}
 }
 
+func TestNeedsBootstrap(t *testing.T) {
+	empty := NewService(t.TempDir(), URLs{})
+	empty.Load()
+	if !empty.NeedsBootstrap() {
+		t.Fatal("empty geo dir should need bootstrap")
+	}
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, GeoSiteFile), fixtureGeoSite(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, GeoIPFile), fixtureGeoIP(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	partial := NewService(dir, URLs{})
+	partial.Load()
+	// geosite/geoip 可用，metadb/asn 仍缺失 → 仍需 bootstrap
+	if !partial.NeedsBootstrap() {
+		t.Fatal("partial geo dir should still need bootstrap")
+	}
+}
+
 func TestServiceQueryReverseAndInvalidResources(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, GeoSiteFile), fixtureGeoSite(), 0o644); err != nil {

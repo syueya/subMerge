@@ -123,6 +123,20 @@ func (s *Service) Load() {
 	s.snap = s.loadSnapshot()
 }
 
+// NeedsBootstrap 表示是否有任一必需 Geo 资源不可用（典型：Docker 空 volume 首次启动）。
+// 为 true 时启动流程可后台调用一次 Update，失败不阻塞服务。
+func (s *Service) NeedsBootstrap() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, name := range resourceNames {
+		st, ok := s.snap.resources[name]
+		if !ok || !st.status.Available {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Service) loadSnapshot() snapshot {
 	next := snapshot{
 		resources:  make(map[string]resourceState),
