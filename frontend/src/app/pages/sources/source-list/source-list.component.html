@@ -1,5 +1,5 @@
 <cm-page-toolbar title="订阅源" description="添加机场 Clash 订阅，拉取后按地区前缀合并节点。URL 仅脱敏展示。">
-  <button mat-icon-button color="primary" type="button" matTooltip="刷新" [disabled]="isLoading"
+  <button mat-icon-button color="primary" type="button" matTooltip="刷新" [disabled]="isLoading()"
     (click.debounceTime)="reloadTableDataByPage()">
     <i-tabler class="icon-20" name="refresh"></i-tabler>
   </button>
@@ -25,7 +25,7 @@
 <cm-responsive-table-list
   [data]="dataSource.data"
   [isMobile]="isMobileScreen"
-  [isLoading]="isLoading"
+  [isLoading]="isLoading()"
   [trackBy]="tableTrackBy"
   tableHeight="calc(100vh - 240px)"
   noDataTitle="暂无订阅源"
@@ -181,11 +181,6 @@
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="selectTableRow(row)"></tr>
-      <tr class="mat-row" *matNoDataRow [hidden]="isLoading">
-        <td class="mat-cell" [attr.colspan]="displayedColumns.length">
-          <cm-no-data [isMin]="true" noDataTitle="暂无订阅源，点击右上角「新增源」开始"></cm-no-data>
-        </td>
-      </tr>
     </table>
   </ng-template>
 </cm-responsive-table-list>

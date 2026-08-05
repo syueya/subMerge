@@ -184,16 +184,17 @@ export class SessionHttpCacheService {
 	      path === '/api/groups' ||
 	      path === '/api/tokens' ||
 	      path === '/api/apikeys' ||
-	      path === '/api/releases' ||
-	      path === '/api/proxies' ||
-	      path === '/api/regions' ||
-	      path === '/api/audit' ||
-	      path === '/api/logs' ||
-	      path === '/api/logs/details' ||
-	      path === '/api/geo/status' ||
-	      path === '/api/geo/categories' ||
-	      path === '/api/auth/me' ||
-	      path === '/api/health'
+path === '/api/releases' ||
+		      path === '/api/releases/draft-status' ||
+		      path === '/api/proxies' ||
+		      path === '/api/regions' ||
+		      path === '/api/audit' ||
+		      path === '/api/logs' ||
+		      path === '/api/logs/details' ||
+		      path === '/api/geo/status' ||
+		      path === '/api/geo/categories' ||
+		      path === '/api/auth/me' ||
+		      path === '/api/health'
 	    ) {
 	      return true;
 	    }
@@ -245,6 +246,7 @@ export class SessionHttpCacheService {
 
 /**
  * 会话读缓存拦截器：放在 defaultInterceptor 之后，命中则不再出网。
+ * Zone 回入由 defaultInterceptor 的 observeInAngularZone 统一负责；loading 由 withLoading(signal) 负责。
  */
 export const sessionHttpCacheInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,

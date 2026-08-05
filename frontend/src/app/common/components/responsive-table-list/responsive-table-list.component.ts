@@ -1,4 +1,4 @@
-import { Component, ContentChild, Input, TemplateRef, TrackByFunction } from '@angular/core';
+import { Component, contentChild, input, TemplateRef, TrackByFunction } from '@angular/core';
 
 export interface ResponsiveCardField {
   label: string;
@@ -13,25 +13,27 @@ export interface ResponsiveCardField {
   templateUrl: './responsive-table-list.component.html'
 })
 export class ResponsiveTableListComponent {
-  @Input() data: unknown[] = [];
-  @Input() isMobile = false;
-  @Input() isLoading = false;
-  @Input() tableHeight = 'calc(100vh - 275px)';
-  @Input() noDataTitle = '暂无数据';
-  @Input() contentOnly = false;
-  @Input() trackBy?: TrackByFunction<any>;
-  @Input() cardTitle?: string | ((item: unknown) => unknown);
-  @Input() cardBadge?: string | ((item: unknown) => unknown);
-  @Input() cardFields: ResponsiveCardField[] = [];
+  /** 列表数据；空且非 loading 时展示 noDataTitle */
+  readonly data = input<unknown[]>([]);
+  readonly isMobile = input(false);
+  readonly isLoading = input(false);
+  readonly tableHeight = input('calc(100vh - 275px)');
+  readonly noDataTitle = input('暂无数据');
+  readonly contentOnly = input(false);
+  readonly trackBy = input<TrackByFunction<any> | undefined>(undefined);
+  readonly cardTitle = input<string | ((item: unknown) => unknown) | undefined>(undefined);
+  readonly cardBadge = input<string | ((item: unknown) => unknown) | undefined>(undefined);
+  readonly cardFields = input<ResponsiveCardField[]>([]);
 
-  @ContentChild('mobileCard', { static: false }) mobileCardTpl?: TemplateRef<unknown>;
-  @ContentChild('mobileSelect', { static: false }) mobileSelectTpl?: TemplateRef<unknown>;
-  @ContentChild('mobileExtra', { static: false }) mobileExtraTpl?: TemplateRef<unknown>;
-  @ContentChild('mobileActions', { static: false }) mobileActionsTpl?: TemplateRef<unknown>;
-  @ContentChild('desktopTable', { static: false }) desktopTableTpl?: TemplateRef<unknown>;
+  readonly mobileCardTpl = contentChild<TemplateRef<unknown>>('mobileCard');
+  readonly mobileSelectTpl = contentChild<TemplateRef<unknown>>('mobileSelect');
+  readonly mobileExtraTpl = contentChild<TemplateRef<unknown>>('mobileExtra');
+  readonly mobileActionsTpl = contentChild<TemplateRef<unknown>>('mobileActions');
+  readonly desktopTableTpl = contentChild<TemplateRef<unknown>>('desktopTable');
 
   trackItem(index: number, item: unknown) {
-    return this.trackBy ? this.trackBy(index, item) : index;
+    const trackBy = this.trackBy();
+    return trackBy ? trackBy(index, item) : index;
   }
 
   fieldValue(item: unknown, field: ResponsiveCardField) {

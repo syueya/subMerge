@@ -1,5 +1,5 @@
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
-import { ChangeDetectorRef, Component, DestroyRef, ViewChild, inject } from '@angular/core';
+import { Component, ViewChild, inject, signal } from '@angular/core';
 import { FormBuilder, FormControl } from '@angular/forms';
 import { ServiceQueryParams } from '@common/interfaces';
 import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
@@ -17,9 +17,6 @@ import { LogService } from '../services/log.service';
 export class SettingLogsComponent extends CmParentTableComponent {
   private fb = inject(FormBuilder);
   private logService = inject(LogService);
-  private cdr = inject(ChangeDetectorRef);
-  private destroyRef = inject(DestroyRef);
-  private viewDestroyed = false;
 
   sidePanelOpened = true;
   systemLogsTypeList: SystemLogsType[] = [];
@@ -47,8 +44,8 @@ export class SettingLogsComponent extends CmParentTableComponent {
   private logTypeRequestId = 0;
   private logRequestId = 0;
 
-  /** 页面局部 loading，不依赖全局 HTTP spinner */
-  isLoadingLogs = false;
+  /** 首屏默认 true，避免进页先闪空日志 */
+  isLoadingLogs = signal(true);
   logLoadError = false;
 
   isOver(): boolean {
@@ -57,9 +54,6 @@ export class SettingLogsComponent extends CmParentTableComponent {
 
   constructor() {
     super();
-    this.destroyRef.onDestroy(() => {
-      this.viewDestroyed = true;
-    });
 
     this.searchForm = this.fb.group({
       name: ''
@@ -96,7 +90,7 @@ export class SettingLogsComponent extends CmParentTableComponent {
     this.allSystemLogsList = [];
     this.systemLogsList = [];
     this.logLoadError = false;
-    this.isLoadingLogs = true;
+    this.isLoadingLogs.set(true);
     const requestId = ++this.logRequestId;
 
     this.loadLogDetails(name, this.lineSelected, options?.bypassCache === true)
@@ -129,7 +123,7 @@ export class SettingLogsComponent extends CmParentTableComponent {
     // 作废进行中的详情请求，避免旧 finalize 误关/误开 loading
     this.logRequestId++;
     this.logLoadError = false;
-    this.isLoadingLogs = true;
+    this.isLoadingLogs.set(true);
     this.allSystemLogsList = [];
     this.systemLogsList = [];
 
@@ -211,15 +205,7 @@ export class SettingLogsComponent extends CmParentTableComponent {
   }
 
   private finishLoading() {
-    this.isLoadingLogs = false;
-    // 首屏请求完成时偶发不刷新；组件已销毁时不再 detectChanges
-    this.safeDetectChanges();
-  }
-
-  private safeDetectChanges() {
-    if (!this.viewDestroyed) {
-      this.cdr.detectChanges();
-    }
+    this.isLoadingLogs.set(false);
   }
 
   /** 虚拟滚动 trackBy：时间戳 + 调用栈 + 内容，避免切换文件时错复用 DOM */

@@ -63,7 +63,9 @@ func (h *Handler) Preview(c *gin.Context) {
 }
 
 func (h *Handler) DraftStatus(c *gin.Context) {
-	res, err := h.svc.DraftStatus()
+	// ?changes=1 时才算实体级 diff；默认只返回 dirty/hash，减轻进页成本
+	withChanges := c.Query("changes") == "1" || c.Query("changes") == "true"
+	res, err := h.svc.DraftStatus(withChanges)
 	if err != nil {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "draft status failed")
 		return

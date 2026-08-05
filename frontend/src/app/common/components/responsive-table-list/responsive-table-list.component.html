@@ -1,38 +1,38 @@
-@if (isMobile) {
-  @if (isLoading) {
+@if (isMobile()) {
+  @if (isLoading()) {
     <div class="d-flex justify-content-center m-y-24">
       <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
     </div>
   }
 
-  @if (data.length) {
+  @if (data().length) {
     <div class="row">
-      @for (item of data; track trackItem($index, item)) {
+      @for (item of data(); track trackItem($index, item)) {
         <div class="col-24 col-md-8 col-lg-6 col-xl-4 col-xxxl-3 m-b-24">
           <mat-card class="cardWithShadow h-full cursor-pointer">
             <div class="text-left p-x-24">
-              @if (mobileCardTpl) {
-                <ng-container *ngTemplateOutlet="mobileCardTpl; context: { $implicit: item, index: $index }"></ng-container>
+              @if (mobileCardTpl(); as cardTpl) {
+                <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: item, index: $index }"></ng-container>
               } @else {
                 <div class="m-t-20">
                   <div class="d-flex align-items-center gap-8 flex-wrap m-b-12">
-                    @if (mobileSelectTpl) {
-                      <ng-container *ngTemplateOutlet="mobileSelectTpl; context: { $implicit: item, index: $index }"></ng-container>
+                    @if (mobileSelectTpl(); as selectTpl) {
+                      <ng-container *ngTemplateOutlet="selectTpl; context: { $implicit: item, index: $index }"></ng-container>
                     }
-                    @if (hasValue(headerValue(item, cardBadge))) {
-                      <div class="bg-success text-white rounded f-w-600 p-x-4 f-s-12 align-middle">{{ headerValue(item, cardBadge) }}</div>
+                    @if (hasValue(headerValue(item, cardBadge()))) {
+                      <div class="bg-success text-white rounded f-w-600 p-x-4 f-s-12 align-middle">{{ headerValue(item, cardBadge()) }}</div>
                     }
-                    @if (hasValue(headerValue(item, cardTitle))) {
+                    @if (hasValue(headerValue(item, cardTitle()))) {
                       <h5 mat-card-title class="m-0 f-w-600 text-left">
-                        {{ headerValue(item, cardTitle) }}
+                        {{ headerValue(item, cardTitle()) }}
                       </h5>
                     }
                   </div>
-                  @if (mobileExtraTpl) {
-                    <ng-container *ngTemplateOutlet="mobileExtraTpl; context: { $implicit: item, index: $index }"></ng-container>
+                  @if (mobileExtraTpl(); as extraTpl) {
+                    <ng-container *ngTemplateOutlet="extraTpl; context: { $implicit: item, index: $index }"></ng-container>
                   }
                   <div class="row m-b-8 p-x-15">
-                    @for (field of cardFields; track field.label) {
+                    @for (field of cardFields(); track field.label) {
                       @let value = fieldValue(item, field);
                       @if (hasValue(value)) {
                         <div class="f-w-600 f-s-12 m-t-8" [class.col-24]="field.fullWidth" [class.col-12]="!field.fullWidth">
@@ -41,9 +41,9 @@
                       }
                     }
                   </div>
-                  @if (mobileActionsTpl) {
+                  @if (mobileActionsTpl(); as actionsTpl) {
                     <div class="d-flex justify-content-center gap-8 m-y-8">
-                      <ng-container *ngTemplateOutlet="mobileActionsTpl; context: { $implicit: item, index: $index }"></ng-container>
+                      <ng-container *ngTemplateOutlet="actionsTpl; context: { $implicit: item, index: $index }"></ng-container>
                     </div>
                   }
                 </div>
@@ -53,37 +53,45 @@
         </div>
       }
     </div>
-  } @else if (!isLoading) {
-    @if (contentOnly) {
-      <cm-no-data [isMin]="true" [noDataTitle]="noDataTitle"></cm-no-data>
+  } @else if (!isLoading()) {
+    @if (contentOnly()) {
+      <cm-no-data [isMin]="true" [noDataTitle]="noDataTitle()"></cm-no-data>
     } @else {
       <mat-card class="cardWithShadow">
         <mat-card-content>
-          <cm-no-data [isMin]="true" [noDataTitle]="noDataTitle"></cm-no-data>
+          <cm-no-data [isMin]="true" [noDataTitle]="noDataTitle()"></cm-no-data>
         </mat-card-content>
       </mat-card>
     }
   }
 } @else {
-  @if (contentOnly) {
-    <div class="table-container" [style.height]="tableHeight">
-      @if (isLoading) {
+  @if (contentOnly()) {
+    <div class="table-container" [style.height]="tableHeight()">
+      @if (isLoading()) {
         <div class="table-loading-overlay">
           <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
         </div>
       }
-      <ng-container *ngTemplateOutlet="desktopTableTpl || null"></ng-container>
+      @if (!isLoading() && data().length === 0) {
+        <cm-no-data [isMin]="true" [noDataTitle]="noDataTitle()"></cm-no-data>
+      } @else {
+        <ng-container *ngTemplateOutlet="desktopTableTpl() || null"></ng-container>
+      }
     </div>
   } @else {
     <mat-card class="cardWithShadow">
       <mat-card-content>
-        <div class="table-container" [style.height]="tableHeight">
-          @if (isLoading) {
+        <div class="table-container" [style.height]="tableHeight()">
+          @if (isLoading()) {
             <div class="table-loading-overlay">
               <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
             </div>
           }
-          <ng-container *ngTemplateOutlet="desktopTableTpl || null"></ng-container>
+          @if (!isLoading() && data().length === 0) {
+            <cm-no-data [isMin]="true" [noDataTitle]="noDataTitle()"></cm-no-data>
+          } @else {
+            <ng-container *ngTemplateOutlet="desktopTableTpl() || null"></ng-container>
+          }
         </div>
       </mat-card-content>
     </mat-card>

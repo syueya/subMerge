@@ -6,3 +6,4 @@ export * from './deviceInfo';
 export * from './is';
 export * from './GlobalErrorHandler';
 export * from './urlUtils';
+export * from './with-loading';

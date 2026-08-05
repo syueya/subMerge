@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, computed, effect, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import {
 	BADGE_MUTED,
@@ -40,7 +40,6 @@ export class SourceListComponent extends CmParentTableComponent implements After
 	private svc = inject(SourceService);
 	private dialog = inject(DialogService);
 	private dialogOpen = inject(CmDialogOpenService);
-	private cdr = inject(ChangeDetectorRef);
 
 	dataSource = new MatTableDataSource<SubscriptionSource>([]);
 	override displayedColumns: string[] = [
@@ -123,16 +122,13 @@ export class SourceListComponent extends CmParentTableComponent implements After
 
 	/** 列表刷新；在弹窗打开期间完成时也强制刷新视图，避免 isLoading 遮罩卡住 */
 	private reloadTableDataAsync(): Promise<void> {
-		this.isLoading = true;
-		this.safeDetectChanges();
 		return new Promise((resolve) => {
 			this.svc
 				.list(true)
 				.pipe(
 					takeUntil(this.$destroy),
+					this.trackLoading(),
 					finalize(() => {
-						this.isLoading = false;
-						this.safeDetectChanges();
 						resolve();
 					}),
 				)
@@ -153,14 +149,6 @@ export class SourceListComponent extends CmParentTableComponent implements After
 					error: (err: Error) => void this.dialog.error(err.message),
 				});
 		});
-	}
-
-	private safeDetectChanges(): void {
-		try {
-			this.cdr.detectChanges();
-		} catch {
-			// 组件已销毁时忽略
-		}
 	}
 
 	regionText(v: string): string {

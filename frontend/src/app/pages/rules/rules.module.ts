@@ -4,7 +4,6 @@ import { AppCommonModule } from '@common/common.module';
 import { SharedBusinessModule } from '../_shared/shared-business.module';
 import { BatchImportComponent } from './batch-import/batch-import.component';
 import { NewCategoryFormComponent } from './new-category-form/new-category-form.component';
-import { PublishFormComponent } from './publish-form/publish-form.component';
 import { RuleHomeComponent } from './rule-home/rule-home.component';
 import { RuleFormComponent } from './rule-form/rule-form.component';
 import { RulesRoutingModule } from './rules-routing.module';
@@ -14,7 +13,6 @@ import { RulesRoutingModule } from './rules-routing.module';
     RuleHomeComponent,
     RuleFormComponent,
     BatchImportComponent,
-    PublishFormComponent,
     NewCategoryFormComponent
   ],
   imports: [AppCommonModule, SharedBusinessModule, RouterModule, RulesRoutingModule]

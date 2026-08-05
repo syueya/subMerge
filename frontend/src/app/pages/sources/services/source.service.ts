@@ -28,13 +28,13 @@ export class SourceService {
 	 */
 	private regions$: Observable<RegionCatalogResponse> | null = null;
 
-	// 订阅源列表与全量节点列表被概览/策略组/订阅源多页共用，做会话内缓存，写操作后失效。
-	private readonly sourcesCache = new CachedRequest<ListResponse<SubscriptionSource>>(() =>
-		this.api.get('/sources'),
-	);
-	private readonly proxiesCache = new CachedRequest<ListResponse<ProxyNode>>(() =>
-		this.api.get('/proxies'),
-	);
+// 订阅源列表与全量节点列表被概览/策略组/订阅源多页共用，做会话内缓存，写操作后失效。
+		private readonly sourcesCache = new CachedRequest<ListResponse<SubscriptionSource>>((context) =>
+			this.api.get('/sources', { context }),
+		);
+		private readonly proxiesCache = new CachedRequest<ListResponse<ProxyNode>>((context) =>
+			this.api.get('/proxies', { context }),
+		);
 
 	private refreshAllSub: Subscription | null = null;
 

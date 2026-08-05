@@ -35,50 +35,52 @@ export class GroupListComponent extends CmParentComponent implements OnInit {
 	regionCatalog = signal<{ code: string; name: string }[]>([]);
 	extraRegionCodes = signal<string[]>([]);
 	knownSources = signal<{ id: number; name: string }[]>([]);
-isLoading = false;
+	override isLoading = signal(true);
 
-		readonly defaultTestInterval = 300;
+	readonly defaultTestInterval = 300;
 	readonly badgeWarn = BADGE_WARN;
 
 	override ngOnInit(): void {
 		super.ngOnInit();
-		this.reload(true);
-		this.draftStore.refresh();
+		// 进页走会话缓存；工具栏刷新再 force
+		this.reload();
 	}
 
-	reload(force = false): void {
-		this.isLoading = true;
-		this.svc
-			.listGroups(force)
-			.pipe(takeUntil(this.$destroy))
-			.subscribe({
+/** 写成功后静默同步草稿角标（进页仍不请求 draft-status） */
+		private notifyDraftChanged(): void {
+			this.draftStore.refresh();
+		}
+
+		/** force 绕过双层缓存；silent 不挡内容（写后对齐） */
+		reload(force = false, silent = false): void {
+			const groups$ = this.svc.listGroups(force).pipe(takeUntil(this.$destroy));
+			const pipeGroups = silent ? groups$ : groups$.pipe(this.trackLoading());
+			pipeGroups.subscribe({
 				next: (r) => {
 					this.groups.set(r.items || []);
-					this.isLoading = false;
 				},
 				error: (e: Error) => {
-					this.isLoading = false;
 					void this.dialog.error(e.message);
 				},
 			});
-		this.svc
-			.listRules(force)
-			.pipe(takeUntil(this.$destroy))
-			.subscribe({
-				next: (r) => this.rules.set(r.items || []),
-				error: () => {},
-			});
-		this.sourceSvc
-			.listRegions()
-			.pipe(takeUntil(this.$destroy))
-			.subscribe({
-				next: (r) => {
-					const items = (r.items || [])
-						.map((item) => ({
-							code: String(item.code || '').toUpperCase(),
-							name: String(item.name || '').trim(),
-						}))
-.filter((item) => item.code && item.code !== 'UNK' && item.code !== 'UNKNOWN');
+			this.svc
+				.listRules(force)
+				.pipe(takeUntil(this.$destroy))
+				.subscribe({
+					next: (r) => this.rules.set(r.items || []),
+					error: () => {},
+				});
+			this.sourceSvc
+				.listRegions()
+				.pipe(takeUntil(this.$destroy))
+				.subscribe({
+					next: (r) => {
+						const items = (r.items || [])
+							.map((item) => ({
+								code: String(item.code || '').toUpperCase(),
+								name: String(item.name || '').trim(),
+							}))
+							.filter((item) => item.code && item.code !== 'UNK' && item.code !== 'UNKNOWN');
 						this.regionCatalog.set(items);
 					},
 					error: () => {},
@@ -118,7 +120,7 @@ isLoading = false;
 					},
 					error: () => {},
 				});
-	}
+		}
 
 	rulesOfGroup(name: string): number {
 		return this.rules().filter((r) => r.target === name).length;
@@ -177,13 +179,14 @@ isLoading = false;
 		const ref = this.dialogOpen.openForm(GroupFormComponent, data, {
 			width: CM_DIALOG_WIDTH.form,
 		});
-		ref.afterClosed().subscribe((ok) => {
-			if (ok) {
-				this.reload(true);
-				this.draftStore.refresh();
-			}
-		});
-	}
+ref.afterClosed().subscribe((ok) => {
+				if (ok) {
+					// 写操作已 invalidate 缓存；silent 对齐，不整页转圈
+					this.reload(false, true);
+					this.notifyDraftChanged();
+				}
+			});
+		}
 
 	async removeGroup(g: ProxyGroup): Promise<void> {
 		const count = this.rulesOfGroup(g.name);
@@ -213,13 +216,13 @@ isLoading = false;
 			.deleteGroup(g.id, cascade)
 			.pipe(takeUntil(this.$destroy))
 			.subscribe({
-				next: () => {
-					void this.dialog.success(
-						cascade ? `已删除策略组「${g.name}」及其规则` : `已删除策略组「${g.name}」`,
-					);
-					this.reload(true);
-					this.draftStore.refresh();
-				},
+next: () => {
+						void this.dialog.success(
+							cascade ? `已删除策略组「${g.name}」及其规则` : `已删除策略组「${g.name}」`,
+						);
+						this.reload(false, true);
+						this.notifyDraftChanged();
+					},
 				error: (e: Error) => void this.dialog.error(e.message),
 			});
 	}

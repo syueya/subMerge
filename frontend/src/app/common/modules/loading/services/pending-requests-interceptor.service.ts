@@ -1,128 +1,115 @@
-import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { Injectable, ExistingProvider } from '@angular/core';
-import { ReplaySubject, Observable, finalize } from 'rxjs';
+import { HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { SessionHttpCacheService } from '@common/net/session-http-cache';
+import { Observable, ReplaySubject, finalize } from 'rxjs';
 
 /**
- * HTTP请求拦截器，用于管理待处理的HTTP请求
+ * 全局待处理 HTTP 计数服务（全屏 cm-loading 用）。
+ * 通过 functional interceptor 接入 provideHttpClient，不再走 HTTP_INTERCEPTORS DI。
  */
 @Injectable({
   providedIn: 'root'
 })
-export class PendingRequestsInterceptor implements HttpInterceptor {
-  private _pendingRequests = 0; // 待处理的请求数量
-  private _pendingRequestsStatus$ = new ReplaySubject<boolean>(1); // 待处理请求状态的可观察对象
-  private _filteredUrlPatterns: RegExp[] = []; // 需要绕过的URL模式
-  private _filteredMethods: string[] = []; // 需要绕过的HTTP方法
-  private _filteredHeaders: string[] = []; // 需要绕过的请求头信息
-  private _forceByPass = false; // 是否强制绕过拦截器处理
+export class PendingRequestsInterceptor {
+  private _pendingRequests = 0;
+  private _pendingRequestsStatus$ = new ReplaySubject<boolean>(1);
+  private _filteredUrlPatterns: RegExp[] = [];
+  private _filteredMethods: string[] = [];
+  private _filteredHeaders: string[] = [];
+  private _forceByPass = false;
 
-  // 获取待处理请求状态的可观察对象
   get pendingRequestsStatus$(): Observable<boolean> {
     return this._pendingRequestsStatus$.asObservable();
   }
 
-  // 获取待处理的请求数量
   get pendingRequests(): number {
     return this._pendingRequests;
   }
 
-  // 获取需要绕过的URL模式数组
   get filteredUrlPatterns(): RegExp[] {
     return this._filteredUrlPatterns;
   }
 
-  // 设置需要绕过的HTTP方法数组
   set filteredMethods(httpMethods: string[]) {
     this._filteredMethods = httpMethods;
   }
 
-  // 设置需要绕过的请求头信息数组
   set filteredHeaders(value: string[]) {
     this._filteredHeaders = value;
   }
 
-  // 设置是否强制绕过拦截器处理
   set forceByPass(value: boolean) {
     this._forceByPass = value;
   }
 
-  /**
-   * 判断是否应绕过指定的URL
-   */
-  private shouldBypassUrl(url: string): boolean {
-    return this._filteredUrlPatterns.some(e => {
-      return e.test(url);
-    });
-  }
-
-  /**
-   * 判断是否应绕过指定的HTTP方法
-   */
-  private shouldBypassMethod(req: HttpRequest<unknown>): boolean {
-    return this._filteredMethods.some(e => {
-      return e.toUpperCase() === req.method.toUpperCase();
-    });
-  }
-
-  /**
-   * 判断是否应绕过指定的请求头信息
-   */
-  private shouldBypassHeader(req: HttpRequest<unknown>): boolean {
-    return this._filteredHeaders.some(e => {
-      return req.headers.has(e);
-    });
-  }
-
-  /**
-   * 判断是否应绕过拦截器处理
-   */
-  private shouldBypass(req: HttpRequest<unknown>): boolean {
+  /** 是否应跳过全屏 loading（读列表走局部 spinner；写操作才遮全屏） */
+  shouldBypass(req: HttpRequest<unknown>, isReadRequest: boolean): boolean {
     const hasNoLoadingSpinnerHeader = req.headers.has('REQUEST_NO_LOADING_SPINNER');
-    return this._forceByPass || this.shouldBypassUrl(req.urlWithParams) || this.shouldBypassMethod(req) || this.shouldBypassHeader(req) || hasNoLoadingSpinnerHeader;
+    return (
+      this._forceByPass ||
+      isReadRequest ||
+      this.shouldBypassUrl(req.urlWithParams) ||
+      this.shouldBypassMethod(req) ||
+      this.shouldBypassHeader(req) ||
+      hasNoLoadingSpinnerHeader
+    );
   }
 
-  /**
-   * 拦截HTTP请求
-   */
-  intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const shouldBypass = this.shouldBypass(req);
-
-    if (shouldBypass && req.headers.has('REQUEST_NO_LOADING_SPINNER')) {
-      // 移除 REQUEST_NO_LOADING_SPINNER 头部
-      req = req.clone({
-        headers: req.headers.delete('REQUEST_NO_LOADING_SPINNER')
-      });
+  begin(): void {
+    this._pendingRequests++;
+    if (this._pendingRequests === 1) {
+      this._pendingRequestsStatus$.next(true);
     }
+  }
 
-    if (!shouldBypass) {
-      this._pendingRequests++;
-
-      if (1 === this._pendingRequests) {
-        this._pendingRequestsStatus$.next(true);
-      }
+  end(): void {
+    this._pendingRequests = Math.max(0, this._pendingRequests - 1);
+    if (this._pendingRequests === 0) {
+      this._pendingRequestsStatus$.next(false);
     }
+  }
 
-    return next.handle(req).pipe(
-      finalize(() => {
-        if (!shouldBypass) {
-          this._pendingRequests--;
+  private shouldBypassUrl(url: string): boolean {
+    return this._filteredUrlPatterns.some(e => e.test(url));
+  }
 
-          if (0 === this._pendingRequests) {
-            this._pendingRequestsStatus$.next(false);
-          }
-        }
-      })
-    );
+  private shouldBypassMethod(req: HttpRequest<unknown>): boolean {
+    return this._filteredMethods.some(e => e.toUpperCase() === req.method.toUpperCase());
+  }
+
+  private shouldBypassHeader(req: HttpRequest<unknown>): boolean {
+    return this._filteredHeaders.some(e => req.headers.has(e));
   }
 }
 
 /**
- * HTTP请求拦截器提供器
+ * 全屏 loading 拦截器：最外层注册，缓存命中也会 finalize。
+ * 读接口（与会话缓存 read 判定对齐）默认不遮全屏，避免与表格局部 spinner 叠两层。
  */
-export const PendingRequestsInterceptorProvider: ExistingProvider[] = [
-  {
-    provide: HTTP_INTERCEPTORS,
-    useExisting: PendingRequestsInterceptor,
-    multi: true
+export const pendingRequestsInterceptorFn: HttpInterceptorFn = (
+  req: HttpRequest<unknown>,
+  next: HttpHandlerFn
+): Observable<HttpEvent<unknown>> => {
+  const pending = inject(PendingRequestsInterceptor);
+  const cache = inject(SessionHttpCacheService);
+
+  let request = req;
+  if (request.headers.has('REQUEST_NO_LOADING_SPINNER')) {
+    request = request.clone({
+      headers: request.headers.delete('REQUEST_NO_LOADING_SPINNER')
+    });
   }
-];
+
+  const shouldBypass = pending.shouldBypass(req, cache.isReadRequest(req));
+  if (!shouldBypass) {
+    pending.begin();
+  }
+
+  return next(request).pipe(
+    finalize(() => {
+      if (!shouldBypass) {
+        pending.end();
+      }
+    })
+  );
+};

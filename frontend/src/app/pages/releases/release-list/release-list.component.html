@@ -5,12 +5,12 @@
     type="button"
     class="m-r-10"
     matTooltip="刷新"
-    [disabled]="isLoading"
+    [disabled]="isLoading()"
     (click.debounceTime)="reloadTableDataByPage(); refreshDraft()"
   >
     <i-tabler class="icon-20" name="refresh"></i-tabler>
   </button>
-  @if (draftDirty() && draftChanges().length) {
+  @if (draftDirty()) {
     <button
       mat-stroked-button
       color="primary"
@@ -19,7 +19,9 @@
       (click.debounceTime)="openDraftChanges()"
     >
       查看差异
-      <span [class]="badgeWarn">{{ draftChanges().length }}</span>
+      @if (draftChanges().length) {
+        <span [class]="badgeWarn">{{ draftChanges().length }}</span>
+      }
     </button>
   }
   <button mat-flat-button color="primary" type="button" [disabled]="publishing()" (click.debounceTime)="publishNow()">
@@ -36,7 +38,7 @@
 <cm-responsive-table-list
   [data]="dataSource.data"
   [isMobile]="isMobileScreen"
-  [isLoading]="isLoading"
+  [isLoading]="isLoading()"
   [trackBy]="tableTrackBy"
   tableHeight="calc(100vh - 240px)"
   noDataTitle="尚无发布记录"
@@ -118,11 +120,6 @@
       </ng-container>
       <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="selectTableRow(row)"></tr>
-      <tr class="mat-row" *matNoDataRow [hidden]="isLoading">
-        <td class="mat-cell" [attr.colspan]="displayedColumns.length">
-          <cm-no-data [isMin]="true" noDataTitle="尚无发布记录，请先在规则页发布"></cm-no-data>
-        </td>
-      </tr>
     </table>
   </ng-template>
 </cm-responsive-table-list>

@@ -14,8 +14,8 @@ import {
 	enumText,
 } from '@data-struct';
 import { DialogService } from '@common/services/dialog.service';
-import { DraftStatusStore } from '../services/draft-status.store';
-import { ReleaseService } from '../services/release.service';
+import { DraftStatusStore, summarizeChanges } from '../services/draft-status.store';
+	import { ReleaseService } from '../services/release.service';
 import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
 import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
 import { finalize, takeUntil } from 'rxjs';
@@ -59,16 +59,17 @@ export class ReleaseListComponent extends CmParentTableComponent implements Afte
 		this.draftStore.refresh();
 	}
 
-	openDraftChanges(): void {
-		const data: DraftChangesDialogData = {
-			changes: this.draftChanges(),
-			summary: this.draftSummary(),
-			publishedVersion: this.draftStore.status()?.publishedVersion,
-		};
-		this.dialogOpen.openContent(DraftChangesComponent, data, {
-			width: CM_DIALOG_WIDTH.medium,
-		});
-	}
+async openDraftChanges(): Promise<void> {
+			await this.draftStore.ensureChanges();
+			const data: DraftChangesDialogData = {
+				changes: this.draftChanges(),
+				summary: this.draftSummary(),
+				publishedVersion: this.draftStore.status()?.publishedVersion,
+			};
+			this.dialogOpen.openContent(DraftChangesComponent, data, {
+				width: CM_DIALOG_WIDTH.medium,
+			});
+		}
 
 	private changeActionText(a: string): string {
 		switch (a) {
@@ -96,24 +97,26 @@ export class ReleaseListComponent extends CmParentTableComponent implements Afte
 		}
 	}
 
-	private buildPublishConfirmMessage(): string {
-		const head = '确认发布当前草稿配置？\n发布后「全部源 + 自动」的订阅链接将使用新配置。';
-		const changes = this.draftChanges();
-		if (!changes.length) return head;
-		const summary = this.draftSummary();
-		const lines = changes.slice(0, this.changesPreviewLimit).map((c) => {
-			const detail = c.detail ? `（${c.detail}）` : '';
-			return `· ${this.changeActionText(c.action)} ${this.changeKindText(c.kind)} ${c.name}${detail}`;
-		});
-		const more =
-			changes.length > this.changesPreviewLimit ? `\n… 等共 ${changes.length} 项` : '';
-		const summaryLine = summary ? `\n本次更改：${summary}` : '';
-		return `${head}\n${summaryLine}\n\n${lines.join('\n')}${more}`;
-	}
+private buildPublishConfirmMessage(
+			changes: { action: string; kind: string; name: string; detail?: string }[],
+		): string {
+			const head = '确认发布当前草稿配置？\n发布后「全部源 + 自动」的订阅链接将使用新配置。';
+			if (!changes.length) return head;
+			const summary = summarizeChanges(changes) || this.draftSummary();
+			const lines = changes.slice(0, this.changesPreviewLimit).map((c) => {
+				const detail = c.detail ? `（${c.detail}）` : '';
+				return `· ${this.changeActionText(c.action)} ${this.changeKindText(c.kind)} ${c.name}${detail}`;
+			});
+			const more =
+				changes.length > this.changesPreviewLimit ? `\n… 等共 ${changes.length} 项` : '';
+			const summaryLine = summary ? `\n本次更改：${summary}` : '';
+			return `${head}\n${summaryLine}\n\n${lines.join('\n')}${more}`;
+		}
 
-	async publishNow(): Promise<void> {
-		const ok = await this.dialog.confirm(this.buildPublishConfirmMessage(), '发布确认', '发布');
-		if (!ok) return;
+		async publishNow(): Promise<void> {
+			const changes = await this.draftStore.ensureChanges();
+			const ok = await this.dialog.confirm(this.buildPublishConfirmMessage(changes), '发布确认', '发布');
+			if (!ok) return;
 		this.publishing.set(true);
 		this.svc
 			.publish('')
@@ -140,12 +143,11 @@ export class ReleaseListComponent extends CmParentTableComponent implements Afte
 	}
 
 	override reloadTableData(): void {
-		this.isLoading = true;
 		this.svc
 			.list(true)
 			.pipe(
 				takeUntil(this.$destroy),
-				finalize(() => (this.isLoading = false)),
+				this.trackLoading(),
 			)
 			.subscribe({
 				next: (r) => {

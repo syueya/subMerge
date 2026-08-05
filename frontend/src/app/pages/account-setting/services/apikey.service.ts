@@ -14,9 +14,9 @@ import {
 export class ApiKeyService {
 	private readonly api = inject(ApiService);
 
-	private readonly listCache = new CachedRequest<ListResponse<APIKey>>(() =>
-		this.api.get('/apikeys'),
-	);
+private readonly listCache = new CachedRequest<ListResponse<APIKey>>((context) =>
+			this.api.get('/apikeys', { context }),
+		);
 
 	list(forceRefresh = false): Observable<ListResponse<APIKey>> {
 		return this.listCache.get(forceRefresh);

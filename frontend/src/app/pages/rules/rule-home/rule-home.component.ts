@@ -1,39 +1,38 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import {
-		BADGE_MUTED,
-		BADGE_OK,
-		BADGE_WARN,
-		BatchImportDialogData,
-		CategorySection,
-		MatchableRule,
-		ProxyGroup,
-		RULE_TYPE_OPTIONS,
-		Rule,
-		RuleFormDialogData,
-		RuleMatchDialogData,
-		RuleMatchDialogResult,
-		RuleType,
-		enumText,
-	} from '@data-struct';
-	import { DialogService } from '@common/services/dialog.service';
+	BADGE_MUTED,
+	BADGE_OK,
+	BADGE_WARN,
+	BatchImportDialogData,
+	CategorySection,
+	MatchableRule,
+	ProxyGroup,
+	RULE_TYPE_OPTIONS,
+	Rule,
+	RuleFormDialogData,
+	RuleMatchDialogData,
+	RuleMatchDialogResult,
+	RuleType,
+	enumText,
+} from '@data-struct';
+import { DialogService } from '@common/services/dialog.service';
 	import { DraftStatusStore } from '../../releases/services/draft-status.store';
 	import { RuleService } from '../services/rule.service';
-	import {
-		buildCategorySections,
-		buildTargetSections,
-		categoryToRemember,
-		defaultRuleTarget,
-		isSystemRule,
-		sortRules,
-	} from '../services/rule-ui';
-	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-	import { CmParentComponent } from '@common/parents/parent/parent.component';
-	import { takeUntil } from 'rxjs';
-	import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
-	import { BatchImportComponent } from '../batch-import/batch-import.component';
-	import { NewCategoryFormComponent } from '../new-category-form/new-category-form.component';
-	import { PublishFormComponent } from '../publish-form/publish-form.component';
-	import { RuleFormComponent } from '../rule-form/rule-form.component';
+import {
+	buildCategorySections,
+	buildTargetSections,
+	categoryToRemember,
+	defaultRuleTarget,
+	isSystemRule,
+	sortRules,
+} from '../services/rule-ui';
+import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+import { CmParentComponent } from '@common/parents/parent/parent.component';
+import { takeUntil } from 'rxjs';
+import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
+import { BatchImportComponent } from '../batch-import/batch-import.component';
+import { NewCategoryFormComponent } from '../new-category-form/new-category-form.component';
+import { RuleFormComponent } from '../rule-form/rule-form.component';
 
 @Component({
 	selector: 'app-rule-home',
@@ -49,11 +48,13 @@ export class RuleHomeComponent extends CmParentComponent implements OnInit {
 	rules = signal<Rule[]>([]);
 	groups = signal<ProxyGroup[]>([]);
 	extraCategories = signal<string[]>([]);
-	isLoading = false;
+	override isLoading = signal(true);
 
-draftDirty = this.draftStore.dirty;
+	/** 搜索：匹配 payload / 类型 / 出口 / 备注 / 分类 */
+	filterText = signal('');
 
-		viewMode = signal<'category' | 'target'>('category');
+	viewMode = signal<'category' | 'target'>('category');
+	/** 默认全部折叠，展开后再渲染 table，减轻首屏 DOM */
 	expandedCategoryKeys = signal<Set<string>>(new Set());
 	expandedTargetKeys = signal<Set<string>>(new Set());
 
@@ -66,35 +67,54 @@ draftDirty = this.draftStore.dirty;
 	readonly badgeWarn = BADGE_WARN;
 	readonly badgeMuted = BADGE_MUTED;
 
-	override ngOnInit(): void {
-		super.ngOnInit();
-		this.reload(true);
-		this.draftStore.refresh();
-	}
-
-	ruleTypeText(v: string | RuleType): string {
-		return enumText(RULE_TYPE_OPTIONS, String(v));
-	}
-
 	private readonly sorted = computed(() => sortRules(this.rules()));
 	private readonly orderNoById = computed(() => {
 		const map = new Map<number, number>();
+		// 全局序号按完整列表，不受搜索过滤影响
 		this.sorted().forEach((r, i) => map.set(r.id, i + 1));
 		return map;
 	});
 	private readonly groupNames = computed(() => new Set(this.groups().map((g) => g.name)));
-	private readonly sections = computed<CategorySection[]>(() => {
+
+	private readonly filteredRules = computed(() => {
+		const q = this.filterText().trim().toLowerCase();
+		const list = this.sorted();
+		if (!q) return list;
+		return list.filter((r) => {
+			const typeText = this.ruleTypeText(r.type).toLowerCase();
+			const hay = [
+				r.payload || '',
+				String(r.type),
+				typeText,
+				r.target || '',
+				r.note || '',
+				r.category || '',
+			]
+				.join('\n')
+				.toLowerCase();
+			return hay.includes(q);
+		});
+	});
+
+	/** 模板直接绑定，避免变更检测里反复调用方法 */
+	readonly sections = computed<CategorySection[]>(() => {
 		if (this.viewMode() === 'target') {
 			return buildTargetSections(
-				this.rules(),
+				this.filteredRules(),
 				this.groups().map((g) => g.name),
 			);
 		}
-		return buildCategorySections(this.rules(), this.extraCategories());
+		return buildCategorySections(this.filteredRules(), this.extraCategories());
 	});
 
+	readonly orphanCount = computed(
+		() => this.sorted().filter((r) => this.isOrphanTarget(r.target)).length,
+	);
+
+	readonly filteredCount = computed(() => this.filteredRules().length);
+
 	testMatchRules = computed<MatchableRule[]>(() =>
-		sortRules(this.rules())
+		this.sorted()
 			.filter((r) => r.enabled)
 			.map((r) => ({
 				type: String(r.type),
@@ -104,8 +124,14 @@ draftDirty = this.draftStore.dirty;
 			})),
 	);
 
-	sortedRules(): Rule[] {
-		return this.sorted();
+	override ngOnInit(): void {
+		super.ngOnInit();
+		// 进页走会话缓存；工具栏刷新再 force
+		this.reload();
+	}
+
+	ruleTypeText(v: string | RuleType): string {
+		return enumText(RULE_TYPE_OPTIONS, String(v));
 	}
 
 	globalOrderNo(rule: Rule): number {
@@ -120,17 +146,17 @@ draftDirty = this.draftStore.dirty;
 		return isSystemRule(rule);
 	}
 
-	orphanRuleCount(): number {
-		return this.sortedRules().filter((r) => this.isOrphanTarget(r.target)).length;
-	}
-
-	ruleSections(): CategorySection[] {
-		return this.sections();
-	}
-
 	setViewMode(mode: 'category' | 'target'): void {
 		if (this.viewMode() === mode) return;
 		this.viewMode.set(mode);
+	}
+
+	onFilterInput(value: string): void {
+		this.filterText.set(value);
+	}
+
+	clearFilter(): void {
+		this.filterText.set('');
 	}
 
 	rememberCategory(name: string): void {
@@ -141,10 +167,6 @@ draftDirty = this.draftStore.dirty;
 
 	private expandedKeys(): Set<string> {
 		return this.viewMode() === 'target' ? this.expandedTargetKeys() : this.expandedCategoryKeys();
-	}
-
-	isSectionCollapsed(key: string): boolean {
-		return !this.expandedKeys().has(key);
 	}
 
 	isSectionExpanded(key: string): boolean {
@@ -160,34 +182,52 @@ draftDirty = this.draftStore.dirty;
 		else this.expandedCategoryKeys.set(next);
 	}
 
-	toggleSection(key: string): void {
-		this.setSectionExpanded(key, this.isSectionCollapsed(key));
+	/** 当前视图下是否已全部展开（用于切换按钮文案） */
+	allSectionsExpanded = computed(() => {
+		const secs = this.sections();
+		if (!secs.length) return false;
+		const open = this.expandedKeys();
+		return secs.every((s) => open.has(s.key));
+	});
+
+	/** 一个按钮切换：全展 ↔ 全折 */
+	toggleExpandAll(): void {
+		if (this.allSectionsExpanded()) {
+			if (this.viewMode() === 'target') this.expandedTargetKeys.set(new Set());
+			else this.expandedCategoryKeys.set(new Set());
+			return;
+		}
+		const keys = new Set(this.sections().map((s) => s.key));
+		if (this.viewMode() === 'target') this.expandedTargetKeys.set(keys);
+		else this.expandedCategoryKeys.set(keys);
 	}
 
-	reload(force = false): void {
-		this.isLoading = true;
-		this.svc
-			.listRules(force)
-			.pipe(takeUntil(this.$destroy))
-			.subscribe({
-				next: (r) => {
-					const list = r.items || [];
-					this.rules.set(list);
-					this.isLoading = false;
-					const valid = new Set(list.map((x) => x.id));
-					this.selectedIds.update((prev) => {
-						const next = new Set<number>();
-						for (const id of prev) {
-							if (valid.has(id)) next.add(id);
-						}
-						return next;
-					});
-				},
-				error: (e: Error) => {
-					this.isLoading = false;
-					void this.dialog.error(e.message);
-				},
-			});
+	/** 写成功后静默同步草稿角标（不挡本页；进页仍不请求 draft-status） */
+	private notifyDraftChanged(): void {
+		this.draftStore.refresh();
+	}
+
+	/** force=true 时绕过双层缓存；silent 时不挡内容（写后本地已 patch 的补拉） */
+	reload(force = false, silent = false): void {
+		const rules$ = this.svc.listRules(force).pipe(takeUntil(this.$destroy));
+		const pipeRules = silent ? rules$ : rules$.pipe(this.trackLoading());
+		pipeRules.subscribe({
+			next: (r) => {
+				const list = r.items || [];
+				this.rules.set(list);
+				const valid = new Set(list.map((x) => x.id));
+				this.selectedIds.update((prev) => {
+					const next = new Set<number>();
+					for (const id of prev) {
+						if (valid.has(id)) next.add(id);
+					}
+					return next;
+				});
+			},
+			error: (e: Error) => {
+				void this.dialog.error(e.message);
+			},
+		});
 		this.svc
 			.listGroups(force)
 			.pipe(takeUntil(this.$destroy))
@@ -263,6 +303,10 @@ draftDirty = this.draftStore.dirty;
 			'确认',
 		);
 		if (!ok) return;
+		const idSet = new Set(ids);
+		const prev = this.rules();
+		// 乐观更新
+		this.rules.set(prev.map((r) => (idSet.has(r.id) ? { ...r, target } : r)));
 		this.batchBusy.set(true);
 		this.svc
 			.batchUpdateTarget(ids, target)
@@ -272,11 +316,12 @@ draftDirty = this.draftStore.dirty;
 					this.batchBusy.set(false);
 					void this.dialog.success(`已更新 ${res.updated} 条出口（草稿，需发布后生效）`);
 					this.clearSelection();
-					this.reload();
-					this.draftStore.refresh();
+					this.reload(false, true);
+					this.notifyDraftChanged();
 				},
 				error: (e: Error) => {
 					this.batchBusy.set(false);
+					this.rules.set(prev);
 					void this.dialog.error(e.message);
 				},
 			});
@@ -326,8 +371,8 @@ draftDirty = this.draftStore.dirty;
 				expanded.add(defaultTarget);
 				this.expandedTargetKeys.set(expanded);
 			}
-			this.reload();
-			this.draftStore.refresh();
+			this.reload(false, true);
+			this.notifyDraftChanged();
 		});
 	}
 
@@ -359,31 +404,22 @@ draftDirty = this.draftStore.dirty;
 		ref.afterClosed().subscribe((category) => {
 			if (category === false || category === undefined) return;
 			if (typeof category === 'string' && category) this.rememberCategory(category);
-			this.reload();
-			this.draftStore.refresh();
-		});
-	}
-
-	openPublishModal(): void {
-		const ref = this.dialogOpen.openForm(PublishFormComponent, null, {
-			width: CM_DIALOG_WIDTH.form,
-		});
-		ref.afterClosed().subscribe((ok) => {
-			if (ok) this.draftStore.refresh();
+			this.reload(false, true);
+			this.notifyDraftChanged();
 		});
 	}
 
 	openTestModal(): void {
-const data: RuleMatchDialogData = {
-				title: '测试规则匹配',
-				subtitle:
-					'按当前启用规则从上到下由服务端模拟匹配（含 DOMAIN / GEOSITE / GEOIP）。使用面板已加载的 Geo 数据。',
-				rules: this.testMatchRules(),
-				typeText: (t) => this.ruleTypeText(t),
-				targetText: (t) => t,
-				showEditAction: true,
-				showLocateAction: false,
-			};
+		const data: RuleMatchDialogData = {
+			title: '测试规则匹配',
+			subtitle:
+				'按当前启用规则从上到下由服务端模拟匹配（含 DOMAIN / GEOSITE / GEOIP）。使用面板已加载的 Geo 数据。',
+			rules: this.testMatchRules(),
+			typeText: (t) => this.ruleTypeText(t),
+			targetText: (t) => t,
+			showEditAction: true,
+			showLocateAction: false,
+		};
 		const ref = this.dialogOpen.openContent(RuleMatchDialogComponent, data, {
 			width: CM_DIALOG_WIDTH.large,
 		});
@@ -407,12 +443,15 @@ const data: RuleMatchDialogData = {
 	}
 
 	toggleRule(rule: Rule): void {
+		const nextEnabled = !rule.enabled;
+		const prev = this.rules();
+		this.rules.set(prev.map((r) => (r.id === rule.id ? { ...r, enabled: nextEnabled } : r)));
 		this.svc
 			.updateRule(rule.id, {
 				type: String(rule.type),
 				payload: rule.payload,
 				target: rule.target,
-				enabled: !rule.enabled,
+				enabled: nextEnabled,
 				note: rule.note,
 				category: rule.category,
 				sortOrder: rule.sortOrder,
@@ -420,10 +459,14 @@ const data: RuleMatchDialogData = {
 			.pipe(takeUntil(this.$destroy))
 			.subscribe({
 				next: () => {
-					this.reload();
-					this.draftStore.refresh();
+					// 写成功已 invalidate；静默对齐一次即可
+					this.reload(false, true);
+					this.notifyDraftChanged();
 				},
-				error: (e: Error) => void this.dialog.error(e.message),
+				error: (e: Error) => {
+					this.rules.set(prev);
+					void this.dialog.error(e.message);
+				},
 			});
 	}
 
@@ -434,16 +477,26 @@ const data: RuleMatchDialogData = {
 		}
 		const ok = await this.dialog.confirm('确认删除该规则？', '删除确认', '删除');
 		if (!ok) return;
+		const prev = this.rules();
+		this.rules.set(prev.filter((r) => r.id !== rule.id));
+		this.selectedIds.update((s) => {
+			const next = new Set(s);
+			next.delete(rule.id);
+			return next;
+		});
 		this.svc
 			.deleteRule(rule.id)
 			.pipe(takeUntil(this.$destroy))
-			.subscribe({
-				next: () => {
-					void this.dialog.success('规则已删除');
-					this.reload();
-					this.draftStore.refresh();
-				},
-				error: (e: Error) => void this.dialog.error(e.message),
-			});
+.subscribe({
+					next: () => {
+						void this.dialog.success('规则已删除');
+						this.reload(false, true);
+						this.notifyDraftChanged();
+					},
+					error: (e: Error) => {
+						this.rules.set(prev);
+						void this.dialog.error(e.message);
+					},
+				});
 	}
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import {
 	BADGE_MUTED,
@@ -46,12 +46,11 @@ export class SourceProxiesComponent extends CmParentComponent implements OnInit 
 	data = inject<SourceProxiesDialogData>(MAT_DIALOG_DATA);
 	private svc = inject(SourceService);
 	private dialog = inject(DialogService);
-	private cdr = inject(ChangeDetectorRef);
 
 	displayedColumns = ['enabled', 'name', 'region', 'type', 'server', 'quality'];
 
 	proxies = signal<ProxyNode[]>([]);
-	isLoading = false;
+	override isLoading = signal(true);
 	/** 输入框展示值 */
 	proxySearchInput = signal('');
 	/** 防抖后的筛选词（已 normalize） */
@@ -133,16 +132,11 @@ export class SourceProxiesComponent extends CmParentComponent implements OnInit 
 	}
 
 	loadProxies(): void {
-		this.isLoading = true;
-		this.safeDetectChanges();
 		this.svc
 			.listProxies(this.source.id)
 			.pipe(
 				takeUntil(this.$destroy),
-				finalize(() => {
-					this.isLoading = false;
-					this.safeDetectChanges();
-				}),
+				this.trackLoading(),
 			)
 			.subscribe({
 				next: (res) => {
@@ -158,19 +152,11 @@ export class SourceProxiesComponent extends CmParentComponent implements OnInit 
 						.join(' ');
 					this.lastRefreshSummary.set(summary || '无节点');
 				},
-				error: (err: Error) => void this.dialog.error(err.message),
-			});
-	}
-
-	private safeDetectChanges(): void {
-		try {
-			this.cdr.detectChanges();
-		} catch {
-			// 组件已销毁时忽略
+error: (err: Error) => void this.dialog.error(err.message),
+				});
 		}
-	}
 
-	toggleProxy(p: ProxyNode): void {
+		toggleProxy(p: ProxyNode): void {
 		this.svc
 			.updateProxy(p.id, !p.enabled)
 			.pipe(takeUntil(this.$destroy))

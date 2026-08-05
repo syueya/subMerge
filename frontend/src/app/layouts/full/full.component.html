@@ -3,7 +3,7 @@
     class="mainWrapper"
     autosize
     autoFocus
-    [class.sidebarNav-mini]="options.sidenavCollapsed && options.navPos !== 'top' && !resView"
+    [class.sidebarNav-mini]="options.sidenavCollapsed && !resView"
   >
     <!-- ============================================================== -->
     <!-- Vertical Sidebar -->
@@ -12,7 +12,7 @@
     <mat-sidenav
       #leftsidenav
       [mode]="isOver ? 'over' : 'side'"
-      [opened]="options.navPos === 'side' && options.sidenavOpened && !isOver && !resView"
+      [opened]="options.sidenavOpened && !isOver && !resView"
       (openedChange)="onSidenavOpenedChange($event)"
       (closedStart)="onSidenavClosedStart()"
       class="sidebarNav"

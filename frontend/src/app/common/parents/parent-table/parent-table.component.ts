@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, ViewChild, OnInit, inject } from '@angular/core';
+import { Component, ViewChild, OnInit, inject, signal } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { PageEvent } from '@angular/material/paginator';
 import { MatSort, Sort } from '@angular/material/sort';
@@ -66,9 +66,10 @@ export class CmParentTableComponent extends CmParentComponent implements OnInit 
   rememberSearchFormKey!: string;
 
   /**
-   * 表格数据是否正在加载
+   * 列表页默认 true：首屏在 AfterViewInit 发请求前避免空数据闪「暂无数据」。
+   * 请求结束由 trackLoading()/withLoading 置回 false。
    */
-  isLoading = false;
+  override isLoading = signal(true);
 
   isMobileScreen = false;
 

@@ -18,35 +18,8 @@ import { processUrl } from '@common/util/urlUtils';
 import { Observable, of, throwError, mergeMap, catchError, timeout, TimeoutError } from 'rxjs';
 
 import { ReThrowHttpError, checkStatus, processHeaders, toLogin } from './helper';
+import { observeInAngularZone } from './observe-in-angular-zone';
 
-function runInAngularZone<T>(ngZone: NgZone, source: Observable<T>): Observable<T> {
-  return new Observable<T>(subscriber => {
-    const subscription = source.subscribe({
-      next: value => {
-        if (NgZone.isInAngularZone()) {
-          subscriber.next(value);
-        } else {
-          ngZone.run(() => subscriber.next(value));
-        }
-      },
-      error: err => {
-        if (NgZone.isInAngularZone()) {
-          subscriber.error(err);
-        } else {
-          ngZone.run(() => subscriber.error(err));
-        }
-      },
-      complete: () => {
-        if (NgZone.isInAngularZone()) {
-          subscriber.complete();
-        } else {
-          ngZone.run(() => subscriber.complete());
-        }
-      }
-    });
-    return () => subscription.unsubscribe();
-  });
-}
 
 let lastAuthErrorTime = 0;
 
@@ -127,7 +100,8 @@ export const defaultInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, nex
     withCredentials: withCreds ? true : req.withCredentials
   });
 
-  return runInAngularZone(
+  // 唯一 Zone 出口：含缓存命中在内的所有 HTTP 事件都从这里回到 Angular Zone
+  return observeInAngularZone(
     ngZone,
     next(newReq).pipe(
       timeout(timeoutTime),

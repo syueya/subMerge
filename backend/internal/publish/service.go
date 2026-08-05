@@ -209,8 +209,10 @@ func (s *Service) CurrentYAMLForToken(sourceIDs []uint, groupMode string, groupN
 	return res.YAML, nil
 }
 
-// DraftStatus 比较当前草稿与已发布配置是否一致
-func (s *Service) DraftStatus() (common.DraftStatusResponse, error) {
+// DraftStatus 比较当前草稿与已发布配置是否一致。
+// withChanges=false 时只算 dirty/hash（列表角标、概览用），不跑 YAML diff；
+// withChanges=true 时在 dirty 时填充 Changes（查看差异弹窗用）。
+func (s *Service) DraftStatus(withChanges bool) (common.DraftStatusResponse, error) {
 	out := common.DraftStatusResponse{}
 
 	var pub database.Release
@@ -237,7 +239,7 @@ func (s *Service) DraftStatus() (common.DraftStatusResponse, error) {
 		return out, nil
 	}
 	out.Dirty = out.DraftHash != out.PublishedHash
-	if out.Dirty {
+	if out.Dirty && withChanges {
 		out.Changes = diffConfigs(pub.ConfigYAML, res.YAML)
 	}
 	return out, nil

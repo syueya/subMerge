@@ -13,10 +13,10 @@ import {
 export class TokenService {
 	private readonly api = inject(ApiService);
 
-	// 令牌列表被概览页与令牌页共用，做会话内缓存，写操作后失效。
-	private readonly listCache = new CachedRequest<ListResponse<ShareToken>>(() =>
-		this.api.get('/tokens'),
-	);
+// 令牌列表被概览页与令牌页共用，做会话内缓存，写操作后失效。
+		private readonly listCache = new CachedRequest<ListResponse<ShareToken>>((context) =>
+			this.api.get('/tokens', { context }),
+		);
 
 	list(forceRefresh = false): Observable<ListResponse<ShareToken>> {
 		return this.listCache.get(forceRefresh);

@@ -66,12 +66,11 @@ override displayedColumns: string[] = [
 	}
 
 	override reloadTableData(): void {
-		this.isLoading = true;
 		this.svc
 			.list(true)
 			.pipe(
 				takeUntil(this.$destroy),
-				finalize(() => (this.isLoading = false)),
+				this.trackLoading(),
 			)
 			.subscribe({
 				next: (r) => {

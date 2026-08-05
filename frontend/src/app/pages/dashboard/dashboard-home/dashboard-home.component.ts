@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { catchError, forkJoin, of, takeUntil } from 'rxjs';
+import { catchError, of, takeUntil } from 'rxjs';
 import { DialogService } from '@common/services/dialog.service';
 import { formatDateTime } from '@common/util';
 import { BADGE_WARN, Release } from '@data-struct';
@@ -23,6 +23,7 @@ export class DashboardHomeComponent extends CmParentComponent implements OnInit 
 	private readonly draftStore = inject(DraftStatusStore);
 	private readonly dialog = inject(DialogService);
 
+	/** 首屏骨架：不挡整页，各卡片可独立显示 */
 	loading = signal(true);
 
 	sourceCount = signal(0);
@@ -82,43 +83,102 @@ export class DashboardHomeComponent extends CmParentComponent implements OnInit 
 		},
 	];
 
+	private pendingLoads = 0;
+
 	override ngOnInit(): void {
 		super.ngOnInit();
 		this.reload();
 	}
 
+	/**
+	 * 分批独立订阅，避免 forkJoin 等最慢接口才出数；
+	 * 单路失败不影响其它卡片。
+	 */
 	reload(force = false): void {
 		this.loading.set(true);
-		this.draftStore.refresh();
-		forkJoin({
-			sources: this.sources.list(force).pipe(catchError(() => of({ items: [] }))),
-			proxies: this.sources.listProxies(undefined, force).pipe(catchError(() => of({ items: [] }))),
-			groups: this.rules.listGroups(force).pipe(catchError(() => of({ items: [] }))),
-			rules: this.rules.listRules(force).pipe(catchError(() => of({ items: [] }))),
-			tokens: this.tokens.list(force).pipe(catchError(() => of({ items: [] }))),
-			releases: this.releases.list(force).pipe(catchError(() => of({ items: [] }))),
-		})
-			.pipe(takeUntil(this.$destroy))
-			.subscribe({
-				next: (r) => {
-					const src = r.sources.items || [];
-					this.sourceCount.set(src.length);
-					this.enabledSourceCount.set(src.filter((s) => s.enabled).length);
-					this.proxyCount.set((r.proxies.items || []).length);
-					this.groupCount.set((r.groups.items || []).length);
-					this.ruleCount.set((r.rules.items || []).length);
-					const toks = r.tokens.items || [];
-					this.tokenCount.set(toks.length);
-					this.activeTokenCount.set(toks.filter((t) => t.status === 'active').length);
-					const rels = r.releases.items || [];
-					this.latestRelease.set(rels.find((x) => x.status === 'published') || rels[0] || null);
-					this.loading.set(false);
-				},
-				error: (e: Error) => {
-					this.loading.set(false);
-					void this.dialog.error(e.message);
-				},
+		this.pendingLoads = 6;
+		this.draftStore.refresh(force);
+
+		this.sources
+			.list(force)
+			.pipe(
+				takeUntil(this.$destroy),
+				catchError(() => of({ items: [] })),
+			)
+			.subscribe((r) => {
+				const src = r.items || [];
+				this.sourceCount.set(src.length);
+				this.enabledSourceCount.set(src.filter((s) => s.enabled).length);
+				this.markLoaded();
 			});
+
+		this.sources
+			.listProxies(undefined, force)
+			.pipe(
+				takeUntil(this.$destroy),
+				catchError(() => of({ items: [] })),
+			)
+			.subscribe((r) => {
+				this.proxyCount.set((r.items || []).length);
+				this.markLoaded();
+			});
+
+		this.rules
+			.listGroups(force)
+			.pipe(
+				takeUntil(this.$destroy),
+				catchError(() => of({ items: [] })),
+			)
+			.subscribe((r) => {
+				this.groupCount.set((r.items || []).length);
+				this.markLoaded();
+			});
+
+		this.rules
+			.listRules(force)
+			.pipe(
+				takeUntil(this.$destroy),
+				catchError(() => of({ items: [] })),
+			)
+			.subscribe((r) => {
+				this.ruleCount.set((r.items || []).length);
+				this.markLoaded();
+			});
+
+		this.tokens
+			.list(force)
+			.pipe(
+				takeUntil(this.$destroy),
+				catchError(() => of({ items: [] })),
+			)
+			.subscribe((r) => {
+				const toks = r.items || [];
+				this.tokenCount.set(toks.length);
+				this.activeTokenCount.set(toks.filter((t) => t.status === 'active').length);
+				this.markLoaded();
+			});
+
+		this.releases
+			.list(force)
+			.pipe(
+				takeUntil(this.$destroy),
+				catchError((e: Error) => {
+					void this.dialog.error(e.message);
+					return of({ items: [] as Release[] });
+				}),
+			)
+			.subscribe((r) => {
+				const rels = r.items || [];
+				this.latestRelease.set(rels.find((x) => x.status === 'published') || rels[0] || null);
+				this.markLoaded();
+			});
+	}
+
+	private markLoaded(): void {
+		this.pendingLoads = Math.max(0, this.pendingLoads - 1);
+		if (this.pendingLoads === 0) {
+			this.loading.set(false);
+		}
 	}
 
 	/** 发布卡第三行：完整说明（与其它统计卡同为 f-s-12 一行） */
@@ -128,7 +188,10 @@ export class DashboardHomeComponent extends CmParentComponent implements OnInit 
 		const err = String(d.buildError || '').trim();
 		if (err) return err;
 		if (!d.hasPublished) return '尚未发布';
-		if (d.dirty) return this.draftSummary() || '有未发布更改';
+		if (d.dirty) {
+			// 轻量 draft-status 默认不带 changes；有 summary 再展示，否则通用文案
+			return this.draftSummary() || '有未发布更改';
+		}
 		const time = this.formatTime(this.latestRelease()?.publishedAt || this.latestRelease()?.createdAt);
 		return time ? `已与线上一致 · ${time}` : '已与线上一致';
 	}

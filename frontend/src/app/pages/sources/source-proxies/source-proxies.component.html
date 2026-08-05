@@ -49,7 +49,7 @@
   </div>
 
   <div class="table-container" style="max-height: min(55vh, 28rem)">
-    @if (isLoading) {
+    @if (isLoading()) {
       <div class="table-loading-overlay">
         <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
       </div>
@@ -61,7 +61,7 @@
             [checked]="allFilteredEnabled()"
             [indeterminate]="someFilteredEnabled()"
             (change)="toggleAllFiltered($event.checked)"
-            [disabled]="batchBusy() || filteredProxies().length === 0 || isLoading"
+            [disabled]="batchBusy() || filteredProxies().length === 0 || isLoading()"
             matTooltip="全选启用/禁用当前筛选"
           ></mat-checkbox>
         </th>
@@ -105,7 +105,7 @@
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.text-muted]="!row.enabled"></tr>
-      <tr class="mat-row" *matNoDataRow [hidden]="isLoading">
+      <tr class="mat-row" *matNoDataRow [hidden]="isLoading()">
         <td class="mat-cell" [attr.colspan]="displayedColumns.length">
           <cm-no-data [isMin]="true" noDataTitle="无节点"></cm-no-data>
         </td>

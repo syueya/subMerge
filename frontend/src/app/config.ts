@@ -7,8 +7,6 @@ export interface AppSettings {
   sidenavCollapsed: boolean;
   /** 主题色 class，对应 html.xxx_theme，默认 blue_theme */
   activeTheme: string;
-  /** 导航位置：侧边 side / 顶部 top（当前仅使用 side） */
-  navPos: 'side' | 'top';
 }
 
 export const defaults: AppSettings = {
@@ -16,5 +14,4 @@ export const defaults: AppSettings = {
   sidenavOpened: true,
   sidenavCollapsed: false,
   activeTheme: 'blue_theme',
-  navPos: 'side',
 };

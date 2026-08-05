@@ -9,11 +9,12 @@ export class RuleService {
 	private readonly api = inject(ApiService);
 
 	// 规则与策略组列表被概览/规则/策略组多页共用，做会话内缓存，写操作后失效。
-	private readonly rulesCache = new CachedRequest<ListResponse<Rule>>(() =>
-		this.api.get('/rules'),
+	// force 时 bypass 会话 HTTP 缓存，避免工具栏刷新仍命中拦截器缓存。
+	private readonly rulesCache = new CachedRequest<ListResponse<Rule>>((context) =>
+		this.api.get('/rules', { context }),
 	);
-	private readonly groupsCache = new CachedRequest<ListResponse<ProxyGroup>>(() =>
-		this.api.get('/groups'),
+	private readonly groupsCache = new CachedRequest<ListResponse<ProxyGroup>>((context) =>
+		this.api.get('/groups', { context }),
 	);
 
 	listRules(forceRefresh = false): Observable<ListResponse<Rule>> {

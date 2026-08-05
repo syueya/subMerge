@@ -107,7 +107,7 @@
         </div>
 
         <div class="log-content-container position-relative page-fill__grow">
-          @if (isLoadingLogs) {
+          @if (isLoadingLogs()) {
             <div class="table-loading-overlay">
               <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
             </div>
