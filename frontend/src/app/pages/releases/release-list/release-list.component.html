@@ -13,8 +13,8 @@
   <button mat-flat-button color="primary" type="button" [disabled]="publishing()" (click.debounceTime)="publishNow()">
     @if (publishing()) {
       发布中...
-    } @else if (draftChanges().length) {
-      发布 · {{ draftChanges().length }}
+    } @else if (draftDirty()) {
+      待发布 *
     } @else {
       发布
     }

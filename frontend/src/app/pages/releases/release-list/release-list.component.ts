@@ -39,6 +39,7 @@ export class ReleaseListComponent extends CmParentTableComponent implements Afte
 	override displayedColumns = ['version', 'counts', 'note', 'hash', 'createdBy', 'time', 'action'];
 
 	publishing = signal(false);
+  draftDirty = this.draftStore.dirty;
 	draftChanges = this.draftStore.changes;
 	draftSummary = this.draftStore.summary;
 
