@@ -48,7 +48,7 @@
 
 <div mat-dialog-actions class="text-right p-24 p-t-0">
   <button mat-stroked-button color="primary" type="button" (click)="dialogRef.close()">取消</button>
-  <button mat-flat-button color="primary" type="submit" [disabled]="editForm.invalid">
+  <button mat-flat-button color="primary" type="button" [disabled]="editForm.invalid" (click)="submit()">
     确认发布
   </button>
 </div>
