@@ -17,7 +17,7 @@ rules:
 
   # ========== 代理集 ==========
   - { category: GEOSITE, type: GEOSITE, payload: category-ai-!cn, target: 美国US, enabled: true, note: 海外AI }
-  - { category: GEOSITE, type: GEOSITE, payload: category-ai, target: 直连, enabled: true, note: 国内AI }
+  - { category: GEOSITE, type: GEOSITE, payload: category-ai-cn, target: 直连, enabled: true, note: 国内AI }
   - { category: GEOSITE, type: GEOSITE, payload: telegram, target: 香港HK, enabled: true, note: 电报 }
   - { category: GEOSITE, type: GEOSITE, payload: github, target: 日本JP, enabled: true, note: GitHub }
   - { category: GEOSITE, type: GEOSITE, payload: docker, target: 日本JP, enabled: true, note: Docker }
