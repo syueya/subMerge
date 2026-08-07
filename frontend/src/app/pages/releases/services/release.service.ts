@@ -62,4 +62,10 @@ export class ReleaseService {
 			.post<Release>(`/releases/${id}/rollback`)
 			.pipe(tap(() => this.listCache.invalidate()));
 	}
+
+	delete(id: number): Observable<void> {
+		return this.api
+			.delete<void>(`/releases/${id}`)
+			.pipe(tap(() => this.listCache.invalidate()));
+	}
 }

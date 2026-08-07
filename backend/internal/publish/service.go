@@ -126,6 +126,21 @@ func (s *Service) Rollback(id uint, actor string) (common.Release, error) {
 	return toRelease(release), nil
 }
 
+// Delete 删除指定版本记录（禁止删除当前生效的已发布版本）
+func (s *Service) Delete(id uint, actor string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var row database.Release
+	if err := s.db.First(&row, id).Error; err != nil {
+		return err
+	}
+	if row.Status == string(common.ReleaseStatusPublished) {
+		return fmt.Errorf("cannot delete the currently published release")
+	}
+	return s.db.Delete(&row).Error
+}
+
 func (s *Service) createPublishedRelease(res *BuildResult, note, actor string) (database.Release, error) {
 	var release database.Release
 	err := s.db.Transaction(func(tx *gorm.DB) error {

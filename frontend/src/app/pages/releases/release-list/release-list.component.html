@@ -10,25 +10,11 @@
   >
     <i-tabler class="icon-20" name="refresh"></i-tabler>
   </button>
-  @if (draftDirty()) {
-    <button
-      mat-stroked-button
-      color="primary"
-      type="button"
-      class="m-r-10 d-inline-flex align-items-center gap-8"
-      (click.debounceTime)="openDraftChanges()"
-    >
-      查看差异
-      @if (draftChanges().length) {
-        <span [class]="badgeWarn">{{ draftChanges().length }}</span>
-      }
-    </button>
-  }
   <button mat-flat-button color="primary" type="button" [disabled]="publishing()" (click.debounceTime)="publishNow()">
     @if (publishing()) {
       发布中...
-    } @else if (draftDirty()) {
-      发布 *
+    } @else if (draftChanges().length) {
+      发布 · {{ draftChanges().length }}
     } @else {
       发布
     }
@@ -64,6 +50,9 @@
         @if (row.status !== 'published') {
           <button mat-icon-button color="primary" type="button" matTooltip="回滚" (click.debounceTime)="rollback(row)">
             <i-tabler name="arrow-back-up" class="icon-24 d-flex align-items-center"></i-tabler>
+          </button>
+          <button mat-icon-button color="warn" type="button" matTooltip="删除" (click.debounceTime)="remove(row)">
+            <i-tabler name="trash" class="icon-24 d-flex align-items-center"></i-tabler>
           </button>
         }
       </div>
@@ -113,6 +102,9 @@
           @if (row.status !== 'published') {
             <button mat-icon-button color="primary" type="button" matTooltip="回滚" (click.debounceTime)="rollback(row)">
               <i-tabler name="arrow-back-up" class="icon-24 d-flex align-items-center"></i-tabler>
+            </button>
+            <button mat-icon-button color="warn" type="button" matTooltip="删除" (click.debounceTime)="remove(row)">
+              <i-tabler name="trash" class="icon-24 d-flex align-items-center"></i-tabler>
             </button>
           }
         </td>

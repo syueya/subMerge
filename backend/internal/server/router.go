@@ -180,6 +180,7 @@ func NewRouter(d Deps) *gin.Engine {
 			secured.POST("/releases/publish", scopePublish, d.Publish.Publish)
 			secured.GET("/releases/:id", scopeRead, d.Publish.Get)
 			secured.POST("/releases/:id/rollback", scopePublish, d.Publish.Rollback)
+			secured.DELETE("/releases/:id", scopePublish, d.Publish.Delete)
 
 			secured.GET("/audit", scopeRead, func(c *gin.Context) {
 				res, err := d.Audit.List(50, 0)

@@ -1,6 +1,7 @@
 package publish
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -103,4 +104,19 @@ func (h *Handler) Rollback(c *gin.Context) {
 	}
 	h.audit.Log(actor, "rollback", "release", "v"+strconv.Itoa(res.Version), c.ClientIP())
 	apiresp.OK(c, res)
+}
+
+func (h *Handler) Delete(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+		return
+	}
+	actor := middleware.GetUsername(c)
+	if err := h.svc.Delete(uint(id), actor); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "delete_failed", err.Error())
+		return
+	}
+	h.audit.Log(actor, "delete", "release", fmt.Sprintf("v(%d)", id), c.ClientIP())
+	apiresp.OK(c, gin.H{})
 }

@@ -1,17 +1,43 @@
 <cm-dialog-header modalTitle="发布配置"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content>
-    <div class="row">
-      <cm-form-field class="col-24" [help]="'可选。只写在发布历史里，方便以后回看这次改了什么。'">
-        <mat-label>发布备注</mat-label>
-        <mat-form-field appearance="outline" class="w-full" color="primary">
-          <input matInput formControlName="note" maxlength="255" placeholder="例如：调整 OpenAI 规则" />
-          @if (editForm.get('note')?.hasError('maxlength')) {
-            <mat-error>备注不能超过 255 个字符</mat-error>
-          }
-        </mat-form-field>
-      </cm-form-field>
+  <div mat-dialog-content class="dialog-body-no-scroll">
+    <cm-form-field class="d-block" [help]="'可选。只写在发布历史里，方便以后回看这次改了什么。'">
+      <mat-label>发布备注</mat-label>
+      <mat-form-field appearance="outline" class="w-full" color="primary">
+        <input matInput formControlName="note" maxlength="255" placeholder="例如：调整 OpenAI 规则" />
+        @if (editForm.get('note')?.hasError('maxlength')) {
+          <mat-error>备注不能超过 255 个字符</mat-error>
+        }
+      </mat-form-field>
+    </cm-form-field>
+
+    <div class="bg-light-warning text-warning rounded p-12 f-s-14 m-b-12 text-pre-wrap">
+      发布后「全部源 + 自动」的订阅链接将使用新配置，请确认变更内容后再发布。
+    </div>
+
+    <div class="m-b-0" style="max-height: min(60vh, 28rem); overflow: auto">
+      <cm-collapse-panel [expanded]="true" title="变更内容">
+        @if (summary) {
+          <p class="f-s-12 text-warning m-b-12">{{ summary }}</p>
+        }
+        @if (!changes.length) {
+          <cm-no-data [isMin]="true" noDataTitle="暂无差异"></cm-no-data>
+        } @else {
+          <ul class="m-b-0 p-l-0" style="list-style: none">
+            @for (ch of changes; track $index) {
+              <li class="d-flex flex-wrap align-items-start gap-8 f-s-12 m-b-8">
+                <span [class]="changeActionClass(ch.action)">{{ changeActionText(ch.action) }}</span>
+                <span class="text-muted">{{ changeKindText(ch.kind) }}</span>
+                <span>{{ ch.name }}</span>
+                @if (ch.detail) {
+                  <span class="text-muted">（{{ ch.detail }}）</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </cm-collapse-panel>
     </div>
   </div>
 </form>
@@ -21,8 +47,8 @@
 </div>
 
 <div mat-dialog-actions class="text-right p-24 p-t-0">
-  <button mat-stroked-button color="primary" type="button" mat-dialog-close>取消</button>
-  <button mat-flat-button color="primary" type="button" [disabled]="editForm.invalid" (click.debounceTime)="submit()">
+  <button mat-stroked-button color="primary" type="button" (click)="dialogRef.close()">取消</button>
+  <button mat-flat-button color="primary" type="submit" [disabled]="editForm.invalid">
     确认发布
   </button>
 </div>

@@ -62,7 +62,7 @@ export function payloadTip(type: string): string {
 		case RuleType.GEOIP:
 			return '填写 GeoIP 国家代码。\n例如：CN（国内）、US、JP。\n国内直连常用 CN。';
 		case RuleType.IP_CIDR:
-			return '填写 IPv4 CIDR。\n例如：10.0.0.0/8、1.1.1.1/32';
+			return '填写 IPv4 CIDR。\n例如：255.255.0.0/16、255.255.255.0/24、255.255.255.255/32';
 		case RuleType.IP_CIDR6:
 			return '填写 IPv6 CIDR。\n例如：2001:db8::/32';
 		case RuleType.MATCH:
