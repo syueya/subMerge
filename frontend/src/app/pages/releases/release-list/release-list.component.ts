@@ -36,7 +36,7 @@ export class ReleaseListComponent extends CmParentTableComponent implements Afte
 	private dialogOpen = inject(CmDialogOpenService);
 
 	dataSource = new MatTableDataSource<Release>([]);
-	override displayedColumns = ['version', 'status', 'counts', 'note', 'hash', 'createdBy', 'time', 'action'];
+	override displayedColumns = ['version', 'counts', 'note', 'hash', 'createdBy', 'time', 'action'];
 
 	publishing = signal(false);
 	draftDirty = this.draftStore.dirty;
