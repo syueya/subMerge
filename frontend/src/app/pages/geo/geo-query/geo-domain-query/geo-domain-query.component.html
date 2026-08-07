@@ -33,28 +33,32 @@
       @for (ip of result.ips; track ip) {
         <div class="d-flex align-items-center justify-content-center gap-4">
           <span [class]="badgeMuted">{{ ip }}</span>
-          <button
-            mat-icon-button
-            color="primary"
+          <button mat-icon-button
+            class="d-flex align-items-center justify-content-center"
+            [color]="ipGeoErrors()[ip] ? 'warn' : 'primary'"
             type="button"
-            [matTooltip]="ipGeoResults()[ip] ? '刷新 IP 归属地' : '查询 IP 归属地'"
+            [matTooltip]="ipGeoErrors()[ip] || (ipGeoResults()[ip] ? '刷新 IP 归属地' : '查询 IP 归属地')"
             [disabled]="ipGeoLoading()[ip]"
             (click.debounceTime)="lookupIPGeo(ip)"
           >
             @if (ipGeoLoading()[ip]) {
-              <mat-progress-spinner diameter="16" mode="indeterminate"></mat-progress-spinner>
+              <mat-progress-spinner diameter="24" mode="indeterminate"></mat-progress-spinner>
+            } @else if (ipGeoErrors()[ip]) {
+              <i-tabler name="circle-x" class="icon-20"></i-tabler>
             } @else {
               <i-tabler name="world" class="icon-24"></i-tabler>
             }
           </button>
-          @if (ipGeoResults()[ip]; as geo) {
-            <span class="f-s-12 text-muted text-truncate">
+          @if (ipGeoErrors()[ip]) {
+            <span class="f-s-12 text-error" [title]="ipGeoErrors()[ip]">查询失败</span>
+          } @else if (ipGeoResults()[ip]; as geo) {
+            <span class="f-s-12 text-muted text-truncate d-flex align-items-center gap-4">
               @if (geo.flag?.img) {
-                <img [src]="geo.flag.img" width="20" height="14" [alt]="geo.countryCode || geo.country || '国旗'" />
+                <img class="d-block" [src]="geo.flag.img" width="20" height="14" [alt]="geo.countryCode || geo.country || '国旗'" />
               } @else if (geo.flag?.emoji) {
-                <span aria-hidden="true">{{ geo.flag.emoji }}</span>
+                <span class="d-flex align-items-center"  aria-hidden="true">{{ geo.flag.emoji }}</span>
               }
-              {{ geo.city }} · {{ geo.region }} · {{geo.city }}
+              {{ geo.country }} · {{ geo.region }} · {{ geo.city }}
             </span>
           }
         </div>

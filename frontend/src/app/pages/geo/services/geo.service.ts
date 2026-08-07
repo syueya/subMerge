@@ -33,7 +33,7 @@ export class GeoService {
   }
 
   lookupIPGeo(ip: string): Observable<GeoIPGeoResponse> {
-    return this.api.post<GeoIPGeoResponse>('/geo/ip-geo', { ip });
+    return this.api.post<GeoIPGeoResponse>('/geo/ip-geo', { ip }, { noLoadingSpinner: true });
   }
 
   reverse(file: string, category: string, limit = 100, offset = 0): Observable<GeoReverseResponse> {

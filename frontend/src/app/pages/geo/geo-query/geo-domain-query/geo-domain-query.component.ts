@@ -23,6 +23,7 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
   readonly loading = signal(false);
   readonly ipGeoLoading = signal<Record<string, boolean>>({});
   readonly ipGeoResults = signal<Record<string, GeoIPGeoResponse>>({});
+  readonly ipGeoErrors = signal<Record<string, string>>({});
 
   readonly badgeMuted = BADGE_MUTED;
 
@@ -61,6 +62,7 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
           this.queryResult.set(result);
           this.ipGeoLoading.set({});
           this.ipGeoResults.set({});
+          this.ipGeoErrors.set({});
           this.loading.set(false);
         },
         error: (err: Error) => {
@@ -74,6 +76,11 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
     const value = ip.trim();
     if (!value || this.ipGeoLoading()[value]) return;
     this.ipGeoLoading.update(state => ({ ...state, [value]: true }));
+    this.ipGeoErrors.update(state => {
+      const next = { ...state };
+      delete next[value];
+      return next;
+    });
     this.svc
       .lookupIPGeo(value)
       .pipe(
@@ -82,11 +89,12 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
       )
       .subscribe({
         next: result => this.ipGeoResults.update(state => ({ ...state, [value]: result })),
-        error: (err: Error) => void this.dialog.error(`${value}：${err.message}`)
+        error: (err: Error) => {
+          this.ipGeoErrors.update(state => ({ ...state, [value]: err.message || '查询失败' }));
+          void this.dialog.error(`${value}：${err.message}`);
+        }
       });
   }
-
-
   clearResult(): void {
     this.queryResult.set(null);
     this.closeEntries();

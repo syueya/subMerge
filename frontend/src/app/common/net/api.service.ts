@@ -6,6 +6,8 @@ import { ApiResponse } from '@data-struct';
 export interface ApiRequestOptions {
 	/** 前端 RxJS 超时（ms）；经 timeout 请求头传给 defaultInterceptor，出网前会剥离 */
 	timeoutMs?: number;
+	/** 是否跳过全屏 loading；局部按钮已有独立 loading 时使用 */
+	noLoadingSpinner?: boolean;
 	/** 查询参数 */
 	params?: HttpParams | Record<string, string | number | boolean | readonly (string | number | boolean)[]>;
 	/** 透传 HttpContext（如会话读缓存 bypass） */
@@ -81,6 +83,9 @@ export class ApiService {
 		let h = this.jsonHeaders;
 		if (options?.timeoutMs != null && options.timeoutMs > 0) {
 			h = h.set('timeout', String(options.timeoutMs));
+		}
+		if (options?.noLoadingSpinner) {
+			h = h.set('REQUEST_NO_LOADING_SPINNER', '1');
 		}
 		return h;
 	}
