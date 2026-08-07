@@ -1,29 +1,25 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '@common/net/api.service';
-import {
-	NetCheckConfig,
-	NetCheckRequest,
-	NetCheckResponse,
-} from '@data-struct';
+import { NetCheckConfig, NetCheckRequest, NetCheckResponse } from '@data-struct';
 
 @Injectable({ providedIn: 'root' })
 export class NetCheckService {
-	private readonly api = inject(ApiService);
+  private readonly api = inject(ApiService);
 
-	config(): Observable<NetCheckConfig> {
-		return this.api.get<NetCheckConfig>('/net-check/config');
-	}
+  config(): Observable<NetCheckConfig> {
+    return this.api.get<NetCheckConfig>('/net-check/config');
+  }
 
-	saveConfig(config: NetCheckConfig): Observable<NetCheckConfig> {
-		return this.api.put<NetCheckConfig>('/net-check/config', config);
-	}
+  saveConfig(config: NetCheckConfig): Observable<NetCheckConfig> {
+    return this.api.put<NetCheckConfig>('/net-check/config', config);
+  }
 
-	check(request: NetCheckRequest): Observable<NetCheckResponse> {
-		return this.api.post<NetCheckResponse>('/net-check/check', request);
-	}
+  check(request: NetCheckRequest): Observable<NetCheckResponse> {
+    return this.api.post<NetCheckResponse>('/net-check/check', request);
+  }
 
-	reset(): Observable<NetCheckConfig> {
-		return this.api.post<NetCheckConfig>('/net-check/reset', {});
-	}
+  reset(): Observable<NetCheckConfig> {
+    return this.api.post<NetCheckConfig>('/net-check/reset', {});
+  }
 }

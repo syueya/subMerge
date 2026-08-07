@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/oschwald/maxminddb-golang"
+	"github.com/submerge/submerge/backend/internal/ipgeo"
 )
 
 const (
@@ -86,6 +87,7 @@ type Service struct {
 	mu     sync.RWMutex
 	snap   snapshot
 	client *http.Client
+	ipGeo  *ipgeo.Client
 }
 
 func NewService(dir string, urls URLs) *Service {
@@ -115,6 +117,10 @@ func NewService(dir string, urls URLs) *Service {
 			},
 		},
 	}
+}
+
+func (s *Service) SetIPGeoClient(client *ipgeo.Client) {
+	s.ipGeo = client
 }
 
 func (s *Service) Load() {
@@ -255,4 +261,3 @@ func (s *Service) Categories() CategoriesResponse {
 		ASN:     CategoryInfo{File: ASNFile, SupportsReverse: false},
 	}
 }
-

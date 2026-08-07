@@ -6,6 +6,39 @@ import (
 	"testing"
 )
 
+func TestParseHysteria2URIIncludesUDP(t *testing.T) {
+	list, err := ParseClashProxies([]byte("hysteria2://pass@hy.example.com:443#hy\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].Raw["udp"] != true {
+		t.Fatalf("hysteria2 udp config = %v", list)
+	}
+}
+func TestParseClashProxiesPreservesUDPConfiguration(t *testing.T) {
+	body := []byte("proxies:\n  - name: udp-on\n    type: ss\n    server: on.example.com\n    port: 443\n    udp: true\n  - name: udp-off\n    type: ss\n    server: off.example.com\n    port: 443\n    udp: false\n")
+	list, err := ParseClashProxies(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("got %d proxies, want 2", len(list))
+	}
+	if list[0].Raw["udp"] != true || list[1].Raw["udp"] != false {
+		t.Fatalf("udp values not preserved: on=%v off=%v", list[0].Raw["udp"], list[1].Raw["udp"])
+	}
+
+	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(body)))
+	base64.StdEncoding.Encode(encoded, body)
+	decoded, err := ParseClashProxies(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded[0].Raw["udp"] != true || decoded[1].Raw["udp"] != false {
+		t.Fatalf("base64 udp values not preserved: on=%v off=%v", decoded[0].Raw["udp"], decoded[1].Raw["udp"])
+	}
+}
+
 func TestParseClashProxies(t *testing.T) {
 	yamlBody := []byte(`
 proxies:

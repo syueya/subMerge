@@ -10,8 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	common "github.com/submerge/submerge/backend/common"
-	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/apikey"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/applog"
 	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/auth"
@@ -139,6 +139,7 @@ func NewRouter(d Deps) *gin.Engine {
 			secured.GET("/geo/status", scopeRead, d.Geo.Status)
 			secured.GET("/geo/categories", scopeRead, d.Geo.Categories)
 			secured.POST("/geo/query", scopeRead, d.Geo.Query)
+			secured.POST("/geo/ip-geo", scopeRead, d.Geo.IPGeo)
 			secured.POST("/geo/reverse", scopeRead, d.Geo.Reverse)
 			secured.POST("/geo/search", scopeRead, d.Geo.Search)
 			secured.POST("/geo/update", scopeWrite, d.Geo.Update)

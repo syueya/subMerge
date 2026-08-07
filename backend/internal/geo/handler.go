@@ -46,6 +46,25 @@ func (h *Handler) Query(c *gin.Context) {
 	apiresp.OK(c, result)
 }
 
+func (h *Handler) IPGeo(c *gin.Context) {
+	var req struct {
+		IP string `json:"ip"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	result, err := h.svc.LookupIPGeo(ctx, req.IP)
+	if err != nil {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	h.audit.Log(middleware.GetUsername(c), "lookup_ip_geo", "geo", result.IP, c.ClientIP())
+	apiresp.OK(c, result)
+}
+
 func (h *Handler) Reverse(c *gin.Context) {
 	var req struct {
 		File     string `json:"file"`

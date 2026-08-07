@@ -45,7 +45,6 @@ func NewServiceWithUA(db *gorm.DB, box *crypto.Box, timeout time.Duration, maxBy
 		refreshing: make(map[uint]struct{}),
 	}
 }
-
 func (s *Service) List() (common.SourceListResponse, error) {
 	var rows []database.Source
 	if err := s.db.Order("id asc").Find(&rows).Error; err != nil {
@@ -303,7 +302,7 @@ func (s *Service) ListProxies(sourceID *uint) (common.ProxyListResponse, error) 
 	}
 	items := make([]common.ProxyNode, 0, len(rows))
 	for _, r := range rows {
-		items = append(items, toProxyNode(r.ID, r.SourceID, r.Name, r.Region, r.Type, r.Server, r.Port, r.Enabled))
+		items = append(items, toProxyNode(r.ID, r.SourceID, r.Name, r.Region, r.Type, r.Server, r.Port, r.Enabled, r.RawJSON))
 	}
 	return common.ProxyListResponse{Items: items}, nil
 }
@@ -318,7 +317,7 @@ func (s *Service) UpdateProxy(id uint, enabled bool) (common.ProxyNode, error) {
 	if err := s.db.Save(&row).Error; err != nil {
 		return common.ProxyNode{}, err
 	}
-	return toProxyNode(row.ID, row.SourceID, row.Name, row.Region, row.Type, row.Server, row.Port, row.Enabled), nil
+	return toProxyNode(row.ID, row.SourceID, row.Name, row.Region, row.Type, row.Server, row.Port, row.Enabled, row.RawJSON), nil
 }
 
 // BatchUpdateProxies 批量更新启用状态

@@ -49,12 +49,9 @@
         <cm-form-field>
           <mat-label>搜索规则</mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
-            <input
-              matInput
-              [ngModel]="filterText()"
+            <input matInput [ngModel]="filterText()"
               (ngModelChange)="onFilterInput($event)"
-              placeholder="匹配 / 类型 / 出口 / 备注 / 分类"
-            />
+              placeholder="匹配 / 类型 / 出口 / 备注 / 分类" />
             @if (filterText()) {
               <button matSuffix mat-icon-button type="button" aria-label="清除" (click)="clearFilter()">
                 <i-tabler class="icon-18" name="x"></i-tabler>

@@ -18,9 +18,10 @@ import { DraftStatusStore, summarizeChanges } from '../services/draft-status.sto
 	import { ReleaseService } from '../services/release.service';
 import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
 import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-import { finalize, takeUntil } from 'rxjs';
+import { finalize, firstValueFrom, takeUntil } from 'rxjs';
 import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
 import { DraftChangesComponent } from '../draft-changes/draft-changes.component';
+import { PublishNoteFormComponent } from '../publish-note-form/publish-note-form.component';
 import { ReleaseDetailComponent } from '../release-detail/release-detail.component';
 
 @Component({
@@ -117,9 +118,13 @@ private buildPublishConfirmMessage(
 			const changes = await this.draftStore.ensureChanges();
 			const ok = await this.dialog.confirm(this.buildPublishConfirmMessage(changes), '发布确认', '发布');
 			if (!ok) return;
-		this.publishing.set(true);
-		this.svc
-			.publish('')
+			const note = await firstValueFrom(
+				this.dialogOpen.openSmallForm(PublishNoteFormComponent, null).afterClosed(),
+			);
+			if (note === undefined) return;
+			this.publishing.set(true);
+			this.svc
+				.publish(note)
 			.pipe(
 				takeUntil(this.$destroy),
 				finalize(() => this.publishing.set(false)),

@@ -2,21 +2,10 @@
   <cm-form-field>
     <mat-label>域名 / IP</mat-label>
     <mat-form-field appearance="outline" class="w-full" color="primary">
-      <input
-        matInput
-        [(ngModel)]="queryText"
-        placeholder="例如 www.example.com 或 1.1.1.1"
-        (keyup.enter)="query()"
-      />
+      <input matInput [(ngModel)]="queryText" placeholder="例如 www.example.com 或 1.1.1.1" (keyup.enter)="query()" />
     </mat-form-field>
     <div formFieldAction class="d-flex align-items-center gap-12 flex-wrap">
-      <button
-        mat-flat-button
-        color="primary"
-        type="button"
-        [disabled]="loading()"
-        (click.debounceTime)="query()"
-      >
+      <button mat-flat-button color="primary" type="button" [disabled]="loading()" (click.debounceTime)="query()">
         {{ loading() ? '查询中…' : '查询' }}
       </button>
       @if (!isIPInput) {
@@ -31,7 +20,7 @@
   <div class="page-fill__scroll">
     <div class="d-flex flex-wrap align-items-center gap-8 m-b-16">
       @if (isIPResult(result)) {
-        <span class="f-s-13 text-muted">直接归属查询</span>
+        <span class="f-s-13 text-muted">IP：</span>
       } @else {
         @if (result.resolveSkipped) {
           <span class="f-s-13 text-warning">未进行 DNS 解析</span>
@@ -42,7 +31,33 @@
         }
       }
       @for (ip of result.ips; track ip) {
-        <span [class]="badgeMuted">{{ ip }}</span>
+        <div class="d-flex align-items-center justify-content-center gap-4">
+          <span [class]="badgeMuted">{{ ip }}</span>
+          <button
+            mat-icon-button
+            color="primary"
+            type="button"
+            [matTooltip]="ipGeoResults()[ip] ? '刷新 IP 归属地' : '查询 IP 归属地'"
+            [disabled]="ipGeoLoading()[ip]"
+            (click.debounceTime)="lookupIPGeo(ip)"
+          >
+            @if (ipGeoLoading()[ip]) {
+              <mat-progress-spinner diameter="16" mode="indeterminate"></mat-progress-spinner>
+            } @else {
+              <i-tabler name="world" class="icon-24"></i-tabler>
+            }
+          </button>
+          @if (ipGeoResults()[ip]; as geo) {
+            <span class="f-s-12 text-muted text-truncate">
+              @if (geo.flag?.img) {
+                <img [src]="geo.flag.img" width="20" height="14" [alt]="geo.countryCode || geo.country || '国旗'" />
+              } @else if (geo.flag?.emoji) {
+                <span aria-hidden="true">{{ geo.flag.emoji }}</span>
+              }
+              {{ geo.city }} · {{ geo.region }} · {{geo.city }}
+            </span>
+          }
+        </div>
       }
     </div>
 
@@ -62,15 +77,7 @@
                   <div class="f-w-600 f-s-14">{{ hit.category }}</div>
                   <div class="f-s-12 text-muted word-break">{{ hit.type }} · {{ hit.value }}</div>
                 </div>
-                <button
-                  mat-stroked-button
-                  color="primary"
-                  type="button"
-                  class="btn-compact"
-                  (click.debounceTime)="openGeoSiteCategoryEntries(hit.category)"
-                >
-                  查看条目
-                </button>
+                <button mat-stroked-button color="primary" type="button" class="btn-compact" (click.debounceTime)="openGeoSiteCategoryEntries(hit.category)"> 查看条目 </button>
               </div>
             }
           } @else {

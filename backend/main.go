@@ -14,6 +14,7 @@ import (
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
 	"github.com/submerge/submerge/backend/internal/geo"
+	"github.com/submerge/submerge/backend/internal/ipgeo"
 	"github.com/submerge/submerge/backend/internal/logs"
 	"github.com/submerge/submerge/backend/internal/middleware"
 	"github.com/submerge/submerge/backend/internal/netcheck"
@@ -65,6 +66,10 @@ func main() {
 	// 管理员仅通过网页首次注册创建，不在环境变量里配置
 
 	sourceSvc := source.NewServiceWithUA(db, box, cfg.SourceFetchTimeout, cfg.SourceMaxBytes, cfg.SourceFetchUA)
+	ipGeoClient, err := ipgeo.NewClient(cfg.IPGeoURL, cfg.IPGeoTimeout)
+	if err != nil {
+		applog.Fatalf("IP geo client: %v", err)
+	}
 	// 复位上次运行遗留的 running 状态，避免源永久卡在「刷新中」
 	if err := sourceSvc.ResetStuckRefresh(); err != nil {
 		applog.Warn("reset stuck refresh: %v", err)
@@ -79,6 +84,7 @@ func main() {
 	geoSvc := geo.NewService(cfg.GeoDir, geo.URLs{
 		GeoIP: cfg.GeoIPURL, GeoSite: cfg.GeoSiteURL, MetaDB: cfg.MetaDBURL, ASN: cfg.ASNURL,
 	})
+	geoSvc.SetIPGeoClient(ipGeoClient)
 	geoSvc.Load()
 	netCheckSvc := netcheck.NewService(db)
 

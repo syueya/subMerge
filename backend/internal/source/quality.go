@@ -1,6 +1,7 @@
 package source
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
 
@@ -53,7 +54,7 @@ func AssessProxy(name, region, typ, server string, port int) (ok bool, issue str
 	return true, ""
 }
 
-func toProxyNode(id, sourceID uint, name, region, typ, server string, port int, enabled bool) common.ProxyNode {
+func toProxyNode(id, sourceID uint, name, region, typ, server string, port int, enabled bool, rawJSON string) common.ProxyNode {
 	ok, issue := AssessProxy(name, region, typ, server, port)
 	return common.ProxyNode{
 		ID:       id,
@@ -64,7 +65,20 @@ func toProxyNode(id, sourceID uint, name, region, typ, server string, port int, 
 		Server:   server,
 		Port:     port,
 		Enabled:  enabled,
+		UDP:      configuredUDP(rawJSON),
 		OK:       ok,
 		Issue:    issue,
 	}
+}
+
+func configuredUDP(rawJSON string) *bool {
+	var raw map[string]interface{}
+	if err := json.Unmarshal([]byte(rawJSON), &raw); err != nil {
+		return nil
+	}
+	value, ok := raw["udp"].(bool)
+	if !ok {
+		return nil
+	}
+	return &value
 }

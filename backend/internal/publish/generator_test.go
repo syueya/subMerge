@@ -45,6 +45,29 @@ func mustBuild(t *testing.T, in BuildInput) *BuildResult {
 	return res
 }
 
+func TestGeneratorPreservesUDPConfiguration(t *testing.T) {
+	res := mustBuild(t, BuildInput{
+		Proxies: []map[string]interface{}{
+			ssProxy("udp-on", "1.1.1.1", 443, map[string]interface{}{"udp": true}),
+			ssProxy("udp-off", "2.2.2.2", 443, map[string]interface{}{"udp": false}),
+		},
+		Groups: []database.ProxyGroup{group("节点选择", "select", `["ALL"]`)},
+		Rules:  []database.Rule{makeRule("MATCH", "", "节点选择")},
+	})
+	var doc map[string]interface{}
+	if err := yaml.Unmarshal([]byte(res.YAML), &doc); err != nil {
+		t.Fatal(err)
+	}
+	values := map[string]interface{}{}
+	for _, item := range doc["proxies"].([]interface{}) {
+		proxy := item.(map[string]interface{})
+		values[fmt.Sprint(proxy["name"])] = proxy["udp"]
+	}
+	if values["udp-on"] != true || values["udp-off"] != false {
+		t.Fatalf("udp values changed after publish: %+v", values)
+	}
+}
+
 func TestGeneratorBuild(t *testing.T) {
 	res := mustBuild(t, BuildInput{
 		Proxies: []map[string]interface{}{

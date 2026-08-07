@@ -8,6 +8,56 @@ import (
 	"github.com/submerge/submerge/backend/internal/database"
 )
 
+func TestListProxiesIncludesUDPConfigurationWithoutRawSecrets(t *testing.T) {
+	db, err := database.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, _ := db.DB()
+	t.Cleanup(func() { _ = sqlDB.Close() })
+
+	if err := db.Create(&database.Proxy{
+		SourceID: 1, Name: "udp-on", Region: "US", Type: "ss", Server: "1.1.1.1", Port: 443, Enabled: true,
+		RawJSON: `{"name":"udp-on","udp":true,"password":"secret"}`,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&database.Proxy{
+		SourceID: 1, Name: "udp-off", Region: "US", Type: "ss", Server: "2.2.2.2", Port: 443, Enabled: true,
+		RawJSON: `{"name":"udp-off","udp":false,"uuid":"secret"}`,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&database.Proxy{
+		SourceID: 1, Name: "udp-unknown", Region: "US", Type: "ss", Server: "3.3.3.3", Port: 443, Enabled: true,
+		RawJSON: `{"name":"udp-unknown"}`,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	svc := NewService(db, nil, 0, 0)
+	result, err := svc.ListProxies(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) != 3 {
+		t.Fatalf("got %d nodes, want 3", len(result.Items))
+	}
+	got := map[string]*bool{}
+	for _, item := range result.Items {
+		got[item.Name] = item.UDP
+	}
+	if got["udp-on"] == nil || !*got["udp-on"] {
+		t.Fatalf("udp-on config = %v", got["udp-on"])
+	}
+	if got["udp-off"] == nil || *got["udp-off"] {
+		t.Fatalf("udp-off config = %v", got["udp-off"])
+	}
+	if got["udp-unknown"] != nil {
+		t.Fatalf("udp-unknown config = %v, want nil", got["udp-unknown"])
+	}
+}
+
 func TestEnabledProxiesBySourceIDsInjectsSourceMeta(t *testing.T) {
 	db, err := database.Open(filepath.Join(t.TempDir(), "t.db"))
 	if err != nil {

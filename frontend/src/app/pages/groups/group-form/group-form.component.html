@@ -77,54 +77,54 @@
         >
           添加
         </button>
+      </cm-form-field>
 
-        <mat-card class="cardWithShadow m-b-12 m-t-12">
-          <mat-card-content class="p-16">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-b-8">
-              <span class="f-s-12 f-w-600 text-muted">预设</span>
-              @if (members().length) {
-                <span class="f-s-12 text-muted text-right m-l-auto" [title]="members().join(', ')">
-                  已选 {{ members().length }} 项
-                </span>
-              } @else {
-                <span class="f-s-12 text-muted m-l-auto">尚未选择成员</span>
-              }
-            </div>
+      <mat-card class="cardWithShadow m-b-12 m-t-12">
+        <mat-card-content class="p-16">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-b-8">
+            <span class="f-s-12 f-w-600 text-muted">预设</span>
+            @if (members().length) {
+              <span class="f-s-12 text-muted text-right m-l-auto" [title]="members().join(', ')">
+                已选 {{ members().length }} 项
+              </span>
+            } @else {
+              <span class="f-s-12 text-muted m-l-auto">尚未选择成员</span>
+            }
+          </div>
+          <div class="d-flex flex-wrap gap-x-16 gap-y-8">
+            @for (p of memberPresets(); track p.value) {
+              <mat-checkbox [checked]="isMemberSelected(p.value)" (change)="toggleMember(p.value)">
+                {{ p.text }}
+              </mat-checkbox>
+            }
+          </div>
+
+          @if (memberGroupOptions().length) {
+            <div class="f-s-12 f-w-600 text-muted m-t-16 m-b-8">其它策略组</div>
             <div class="d-flex flex-wrap gap-x-16 gap-y-8">
-              @for (p of memberPresets(); track p.value) {
-                <mat-checkbox [checked]="isMemberSelected(p.value)" (change)="toggleMember(p.value)">
-                  {{ p.text }}
+              @for (g of memberGroupOptions(); track g.id) {
+                <mat-checkbox [checked]="isMemberSelected(g.name)" (change)="toggleMember(g.name)">
+                  {{ g.name }}
                 </mat-checkbox>
               }
             </div>
+          }
 
-            @if (memberGroupOptions().length) {
-              <div class="f-s-12 f-w-600 text-muted m-t-16 m-b-8">其它策略组</div>
-              <div class="d-flex flex-wrap gap-x-16 gap-y-8">
-                @for (g of memberGroupOptions(); track g.id) {
-                  <mat-checkbox [checked]="isMemberSelected(g.name)" (change)="toggleMember(g.name)">
-                    {{ g.name }}
-                  </mat-checkbox>
-                }
-              </div>
-            }
-
-            @if (customMembers().length) {
-              <div class="f-s-12 f-w-600 text-muted m-t-16 m-b-8">自定义</div>
-              <div class="d-flex flex-wrap gap-8">
-                @for (m of customMembers(); track m) {
-                  <span class="bg-light-primary text-primary rounded f-s-12 f-w-600 p-x-8 p-y-4 d-inline-flex align-items-center gap-4">
-                    {{ m }}
-                    <button mat-icon-button type="button" class="icon-20" matTooltip="移除" (click)="removeMember(m)">
-                      <i-tabler name="x" class="icon-14"></i-tabler>
-                    </button>
-                  </span>
-                }
-              </div>
-            }
-          </mat-card-content>
-        </mat-card>
-      </cm-form-field>
+          @if (customMembers().length) {
+            <div class="f-s-12 f-w-600 text-muted m-t-16 m-b-8">自定义</div>
+            <div class="d-flex flex-wrap gap-8">
+              @for (m of customMembers(); track m) {
+                <span class="bg-light-primary text-primary rounded f-s-12 f-w-600 p-x-8 p-y-4 d-inline-flex align-items-center gap-4">
+                  {{ m }}
+                  <button mat-icon-button type="button" class="icon-20" matTooltip="移除" (click)="removeMember(m)">
+                    <i-tabler name="x" class="icon-14"></i-tabler>
+                  </button>
+                </span>
+              }
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
     </div>
   </div>
 </form>

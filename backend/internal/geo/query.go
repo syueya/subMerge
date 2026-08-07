@@ -1,6 +1,7 @@
 package geo
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -70,6 +71,27 @@ func (s *Service) appendIPLookups(result *QueryResponse, ip net.IP) {
 	}
 }
 
+func (s *Service) LookupIPGeo(ctx context.Context, raw string) (IPGeoResponse, error) {
+	if s.ipGeo == nil {
+		return IPGeoResponse{}, errors.New("IP geo client unavailable")
+	}
+	parsed := net.ParseIP(strings.TrimSpace(raw))
+	if parsed == nil {
+		return IPGeoResponse{}, errors.New("invalid IP")
+	}
+	result, err := s.ipGeo.Lookup(ctx, parsed)
+	if err != nil {
+		return IPGeoResponse{}, err
+	}
+	return IPGeoResponse{
+		IP: result.IP, Continent: result.Continent, ContinentCode: result.ContinentCode,
+		Country: result.Country, CountryCode: result.CountryCode, Region: result.Region,
+		RegionCode: result.RegionCode, City: result.City, Postal: result.Postal,
+		Flag:     IPGeoFlag{Img: result.Flag.Img, Emoji: result.Flag.Emoji, EmojiUnicode: result.Flag.EmojiUnicode},
+		Latitude: result.Latitude, Longitude: result.Longitude, ASN: result.ASN,
+		Organization: result.Organization, ISP: result.ISP,
+	}, nil
+}
 func (s *Service) Query(rawDomain string, resolve bool) (QueryResponse, error) {
 	inputType, value, parsedIP, err := normalizeQuery(rawDomain)
 	if err != nil {
@@ -341,4 +363,3 @@ func paginateReverse(result ReverseResponse, items []ReverseItem) ReverseRespons
 	result.Items = items[result.Offset:end]
 	return result
 }
-

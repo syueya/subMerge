@@ -44,6 +44,8 @@ type ProxyNode struct {
 	Server   string `json:"server"`
 	Port     int    `json:"port"`
 	Enabled  bool   `json:"enabled"`
+	// UDP 订阅配置；nil 表示上游未提供该字段。
+	UDP *bool `json:"udp,omitempty"`
 	// OK 是否像正常代理节点（非信息节点、字段完整、地区可识别等）
 	OK bool `json:"ok"`
 	// Issue 非正常时的原因（给前端「识别」列）

@@ -117,7 +117,7 @@
         <td mat-cell *matCellDef="let row" class="f-s-14">
           @if (row.subscribeUrl) {
             <div class="d-flex align-items-center gap-4">
-              <code class="f-s-12 text-muted" [title]="row.subscribeUrl">{{ maskSubscribeUrl(row.subscribeUrl) }}</code>
+              <code class="f-s-14" [title]="row.subscribeUrl">{{ maskSubscribeUrl(row.subscribeUrl) }}</code>
               <button
                 mat-icon-button
                 color="primary"

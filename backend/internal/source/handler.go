@@ -63,20 +63,20 @@ func (h *Handler) Create(c *gin.Context) {
 	if req.RegionMode != nil {
 		mode = string(*req.RegionMode)
 	}
-// 自动模式未填地区 → UNK；固定模式必须选具体地区
-		rawRegion := strings.TrimSpace(string(req.Region))
-		if rawRegion == "" {
-			if mode == string(common.RegionModeFixed) {
-				apiresp.Fail(c, http.StatusBadRequest, "bad_request", "fixed mode requires a region code")
-				return
-			}
-			rawRegion = fallbackRegionCode()
-		}
-		region, ok := normalizeRegion(rawRegion)
-		if !ok {
-			apiresp.Fail(c, http.StatusBadRequest, "bad_request", "region must be 1-16 letters/digits (e.g. US, JP, HK, UNK)")
+	// 自动模式未填地区 → UNK；固定模式必须选具体地区
+	rawRegion := strings.TrimSpace(string(req.Region))
+	if rawRegion == "" {
+		if mode == string(common.RegionModeFixed) {
+			apiresp.Fail(c, http.StatusBadRequest, "bad_request", "fixed mode requires a region code")
 			return
 		}
+		rawRegion = fallbackRegionCode()
+	}
+	region, ok := normalizeRegion(rawRegion)
+	if !ok {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "region must be 1-16 letters/digits (e.g. US, JP, HK, UNK)")
+		return
+	}
 	req.Region = common.Region(region)
 	item, err := h.svc.Create(req)
 	if err != nil {

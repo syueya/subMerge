@@ -57,6 +57,8 @@ type Config struct {
 	GeoSiteURL   string
 	MetaDBURL    string
 	ASNURL       string
+	IPGeoURL     string
+	IPGeoTimeout time.Duration
 }
 
 // Load 从环境变量加载配置
@@ -78,6 +80,10 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	sourceMaxBytes, err := getInt64("SOURCE_MAX_BYTES", 8<<20)
+	if err != nil {
+		return nil, err
+	}
+	ipGeoTimeout, err := getDuration("IP_GEO_TIMEOUT", 5*time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +147,8 @@ func Load() (*Config, error) {
 		GeoSiteURL:       getEnv("GEOSITE_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"),
 		MetaDBURL:        getEnv("GEODB_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb"),
 		ASNURL:           getEnv("GEOASN_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"),
+		IPGeoURL:         getEnv("IP_GEO_URL", "https://ipwho.is/{ip}"),
+		IPGeoTimeout:     ipGeoTimeout,
 	}
 
 	if len(cfg.EncryptionKey) < 32 {

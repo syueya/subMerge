@@ -54,6 +54,30 @@ type ASNHit struct {
 	Organization string `json:"organization"`
 }
 
+type IPGeoFlag struct {
+	Img          string `json:"img,omitempty"`
+	Emoji        string `json:"emoji,omitempty"`
+	EmojiUnicode string `json:"emoji_unicode,omitempty"`
+}
+
+type IPGeoResponse struct {
+	IP            string    `json:"ip"`
+	Continent     string    `json:"continent,omitempty"`
+	ContinentCode string    `json:"continent_code,omitempty"`
+	Country       string    `json:"country,omitempty"`
+	CountryCode   string    `json:"countryCode,omitempty"`
+	Region        string    `json:"region,omitempty"`
+	RegionCode    string    `json:"region_code,omitempty"`
+	City          string    `json:"city,omitempty"`
+	Postal        string    `json:"postal,omitempty"`
+	Flag          IPGeoFlag `json:"flag,omitempty"`
+	Latitude      float64   `json:"latitude,omitempty"`
+	Longitude     float64   `json:"longitude,omitempty"`
+	ASN           string    `json:"asn,omitempty"`
+	Organization  string    `json:"organization,omitempty"`
+	ISP           string    `json:"isp,omitempty"`
+}
+
 type QueryResponse struct {
 	Domain         string       `json:"domain"`
 	InputType      string       `json:"inputType,omitempty"`

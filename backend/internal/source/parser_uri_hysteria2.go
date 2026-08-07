@@ -32,6 +32,7 @@ func parseHysteria2URI(raw string) (map[string]interface{}, error) {
 		"server":   host,
 		"port":     port,
 		"password": password,
+		"udp":      true,
 	}
 	if sni := q.Get("sni"); sni != "" {
 		m["sni"] = sni

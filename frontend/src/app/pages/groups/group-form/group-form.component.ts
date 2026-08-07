@@ -97,8 +97,10 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 	toggleMember(value: string): void {
 		if (this.isMemberSelected(value)) {
 			this.members.update((prev) => prev.filter((m) => m !== value));
+		} else if (value === 'ALL') {
+			this.members.set(['ALL']);
 		} else {
-			this.members.update((prev) => [...prev, value]);
+			this.members.update((prev) => [...prev.filter((m) => m !== 'ALL'), value]);
 		}
 		this.editForm.markAsDirty();
 	}
@@ -107,7 +109,11 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 		const v = this.customMember().trim();
 		if (!v) return;
 		if (!this.isMemberSelected(v)) {
-			this.members.update((prev) => [...prev, v]);
+			if (v === 'ALL') {
+				this.members.set(['ALL']);
+			} else {
+				this.members.update((prev) => [...prev.filter((m) => m !== 'ALL'), v]);
+			}
 			this.editForm.markAsDirty();
 		}
 		this.customMember.set('');
