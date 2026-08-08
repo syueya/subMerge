@@ -81,14 +81,14 @@ func TestListAndDetails(t *testing.T) {
 	if len(details.Items) != 4 {
 		t.Fatalf("items=%d want 4", len(details.Items))
 	}
-	if details.Items[0].Level != "info" || details.Items[1].Level != "warn" {
+	if details.Items[0].Level != "debug" || details.Items[1].Level != "error" {
 		t.Fatalf("levels=%q %q", details.Items[0].Level, details.Items[1].Level)
 	}
-	if details.Items[0].Caller != "main.go:95" {
+	if details.Items[0].Caller != "refresh.go:272" {
 		t.Fatalf("caller=%q", details.Items[0].Caller)
 	}
-	if details.Items[0].Timestamp <= 0 {
-		t.Fatal("expected parsed timestamp")
+	if details.Items[0].Timestamp <= details.Items[1].Timestamp {
+		t.Fatalf("expected newest first: %d <= %d", details.Items[0].Timestamp, details.Items[1].Timestamp)
 	}
 
 	// 路径穿越拒绝

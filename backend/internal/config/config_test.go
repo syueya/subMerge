@@ -7,6 +7,54 @@ import (
 	"time"
 )
 
+func TestLoadEncryptionKeyGeneratesAndReusesKey(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("ENCRYPTION_KEY", "")
+
+	key1, err := loadEncryptionKey(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(key1) != 64 {
+		t.Fatalf("generated key len = %d, want 64", len(key1))
+	}
+	key2, err := loadEncryptionKey(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key1 != key2 {
+		t.Fatal("generated key should be stable across loads")
+	}
+}
+
+func TestLoadEncryptionKeyPrefersEnvironment(t *testing.T) {
+	dir := t.TempDir()
+	key := "12345678901234567890123456789012"
+	t.Setenv("ENCRYPTION_KEY", key)
+
+	got, err := loadEncryptionKey(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != key {
+		t.Fatalf("got key %q, want environment key", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "crypto.key")); !os.IsNotExist(err) {
+		t.Fatalf("environment key should not create crypto.key, stat error: %v", err)
+	}
+}
+
+func TestLoadEncryptionKeyRejectsCorruptFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("ENCRYPTION_KEY", " ")
+	if err := os.WriteFile(filepath.Join(dir, "crypto.key"), []byte("bad\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadEncryptionKey(dir); err == nil {
+		t.Fatal("expected corrupt crypto.key to fail")
+	}
+}
+
 func TestLoadRejectsInvalidDuration(t *testing.T) {
 	t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
 	t.Setenv("SESSION_TTL", "0s")
@@ -16,6 +64,7 @@ func TestLoadRejectsInvalidDuration(t *testing.T) {
 }
 
 func TestLoadAcceptsPlaceholderLikeKey(t *testing.T) {
+
 	t.Setenv("APP_ENV", "development")
 	key := "change-me-to-a-long-random-secret-key"
 	t.Setenv("ENCRYPTION_KEY", key)
@@ -102,57 +151,45 @@ func TestLoadDefaults(t *testing.T) {
 
 func TestLoadLogOutputAndRetention(t *testing.T) {
 	t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
-	t.Setenv("LOG_OUTPUT", "both")
+	t.Setenv("LOG_OUTPUT", "none")
 	t.Setenv("LOG_RETENTION_DAYS", "14")
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.LogOutput != "both" {
-		t.Fatalf("got LogOutput=%q", cfg.LogOutput)
-	}
-	if cfg.LogRetentionDays != 14 {
-		t.Fatalf("got LogRetentionDays=%d", cfg.LogRetentionDays)
+	if cfg.LogOutput != "both" || cfg.LogRetentionDays != 7 {
+		t.Fatalf("web-managed logging env must be ignored: output=%q retention=%d", cfg.LogOutput, cfg.LogRetentionDays)
 	}
 }
 
-func TestLoadRefreshIntervalHours(t *testing.T) {
+func TestLoadRefreshIntervalEnvIsIgnored(t *testing.T) {
 	t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
 	t.Setenv("SOURCE_REFRESH_INTERVAL", "6")
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.RefreshInterval != 6*time.Hour {
-		t.Fatalf("expected RefreshInterval=6h, got %v", cfg.RefreshInterval)
-	}
-
-	t.Setenv("SOURCE_REFRESH_INTERVAL", "24h")
-	if _, err := Load(); err == nil {
-		t.Fatal("expected SOURCE_REFRESH_INTERVAL with unit suffix to fail")
-	}
-	t.Setenv("SOURCE_REFRESH_INTERVAL", "0")
-	if _, err := Load(); err == nil {
-		t.Fatal("expected SOURCE_REFRESH_INTERVAL=0 to fail")
+	if cfg.RefreshInterval != 24*time.Hour {
+		t.Fatalf("web-managed refresh env must be ignored: %v", cfg.RefreshInterval)
 	}
 }
 
-func TestLoadLogRetentionZero(t *testing.T) {
+func TestLoadLogRetentionZeroEnvIsIgnored(t *testing.T) {
 	t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
 	t.Setenv("LOG_RETENTION_DAYS", "0")
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.LogRetentionDays != 0 {
-		t.Fatalf("got %d", cfg.LogRetentionDays)
+	if cfg.LogRetentionDays != 7 {
+		t.Fatalf("web-managed retention env must be ignored: %d", cfg.LogRetentionDays)
 	}
 }
 
 func TestLoadBoolEnvFlags(t *testing.T) {
 	t.Setenv("ENCRYPTION_KEY", "12345678901234567890123456789012")
 
-	// COOKIE_SECURE 默认 false；DEBUG_LOGGING 生产默认 false、开发默认 true
+	// COOKIE_SECURE 仍是部署配置；DEBUG_LOGGING 已移入网页系统设置。
 	_ = os.Unsetenv("COOKIE_SECURE")
 	_ = os.Unsetenv("DEBUG_LOGGING")
 	t.Setenv("APP_ENV", "production")
@@ -170,26 +207,18 @@ func TestLoadBoolEnvFlags(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !cfg.DebugLogging {
-		t.Fatal("development should default DEBUG_LOGGING=true")
+		t.Fatal("development default should enable debug logging")
 	}
 
+	t.Setenv("PUBLIC_BASE_URL", "https://ignored.example")
+	t.Setenv("TRUSTED_PROXIES", "10.0.0.0/8")
 	t.Setenv("COOKIE_SECURE", "true")
 	t.Setenv("DEBUG_LOGGING", "false")
 	cfg, err = Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cfg.CookieSecure || cfg.DebugLogging {
-		t.Fatalf("explicit overrides ignored: CookieSecure=%v DebugLogging=%v", cfg.CookieSecure, cfg.DebugLogging)
-	}
-
-	t.Setenv("COOKIE_SECURE", "maybe")
-	if _, err := Load(); err == nil {
-		t.Fatal("expected invalid COOKIE_SECURE to fail")
-	}
-	t.Setenv("COOKIE_SECURE", "true")
-	t.Setenv("DEBUG_LOGGING", "maybe")
-	if _, err := Load(); err == nil {
-		t.Fatal("expected invalid DEBUG_LOGGING to fail")
+	if cfg.PublicBaseURL != DefaultPublicBaseURL || len(cfg.TrustedProxies) != 0 || cfg.CookieSecure || !cfg.DebugLogging {
+		t.Fatalf("web-managed env must be ignored: %+v", cfg)
 	}
 }

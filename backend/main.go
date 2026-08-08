@@ -18,11 +18,13 @@ import (
 	"github.com/submerge/submerge/backend/internal/logs"
 	"github.com/submerge/submerge/backend/internal/middleware"
 	"github.com/submerge/submerge/backend/internal/netcheck"
+	"github.com/submerge/submerge/backend/internal/outbound"
 	"github.com/submerge/submerge/backend/internal/publish"
 	"github.com/submerge/submerge/backend/internal/rule"
 	"github.com/submerge/submerge/backend/internal/server"
 	"github.com/submerge/submerge/backend/internal/source"
 	"github.com/submerge/submerge/backend/internal/subscription"
+	"github.com/submerge/submerge/backend/internal/systemsettings"
 )
 
 func main() {
@@ -80,6 +82,7 @@ func main() {
 	}
 	publishSvc := publish.NewService(db, sourceSvc, ruleSvc)
 	subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
+	authHandler := auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.CookieSecure)
 	apiKeySvc := apikey.NewService(db, box)
 	geoSvc := geo.NewService(cfg.GeoDir, geo.URLs{
 		GeoIP: cfg.GeoIPURL, GeoSite: cfg.GeoSiteURL, MetaDB: cfg.MetaDBURL, ASN: cfg.ASNURL,
@@ -87,6 +90,63 @@ func main() {
 	geoSvc.SetIPGeoClient(ipGeoClient)
 	geoSvc.Load()
 	netCheckSvc := netcheck.NewService(db)
+	refreshScheduler := systemsettings.NewRefreshScheduler(cfg.RefreshInterval, func() { sourceSvc.RefreshAll() })
+	defer refreshScheduler.Close()
+	applySettings := func(settings systemsettings.Settings) error {
+		if err := sourceSvc.SetRuntimeOptions(settings.SourceFetchTimeout, settings.SourceMaxBytes, settings.SourceFetchUA); err != nil {
+			return err
+		}
+		proxyURL := settings.ProxyURL
+		if !settings.ProxyEnabled {
+			proxyURL = ""
+		}
+		if err := sourceSvc.SetProxy(proxyURL); err != nil {
+			return err
+		}
+		if err := geoSvc.SetURLs(geo.URLs{GeoIP: settings.GeoIPURL, GeoSite: settings.GeoSiteURL, MetaDB: settings.GeoDBURL, ASN: settings.GeoASNURL}); err != nil {
+			return err
+		}
+		if err := geoSvc.SetProxy(proxyURL); err != nil {
+			return err
+		}
+		if err := ipGeoClient.SetConfig(settings.IPGeoURL, settings.IPGeoTimeout); err != nil {
+			return err
+		}
+		if err := subSvc.SetBaseURL(settings.PublicBaseURL); err != nil {
+			return err
+		}
+		authHandler.SetCookieSecure(settings.CookieSecure)
+		if err := applog.Setup(settings.LogOutput, cfg.LogDir, settings.LogRetentionDays); err != nil {
+			return err
+		}
+		applog.SetDebugEnabled(settings.DebugLogging)
+		cfg.SourceFetchTimeout = settings.SourceFetchTimeout
+		cfg.SourceMaxBytes = settings.SourceMaxBytes
+		cfg.SourceFetchUA = settings.SourceFetchUA
+		cfg.PublicBaseURL = settings.PublicBaseURL
+		cfg.CookieSecure = settings.CookieSecure
+		cfg.RefreshInterval = settings.RefreshInterval
+		cfg.GeoIPURL = settings.GeoIPURL
+		cfg.GeoSiteURL = settings.GeoSiteURL
+		cfg.MetaDBURL = settings.GeoDBURL
+		cfg.ASNURL = settings.GeoASNURL
+		cfg.IPGeoURL = settings.IPGeoURL
+		cfg.IPGeoTimeout = settings.IPGeoTimeout
+		cfg.LogOutput = settings.LogOutput
+		cfg.LogRetentionDays = settings.LogRetentionDays
+		cfg.DebugLogging = settings.DebugLogging
+		if refreshScheduler != nil {
+			refreshScheduler.SetInterval(settings.RefreshInterval)
+		}
+		return nil
+	}
+	settingsManager, err := systemsettings.NewManager(db, box, cfg.Env == "production", applySettings)
+	if err != nil {
+		applog.Fatalf("system settings: %v", err)
+	}
+	startupSettings := settingsManager.View().Settings
+	cfg.TrustedProxies = systemsettings.TrustedProxyList(startupSettings.TrustedProxies)
+	proxyAdapter := systemsettings.NewProxyAdapter(settingsManager)
 
 	// Geo：任一必需文件不可用时后台自动拉取一次（Docker 空 volume 首次启动）；失败只记日志
 	go func() {
@@ -118,11 +178,6 @@ func main() {
 		// 略延迟，避免与 HTTP 启动争抢
 		time.Sleep(3 * time.Second)
 		sourceSvc.RefreshAll()
-		ticker := time.NewTicker(cfg.RefreshInterval)
-		defer ticker.Stop()
-		for range ticker.C {
-			sourceSvc.RefreshAll()
-		}
 	}()
 
 	// 定期清理过期会话，避免 sessions 表无限堆积
@@ -142,20 +197,22 @@ func main() {
 	}()
 
 	r := server.NewRouter(server.Deps{
-		Cfg:      cfg,
-		Auth:     auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.CookieSecure),
-		Source:   source.NewHandler(sourceSvc, auditSvc),
-		Rule:     rule.NewHandler(ruleSvc, auditSvc, geoSvc),
-		Publish:  publish.NewHandler(publishSvc, auditSvc),
-		Sub:      subscription.NewHandler(subSvc, auditSvc),
-		APIKey:   apikey.NewHandler(apiKeySvc, auditSvc),
-		Geo:      geo.NewHandler(geoSvc, auditSvc),
-		NetCheck: netcheck.NewHandler(netCheckSvc, auditSvc),
-		Logs:     logs.NewHandler(logs.NewService(cfg.LogDir)),
-		Audit:    auditSvc,
-		AuthMW:   middleware.AuthRequired(db, apiKeySvc),
-		LoginRL:  middleware.RateLimit(cfg.RateLimitLogin),
-		SubRL:    middleware.RateLimit(cfg.RateLimitSub),
+		Cfg:            cfg,
+		Auth:           authHandler,
+		Source:         source.NewHandler(sourceSvc, auditSvc),
+		Rule:           rule.NewHandler(ruleSvc, auditSvc, geoSvc),
+		Publish:        publish.NewHandler(publishSvc, auditSvc),
+		Sub:            subscription.NewHandler(subSvc, auditSvc),
+		APIKey:         apikey.NewHandler(apiKeySvc, auditSvc),
+		Geo:            geo.NewHandler(geoSvc, auditSvc),
+		NetCheck:       netcheck.NewHandler(netCheckSvc, auditSvc),
+		Outbound:       outbound.NewHandler(proxyAdapter, auditSvc),
+		SystemSettings: systemsettings.NewHandler(settingsManager, auditSvc),
+		Logs:           logs.NewHandler(logs.NewService(cfg.LogDir)),
+		Audit:          auditSvc,
+		AuthMW:         middleware.AuthRequired(db, apiKeySvc),
+		LoginRL:        middleware.RateLimit(cfg.RateLimitLogin),
+		SubRL:          middleware.RateLimit(cfg.RateLimitSub),
 	})
 
 	applog.Info("submerge %s listening on %s (db=%s log=%s dir=%s retain=%dd)",

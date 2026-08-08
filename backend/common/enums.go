@@ -173,7 +173,8 @@ const (
 	GroupNameReject    = "拒绝"   // 仅含 REJECT 的选择组
 	GroupNameSelectAll = "节点选择" // 总选择组，也是规则 target 缺失时的回退组
 	GroupNameOther     = "其他国家" // 非常用地区节点聚合组
-	GroupNameDefaultUS = "美国US" // MATCH 兜底默认出口
+	GroupNameDefaultUS = "美国US" // 普通业务规则默认出口
+	GroupNameDefaultHK = "香港HK" // MATCH 兜底默认出口
 )
 
 // 策略组成员展开 token（写入 ProxyGroup.Proxies，由 generator 展开为实际节点）。

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,11 +19,24 @@ type Handler struct {
 	svc          *Service
 	audit        *audit.Service
 	sessionTTL   time.Duration
+	secureMu     sync.RWMutex
 	secureCookie bool
 }
 
 func NewHandler(svc *Service, auditSvc *audit.Service, sessionTTL time.Duration, secureCookie bool) *Handler {
 	return &Handler{svc: svc, audit: auditSvc, sessionTTL: sessionTTL, secureCookie: secureCookie}
+}
+
+func (h *Handler) SetCookieSecure(secure bool) {
+	h.secureMu.Lock()
+	h.secureCookie = secure
+	h.secureMu.Unlock()
+}
+
+func (h *Handler) cookieSecure() bool {
+	h.secureMu.RLock()
+	defer h.secureMu.RUnlock()
+	return h.secureCookie
 }
 
 func (h *Handler) SetupStatus(c *gin.Context) {
@@ -174,10 +188,10 @@ func bearerToken(c *gin.Context) string {
 // Secure 由 COOKIE_SECURE 控制（默认 false，HTTPS 部署设 true）。
 func (h *Handler) setSessionCookie(c *gin.Context, token string) {
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("submerge_session", token, int(h.sessionTTL.Seconds()), "/", "", h.secureCookie, true)
+	c.SetCookie("submerge_session", token, int(h.sessionTTL.Seconds()), "/", "", h.cookieSecure(), true)
 }
 
 func (h *Handler) clearSessionCookie(c *gin.Context) {
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("submerge_session", "", -1, "/", "", h.secureCookie, true)
+	c.SetCookie("submerge_session", "", -1, "/", "", h.cookieSecure(), true)
 }

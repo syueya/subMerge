@@ -17,7 +17,6 @@ import {
 import { DialogService } from '@common/services/dialog.service';
 import { formatDateTime } from '@common/util';
 import { SourceService } from '../services/source.service';
-import { formatRefreshMsg } from '../services/source-refresh.util';
 import {
 	hasTraffic,
 	trafficExpireText,
@@ -27,7 +26,7 @@ import {
 } from '../services/source-traffic.util';
 import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
 import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-import { finalize, firstValueFrom, takeUntil } from 'rxjs';
+import { finalize, takeUntil } from 'rxjs';
 import { SourceFormComponent } from '../source-form/source-form.component';
 import { SourceProxiesComponent } from '../source-proxies/source-proxies.component';
 
@@ -54,6 +53,10 @@ export class SourceListComponent extends CmParentTableComponent implements After
 	busy = signal(false);
 	/** 后台拉取全部状态来自 SourceService，跨路由共享 */
 	readonly refreshingAll = this.svc.refreshingAll;
+	/** 正在后台拉取的单源 ID，按行独立禁用 */
+	readonly refreshingIds = this.svc.refreshingIds;
+	hasRefreshingSources = computed(() => this.refreshingIds().size > 0);
+	private lastRefreshCompletionVersion = 0;
 	selectedIds = signal<Set<number>>(new Set());
 	regionCatalog = signal<RegionCatalogEntry[]>([]);
 	fallbackRegion = signal(FALLBACK_REGION);
@@ -86,13 +89,22 @@ export class SourceListComponent extends CmParentTableComponent implements After
 	constructor() {
 		super();
 		this.rememberPageSize(this.constructor.name);
-		// 后台拉取全部结束后若仍在本页，自动刷新列表状态/节点数
+		this.lastRefreshCompletionVersion = this.svc.refreshCompletionVersion();
+		// 后台拉取结束后若仍在本页，自动刷新列表状态/节点数
 		effect(() => {
 			const busy = this.refreshingAll();
 			if (this.wasRefreshingAll && !busy) {
 				this.reloadTableDataByFirstPage();
 			}
 			this.wasRefreshingAll = busy;
+		});
+		// 单源后台拉取完成后静默刷新列表，结果提示由 SourceService 负责
+		effect(() => {
+			const version = this.svc.refreshCompletionVersion();
+			if (version > this.lastRefreshCompletionVersion) {
+				this.lastRefreshCompletionVersion = version;
+				this.reloadTableDataByFirstPage();
+			}
 		});
 	}
 
@@ -238,17 +250,8 @@ export class SourceListComponent extends CmParentTableComponent implements After
 		);
 		if (!confirmed) return;
 
-		this.busy.set(true);
-		try {
-			const res = await firstValueFrom(this.svc.refresh(item.id).pipe(takeUntil(this.$destroy)));
-			// 先刷新列表再弹结果，避免成功弹窗与 isLoading 叠在一起导致遮罩不消失
-			await this.reloadTableDataAsync();
-			await this.dialog.success(formatRefreshMsg(res, '拉取成功'));
-		} catch (err) {
-			void this.dialog.error((err as Error).message);
-		} finally {
-			this.busy.set(false);
-		}
+		if (!this.svc.startBackgroundRefresh(item.id)) return;
+		void this.dialog.success(`已开始后台拉取「${item.name}」`);
 	}
 
 	async refreshAll(): Promise<void> {

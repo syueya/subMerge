@@ -117,27 +117,71 @@
                 <span [class]="badgeWarn">失效</span>
               }
             </span>
-            @if (viewMode() === 'category') {
-              <button
-                cmCollapseAction
-                mat-stroked-button
-                color="primary"
-                type="button"
-                (click.debounceTime)="openCreateRule({ category: sec.key })"
-              >
-                添加规则
-              </button>
-            } @else if (sec.key && !isOrphanTarget(sec.key)) {
-              <button
-                cmCollapseAction
-                mat-stroked-button
-                color="primary"
-                type="button"
-                (click.debounceTime)="openCreateRule({ target: sec.key })"
-              >
-                添加规则
-              </button>
-            }
+            <ng-container cmCollapseAction>
+              @if (viewMode() === 'category') {
+                @if (hasMovableSection(sec)) {
+                  <button
+                    mat-icon-button
+                    color="primary"
+                    type="button"
+                    matTooltip="分类上移"
+                    [disabled]="!canMoveSection(sec.key, 'up')"
+                    (click.debounceTime)="moveSection(sec.key, 'up')"
+                  >
+                    <i-tabler name="chevron-up" class="icon-24 d-flex align-items-center"></i-tabler>
+                  </button>
+                  <button
+                    mat-icon-button
+                    color="primary"
+                    type="button"
+                    matTooltip="分类下移"
+                    [disabled]="!canMoveSection(sec.key, 'down')"
+                    (click.debounceTime)="moveSection(sec.key, 'down')"
+                  >
+                    <i-tabler name="chevron-down" class="icon-24 d-flex align-items-center"></i-tabler>
+                  </button>
+                }
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  type="button"
+                  (click.debounceTime)="openCreateRule({ category: sec.key })"
+                >
+                  添加规则
+                </button>
+              } @else if (sec.key && !isOrphanTarget(sec.key)) {
+                @if (hasMovableSection(sec)) {
+                  <button
+                    mat-icon-button
+                    color="primary"
+                    type="button"
+                    matTooltip="策略组上移"
+                    [disabled]="!canMoveSection(sec.key, 'up')"
+                    (click.debounceTime)="moveSection(sec.key, 'up')"
+                  >
+                    <i-tabler name="chevron-up" class="icon-24 d-flex align-items-center"></i-tabler>
+                  </button>
+                  <button
+                    mat-icon-button
+                    color="primary"
+                    type="button"
+                    matTooltip="策略组下移"
+                    [disabled]="!canMoveSection(sec.key, 'down')"
+                    (click.debounceTime)="moveSection(sec.key, 'down')"
+                  >
+                    <i-tabler name="chevron-down" class="icon-24 d-flex align-items-center"></i-tabler>
+                  </button>
+                }
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  type="button"
+                  (click.debounceTime)="openCreateRule({ target: sec.key })"
+                >
+                  添加规则
+                </button>
+              }
+            </ng-container>
 
             @if (isSectionExpanded(sec.key)) {
               @if (sec.rules.length === 0) {
@@ -208,6 +252,38 @@
                       <ng-container matColumnDef="action" stickyEnd>
                         <th mat-header-cell *matHeaderCellDef>操作</th>
                         <td mat-cell *matCellDef="let rule">
+                          @if (!isSystemRule(rule)) {
+                            <button
+                              mat-icon-button
+                              color="primary"
+                              type="button"
+                              matTooltip="上移"
+                              [disabled]="!canMoveRule(rule, 'up')"
+                              (click.debounceTime)="moveRule(rule, 'up')"
+                            >
+                              <i-tabler name="chevron-up" class="icon-24 d-flex align-items-center"></i-tabler>
+                            </button>
+                            <button
+                              mat-icon-button
+                              color="primary"
+                              type="button"
+                              matTooltip="下移"
+                              [disabled]="!canMoveRule(rule, 'down')"
+                              (click.debounceTime)="moveRule(rule, 'down')"
+                            >
+                              <i-tabler name="chevron-down" class="icon-24 d-flex align-items-center"></i-tabler>
+                            </button>
+                            <button
+                              mat-icon-button
+                              color="primary"
+                              type="button"
+                              matTooltip="组内置顶"
+                              [disabled]="!canMoveRuleTop(rule)"
+                              (click.debounceTime)="moveRule(rule, 'top')"
+                            >
+                              <i-tabler name="chevrons-up" class="icon-24 d-flex align-items-center"></i-tabler>
+                            </button>
+                          }
                           <button mat-icon-button color="primary" type="button" matTooltip="编辑" (click.debounceTime)="openEditRule(rule)">
                             <i-tabler name="edit" class="icon-24 d-flex align-items-center"></i-tabler>
                           </button>

@@ -85,7 +85,7 @@ func systemRuleDefs() []database.Rule {
 		{
 			Type:     "MATCH",
 			Payload:  "",
-			Target:   common.GroupNameDefaultUS,
+			Target:   common.GroupNameDefaultHK,
 			Enabled:  true,
 			Note:     "默认走代理",
 			Category: systemRuleCategory,

@@ -37,7 +37,7 @@ func TestSystemRulesProtectedOnCRUD(t *testing.T) {
 	if secondLast.Type != "GEOIP" || secondLast.Payload != "CN" {
 		t.Fatalf("secondLast=%+v", secondLast)
 	}
-	if last.Type != "MATCH" || last.Target != "美国US" {
+	if last.Type != "MATCH" || last.Target != "香港HK" {
 		t.Fatalf("last=%+v", last)
 	}
 

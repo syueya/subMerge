@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/oschwald/maxminddb-golang"
 	"github.com/submerge/submerge/backend/internal/ipgeo"
+	"github.com/submerge/submerge/backend/internal/outbound"
 )
 
 const (
@@ -82,12 +84,14 @@ type snapshot struct {
 
 // Service owns one consistent in-memory view of all Geo resources.
 type Service struct {
-	dir    string
-	urls   URLs
-	mu     sync.RWMutex
-	snap   snapshot
-	client *http.Client
-	ipGeo  *ipgeo.Client
+	dir      string
+	urls     URLs
+	mu       sync.RWMutex
+	snap     snapshot
+	client   *http.Client
+	clientMu sync.RWMutex
+	ipGeoMu  sync.RWMutex
+	ipGeo    *ipgeo.Client
 }
 
 func NewService(dir string, urls URLs) *Service {
@@ -120,7 +124,49 @@ func NewService(dir string, urls URLs) *Service {
 }
 
 func (s *Service) SetIPGeoClient(client *ipgeo.Client) {
+	s.ipGeoMu.Lock()
 	s.ipGeo = client
+	s.ipGeoMu.Unlock()
+}
+
+func (s *Service) SetURLs(urls URLs) error {
+	if err := validateURLs(urls); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.urls = urls
+	s.mu.Unlock()
+	return nil
+}
+
+func validateURLs(urls URLs) error {
+	for _, raw := range []string{urls.GeoIP, urls.GeoSite, urls.MetaDB, urls.ASN} {
+		u, err := url.Parse(raw)
+		if err != nil || u.Scheme != "https" || u.Host == "" {
+			return errors.New("geo URLs must use HTTPS")
+		}
+	}
+	return nil
+}
+func (s *Service) SetProxy(proxyURL string) error {
+	transport, err := outbound.NewTransport(proxyURL, 10*time.Second)
+	if err != nil {
+		return err
+	}
+	client := &http.Client{
+		Timeout:   2 * time.Minute,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return errors.New("too many redirects")
+			}
+			return validateURL(req.URL)
+		},
+	}
+	s.clientMu.Lock()
+	s.client = client
+	s.clientMu.Unlock()
+	return nil
 }
 
 func (s *Service) Load() {

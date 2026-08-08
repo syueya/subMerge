@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -44,6 +45,7 @@ type Result struct {
 }
 
 type Client struct {
+	mu      sync.RWMutex
 	baseURL string
 	http    *http.Client
 }
@@ -62,14 +64,38 @@ func NewClient(baseURL string, timeout time.Duration) (*Client, error) {
 	return &Client{baseURL: u.String(), http: &http.Client{Timeout: timeout}}, nil
 }
 
+func (c *Client) SetConfig(baseURL string, timeout time.Duration) error {
+	if strings.TrimSpace(baseURL) == "" {
+		baseURL = DefaultURL
+	}
+	u, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil || u.Host == "" || (u.Scheme != "https" && !isLocalHTTP(u)) {
+		return errors.New("IP geo URL must use HTTPS")
+	}
+	if timeout <= 0 {
+		timeout = DefaultTimeout
+	}
+	c.mu.Lock()
+	c.baseURL = u.String()
+	c.http = &http.Client{Timeout: timeout}
+	c.mu.Unlock()
+	return nil
+}
+
 func (c *Client) Lookup(ctx context.Context, ip net.IP) (Result, error) {
-	if c == nil || c.http == nil {
+	if c == nil {
+		return Result{}, errors.New("IP geo client unavailable")
+	}
+	c.mu.RLock()
+	baseURL, client := c.baseURL, c.http
+	c.mu.RUnlock()
+	if client == nil {
 		return Result{}, errors.New("IP geo client unavailable")
 	}
 	if ip == nil {
 		return Result{}, errors.New("invalid IP")
 	}
-	endpoint, err := c.endpoint(ip.String())
+	endpoint, err := endpointFrom(baseURL, ip.String())
 	if err != nil {
 		return Result{}, err
 	}
@@ -78,7 +104,7 @@ func (c *Client) Lookup(ctx context.Context, ip net.IP) (Result, error) {
 		return Result{}, errors.New("create IP geo request failed")
 	}
 	req.Header.Set("Accept", "application/json")
-	resp, err := c.http.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return Result{}, errors.New("IP geo request failed")
 	}
@@ -140,7 +166,14 @@ func (c *Client) Lookup(ctx context.Context, ip net.IP) (Result, error) {
 }
 
 func (c *Client) endpoint(ip string) (string, error) {
-	u, err := url.Parse(c.baseURL)
+	c.mu.RLock()
+	baseURL := c.baseURL
+	c.mu.RUnlock()
+	return endpointFrom(baseURL, ip)
+}
+
+func endpointFrom(baseURL, ip string) (string, error) {
+	u, err := url.Parse(baseURL)
 	if err != nil {
 		return "", errors.New("invalid IP geo URL")
 	}

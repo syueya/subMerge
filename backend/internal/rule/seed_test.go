@@ -81,8 +81,8 @@ func TestLoadSeedDefaults(t *testing.T) {
 		}
 		if r.Type == "MATCH" {
 			hasMatch = true
-			if r.Target != "美国US" {
-				t.Fatalf("MATCH should target 美国US, got %s", r.Target)
+			if r.Target != "香港HK" {
+				t.Fatalf("MATCH should target 香港HK, got %s", r.Target)
 			}
 			if r.Category != "系统分类" {
 				t.Fatalf("MATCH category = %q, want 系统分类", r.Category)

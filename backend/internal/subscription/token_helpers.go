@@ -75,7 +75,7 @@ func (s *Service) toView(r database.ShareToken, nameByID map[uint]string) common
 		v.LastAccessAt = &ts
 	}
 	if plain != "" {
-		v.SubscribeURL = s.baseURL + "/subscribe/" + plain
+		v.SubscribeURL = s.baseURLSnapshot() + "/subscribe/" + plain
 	}
 	return v
 }

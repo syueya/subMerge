@@ -7,8 +7,12 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'logs',
+        redirectTo: 'outbound-proxy',
         pathMatch: 'full'
+      },
+      {
+        path: 'outbound-proxy',
+        loadChildren: () => import('./outbound-proxy/outbound-proxy.module').then((m) => m.OutboundProxyModule)
       },
       {
         path: 'logs',

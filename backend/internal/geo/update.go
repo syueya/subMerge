@@ -52,7 +52,10 @@ func (s *Service) download(ctx context.Context, raw string) ([]byte, error) {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", "submerge-geo-updater/1")
-	resp, err := s.client.Do(req)
+	s.clientMu.RLock()
+	client := s.client
+	s.clientMu.RUnlock()
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -145,4 +148,3 @@ func validateURL(u *url.URL) error {
 func blockedIP(ip net.IP) bool {
 	return ip == nil || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified()
 }
-

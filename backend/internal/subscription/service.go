@@ -3,6 +3,9 @@ package subscription
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
+	"sync"
 	"time"
 
 	common "github.com/submerge/submerge/backend/common"
@@ -23,11 +26,30 @@ type Service struct {
 	db      *gorm.DB
 	publish *publish.Service
 	box     *crypto.Box
+	baseMu  sync.RWMutex
 	baseURL string
 }
 
 func NewService(db *gorm.DB, publishSvc *publish.Service, box *crypto.Box, baseURL string) *Service {
-	return &Service{db: db, publish: publishSvc, box: box, baseURL: baseURL}
+	return &Service{db: db, publish: publishSvc, box: box, baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/")}
+}
+
+func (s *Service) SetBaseURL(baseURL string) error {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	u, err := url.Parse(baseURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("public base URL must be a valid HTTP or HTTPS URL without query or fragment")
+	}
+	s.baseMu.Lock()
+	s.baseURL = baseURL
+	s.baseMu.Unlock()
+	return nil
+}
+
+func (s *Service) baseURLSnapshot() string {
+	s.baseMu.RLock()
+	defer s.baseMu.RUnlock()
+	return s.baseURL
 }
 
 func (s *Service) List() (common.TokenListResponse, error) {

@@ -20,28 +20,32 @@ import (
 	"github.com/submerge/submerge/backend/internal/logs"
 	"github.com/submerge/submerge/backend/internal/middleware"
 	"github.com/submerge/submerge/backend/internal/netcheck"
+	"github.com/submerge/submerge/backend/internal/outbound"
 	"github.com/submerge/submerge/backend/internal/publish"
 	"github.com/submerge/submerge/backend/internal/rule"
 	"github.com/submerge/submerge/backend/internal/source"
 	"github.com/submerge/submerge/backend/internal/subscription"
+	"github.com/submerge/submerge/backend/internal/systemsettings"
 )
 
 // Deps 路由依赖
 type Deps struct {
-	Cfg      *config.Config
-	Auth     *auth.Handler
-	Source   *source.Handler
-	Rule     *rule.Handler
-	Publish  *publish.Handler
-	Sub      *subscription.Handler
-	APIKey   *apikey.Handler
-	Geo      *geo.Handler
-	NetCheck *netcheck.Handler
-	Logs     *logs.Handler
-	Audit    *audit.Service
-	AuthMW   gin.HandlerFunc
-	LoginRL  gin.HandlerFunc
-	SubRL    gin.HandlerFunc
+	Cfg            *config.Config
+	Auth           *auth.Handler
+	Source         *source.Handler
+	Rule           *rule.Handler
+	Publish        *publish.Handler
+	Sub            *subscription.Handler
+	APIKey         *apikey.Handler
+	Geo            *geo.Handler
+	NetCheck       *netcheck.Handler
+	Outbound       *outbound.Handler
+	SystemSettings *systemsettings.Handler
+	Logs           *logs.Handler
+	Audit          *audit.Service
+	AuthMW         gin.HandlerFunc
+	LoginRL        gin.HandlerFunc
+	SubRL          gin.HandlerFunc
 }
 
 func safeLogFormatter() gin.LogFormatter {
@@ -143,6 +147,17 @@ func NewRouter(d Deps) *gin.Engine {
 			secured.POST("/geo/reverse", scopeRead, d.Geo.Reverse)
 			secured.POST("/geo/search", scopeRead, d.Geo.Search)
 			secured.POST("/geo/update", scopeWrite, d.Geo.Update)
+
+			if d.Outbound != nil {
+				secured.GET("/outbound-proxy", sessionOnly, d.Outbound.Get)
+				secured.PUT("/outbound-proxy", sessionOnly, d.Outbound.Save)
+				secured.POST("/outbound-proxy/reset", sessionOnly, d.Outbound.Reset)
+			}
+			if d.SystemSettings != nil {
+				secured.GET("/system-settings", sessionOnly, d.SystemSettings.Get)
+				secured.PUT("/system-settings", sessionOnly, d.SystemSettings.Save)
+				secured.POST("/system-settings/reset", sessionOnly, d.SystemSettings.Reset)
+			}
 
 			secured.GET("/net-check/config", scopeRead, d.NetCheck.GetConfig)
 			secured.PUT("/net-check/config", scopeWrite, d.NetCheck.SaveConfig)

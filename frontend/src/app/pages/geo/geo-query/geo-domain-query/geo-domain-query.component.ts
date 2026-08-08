@@ -7,6 +7,7 @@ import { CmParentComponent } from '@common/parents/parent/parent.component';
 import { takeUntil, finalize } from 'rxjs';
 import { GeoEntriesComponent } from '../../geo-entries/geo-entries.component';
 import { GeoService } from '../../services/geo.service';
+import { RuleCreateService } from '../../../_shared/rule-create.service';
 
 @Component({
   selector: 'app-geo-domain-query',
@@ -18,6 +19,7 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
   private readonly svc = inject(GeoService);
   private readonly dialog = inject(DialogService);
   private readonly dialogOpen = inject(CmDialogOpenService);
+  private readonly ruleCreate = inject(RuleCreateService);
 
   readonly queryResult = signal<GeoQueryResponse | null>(null);
   readonly loading = signal(false);
@@ -126,7 +128,8 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
           offset: this.entriesOffset,
           limit: this.entriesLimit,
           loading: true,
-          paginated: true
+          paginated: true,
+          addRule: { type: 'GEOSITE', payload: this.entriesCategory }
         },
         true
       );
@@ -152,7 +155,8 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
               offset: result.offset,
               limit: result.limit || this.entriesLimit,
               loading: false,
-              paginated: true
+              paginated: true,
+              addRule: { type: 'GEOSITE', payload: result.category || this.entriesCategory }
             },
             openDialog
           );
@@ -182,7 +186,8 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
       offset: this.entriesOffset,
       limit: this.entriesLimit,
       loading,
-      paginated: true
+      paginated: true,
+      addRule: { type: 'GEOSITE', payload: this.entriesCategory }
     });
   }
 
@@ -202,9 +207,12 @@ export class GeoDomainQueryComponent extends CmParentComponent implements OnDest
       width: CM_DIALOG_WIDTH.large
     });
     this.entriesDialogRef = ref;
-    ref.afterClosed().subscribe(() => {
+    ref.afterClosed().subscribe((result: GeoEntriesDialogResult) => {
       if (this.entriesDialogRef === ref) {
         this.entriesDialogRef = null;
+      }
+      if (result?.action === 'add') {
+        this.ruleCreate.open(result.context);
       }
     });
   }

@@ -15,13 +15,20 @@ import (
 	"gorm.io/gorm"
 )
 
+type runtimeOptions struct {
+	timeout   time.Duration
+	maxBytes  int64
+	userAgent string
+	proxyURL  string
+}
+
 // Service 订阅源管理
 type Service struct {
 	db         *gorm.DB
 	box        *crypto.Box
 	httpClient *http.Client
-	maxBytes   int64
-	userAgent  string
+	clientMu   sync.RWMutex
+	options    runtimeOptions
 	// refreshMu 仅保护 refreshing 集合，避免同一源并发刷新
 	refreshMu  sync.Mutex
 	refreshing map[uint]struct{}
@@ -32,19 +39,77 @@ func NewService(db *gorm.DB, box *crypto.Box, timeout time.Duration, maxBytes in
 }
 
 func NewServiceWithUA(db *gorm.DB, box *crypto.Box, timeout time.Duration, maxBytes int64, userAgent string) *Service {
+	return NewServiceWithProxy(db, box, timeout, maxBytes, userAgent, "")
+}
+
+func NewServiceWithProxy(db *gorm.DB, box *crypto.Box, timeout time.Duration, maxBytes int64, userAgent, proxyURL string) *Service {
 	ua := strings.TrimSpace(userAgent)
 	if ua == "" {
 		ua = config.DefaultSourceFetchUA
 	}
 	return &Service{
-		db:         db,
-		box:        box,
-		httpClient: newFetchHTTPClient(timeout),
-		maxBytes:   maxBytes,
-		userAgent:  ua,
+		db:  db,
+		box: box,
+		httpClient: func() *http.Client {
+			client, err := newFetchHTTPClientWithProxy(timeout, proxyURL)
+			if err != nil {
+				return newFetchHTTPClient(timeout)
+			}
+			return client
+		}(),
+		options:    runtimeOptions{timeout: timeout, maxBytes: maxBytes, userAgent: ua, proxyURL: proxyURL},
 		refreshing: make(map[uint]struct{}),
 	}
 }
+func (s *Service) SetRuntimeOptions(timeout time.Duration, maxBytes int64, userAgent string) error {
+	if timeout <= 0 {
+		return fmt.Errorf("source timeout must be greater than zero")
+	}
+	if maxBytes <= 0 {
+		return fmt.Errorf("source max bytes must be greater than zero")
+	}
+	userAgent = strings.TrimSpace(userAgent)
+	if userAgent == "" {
+		return fmt.Errorf("source user-agent cannot be empty")
+	}
+	s.clientMu.Lock()
+	defer s.clientMu.Unlock()
+	client, err := newFetchHTTPClientWithProxy(timeout, s.options.proxyURL)
+	if err != nil {
+		return err
+	}
+	s.httpClient = client
+	s.options = runtimeOptions{timeout: timeout, maxBytes: maxBytes, userAgent: userAgent, proxyURL: s.options.proxyURL}
+	return nil
+}
+
+func (s *Service) RuntimeOptions() (time.Duration, int64, string) {
+	s.clientMu.RLock()
+	defer s.clientMu.RUnlock()
+	return s.options.timeout, s.options.maxBytes, s.options.userAgent
+}
+
+func (s *Service) SetProxy(proxyURL string) error {
+	s.clientMu.RLock()
+	options := s.options
+	s.clientMu.RUnlock()
+	client, err := newFetchHTTPClientWithProxy(options.timeout, proxyURL)
+	if err != nil {
+		return err
+	}
+	s.clientMu.Lock()
+	s.httpClient = client
+	s.options.proxyURL = proxyURL
+	s.clientMu.Unlock()
+	return nil
+}
+
+func (s *Service) currentTimeout() time.Duration {
+	s.clientMu.RLock()
+	defer s.clientMu.RUnlock()
+	return s.options.timeout
+}
+
 func (s *Service) List() (common.SourceListResponse, error) {
 	var rows []database.Source
 	if err := s.db.Order("id asc").Find(&rows).Error; err != nil {

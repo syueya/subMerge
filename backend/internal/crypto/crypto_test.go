@@ -1,6 +1,9 @@
 package crypto
 
 import (
+	"encoding/hex"
+	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -100,6 +103,48 @@ func TestBoxDecryptsLegacyCiphertext(t *testing.T) {
 	}
 	if plain != "secret" {
 		t.Fatalf("got %q", plain)
+	}
+}
+
+func TestLoadOrCreateKey(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/crypto.key"
+	key1, err := LoadOrCreateKey(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(key1) != KeyLen*2 {
+		t.Fatalf("key len = %d, want %d", len(key1), KeyLen*2)
+	}
+	if _, err := hex.DecodeString(key1); err != nil {
+		t.Fatalf("generated key is not hex: %v", err)
+	}
+	key2, err := LoadOrCreateKey(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key1 != key2 {
+		t.Fatal("key should be stable across loads")
+	}
+
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Perm() != 0o600 {
+			t.Fatalf("key file mode = %o, want 600", info.Mode().Perm())
+		}
+	}
+}
+
+func TestLoadOrCreateKeyRejectsCorruptFile(t *testing.T) {
+	path := t.TempDir() + "/crypto.key"
+	if err := os.WriteFile(path, []byte("not-a-key\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadOrCreateKey(path); err == nil {
+		t.Fatal("expected corrupt key file to fail")
 	}
 }
 

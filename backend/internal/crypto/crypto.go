@@ -21,6 +21,9 @@ import (
 // SaltLen 持久化盐的字节数
 const SaltLen = 16
 
+// KeyLen 自动生成的主密钥字节数
+const KeyLen = 32
+
 // encV2Prefix 标记使用 argon2id 强派生密钥的密文；
 // 无此前缀的历史密文回退到旧 sha256 派生密钥解密（兼容迁移）。
 const encV2Prefix = "v2:"
@@ -74,6 +77,36 @@ func legacyGCM(key string) (cipher.AEAD, error) {
 		return nil, err
 	}
 	return cipher.NewGCM(block)
+}
+
+// LoadOrCreateKey 读取或首次生成持久化主密钥（0600 权限）。
+// 密钥以十六进制文本保存，便于人工备份；已有文件损坏时不会静默生成新密钥。
+func LoadOrCreateKey(path string) (string, error) {
+	if raw, err := os.ReadFile(path); err == nil {
+		key := strings.TrimSpace(string(raw))
+		if len(key) < KeyLen*2 {
+			return "", fmt.Errorf("key file %s is corrupt (too short)", path)
+		}
+		if _, err := hex.DecodeString(key); err != nil {
+			return "", fmt.Errorf("key file %s is corrupt: %w", path, err)
+		}
+		return key, nil
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+
+	buf := make([]byte, KeyLen)
+	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+		return "", err
+	}
+	key := hex.EncodeToString(buf)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, []byte(key+"\n"), 0o600); err != nil {
+		return "", err
+	}
+	return key, nil
 }
 
 // LoadOrCreateSalt 读取或首次生成持久化盐（0600 权限）。

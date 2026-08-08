@@ -10,17 +10,8 @@ Type=simple
 WorkingDirectory=/opt/submerge
 ExecStart=/opt/submerge/bin/submerge
 EnvironmentFile=/opt/submerge/.env
-	# .env 只需业务项，例如：
-	#   APP_ENV=production
-	#   ENCRYPTION_KEY=...（≥32 字符）
-	#   PUBLIC_BASE_URL=https://你的域名
-	#   TRUSTED_PROXIES=   # 无反代留空；有反代填 CIDR，如 172.16.0.0/12
-	#   COOKIE_SECURE=true # HTTPS 时 true；http://IP 用 false
-	#   SOURCE_REFRESH_INTERVAL=24
-	#   LOG_OUTPUT=both
-	#   DEBUG_LOGGING=false
-	#   LOG_RETENTION_DAYS=7
-	# 默认规则与版本号已编译进二进制
+	# .env 仅保留部署、安全和进程参数；应用配置请在「设置 → 系统设置」中修改
+	# 应用配置请登录「设置 → 系统设置」修改并保存到 SQLite
 Restart=on-failure
 RestartSec=3
 

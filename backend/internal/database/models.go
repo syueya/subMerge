@@ -178,6 +178,24 @@ type AuditLog struct {
 	CreatedAt time.Time `gorm:"index"`
 }
 
+type OutboundProxySetting struct {
+	ID            uint   `gorm:"primaryKey"`
+	Enabled       bool   `gorm:"not null;default:false"`
+	HasOverride   bool   `gorm:"not null;default:true"`
+	URLCiphertext string `gorm:"type:text"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type SystemSetting struct {
+	ID        uint   `gorm:"primaryKey"`
+	Key       string `gorm:"size:64;uniqueIndex;not null"`
+	Value     string `gorm:"type:text;not null"`
+	Encrypted bool   `gorm:"not null;default:false"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 // NetCheckSetting 网络检测持久配置（单行 ID=1）。
 // 代理地址不落库，仅检测请求临时传入。
 type NetCheckSetting struct {

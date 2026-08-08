@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	"golang.org/x/net/proxy"
+	"github.com/submerge/submerge/backend/internal/outbound"
 )
 
 func runChecks(cfg runConfig) (CheckResponse, error) {
@@ -89,48 +87,9 @@ func runChecks(cfg runConfig) (CheckResponse, error) {
 
 func buildHTTPClient(proxyCfg ProxyConfig, timeoutSec int) (*http.Client, error) {
 	timeout := time.Duration(timeoutSec) * time.Second
-	dialer := &net.Dialer{Timeout: timeout, KeepAlive: 30 * time.Second}
-	transport := &http.Transport{
-		Proxy:                 nil,
-		DialContext:           dialer.DialContext,
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          32,
-		IdleConnTimeout:       30 * time.Second,
-		TLSHandshakeTimeout:   timeout,
-		ExpectContinueTimeout: time.Second,
-	}
-	if proxyCfg.Enabled {
-		parsed, err := url.Parse(proxyCfg.URL)
-		if err != nil {
-			return nil, fmt.Errorf("代理解析失败：%w", err)
-		}
-		switch strings.ToLower(parsed.Scheme) {
-		case "http", "https":
-			transport.Proxy = http.ProxyURL(parsed)
-		case "socks5", "socks5h":
-			var auth *proxy.Auth
-			if parsed.User != nil {
-				password, _ := parsed.User.Password()
-				auth = &proxy.Auth{User: parsed.User.Username(), Password: password}
-			}
-			address := parsed.Host
-			if !strings.Contains(address, ":") {
-				address = net.JoinHostPort(address, "1080")
-			}
-			dialer, err := proxy.SOCKS5("tcp", address, auth, proxy.Direct)
-			if err != nil {
-				return nil, fmt.Errorf("代理解析失败：%w", err)
-			}
-			if contextDialer, ok := dialer.(proxy.ContextDialer); ok {
-				transport.DialContext = contextDialer.DialContext
-			} else {
-				transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
-					return dialer.Dial(network, address)
-				}
-			}
-		default:
-			return nil, fmt.Errorf("不支持的代理协议：%s", parsed.Scheme)
-		}
+	transport, err := outbound.NewTransport(proxyURL(proxyCfg), timeout)
+	if err != nil {
+		return nil, fmt.Errorf("代理解析失败：%w", err)
 	}
 	return &http.Client{
 		Timeout:   timeout,
@@ -139,6 +98,13 @@ func buildHTTPClient(proxyCfg ProxyConfig, timeoutSec int) (*http.Client, error)
 			return http.ErrUseLastResponse
 		},
 	}, nil
+}
+
+func proxyURL(proxyCfg ProxyConfig) string {
+	if !proxyCfg.Enabled {
+		return ""
+	}
+	return proxyCfg.URL
 }
 
 func checkTarget(client *http.Client, target Target, timeoutSec int) TargetResult {

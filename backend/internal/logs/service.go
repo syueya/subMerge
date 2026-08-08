@@ -85,7 +85,7 @@ func (s *Service) List(nameFilter string) (common.LogFileListResponse, error) {
 	return common.LogFileListResponse{Files: files}, nil
 }
 
-// Details 读取指定日志文件尾部 line 条解析后的条目（时间正序，旧→新）
+// Details 读取指定日志文件尾部 line 条解析后的条目（时间倒序，新→旧）
 func (s *Service) Details(name string, line int) (common.LogDetailsResponse, error) {
 	safe, err := s.resolvePath(name)
 	if err != nil {
@@ -113,6 +113,16 @@ func (s *Service) Details(name string, line int) (common.LogDetailsResponse, err
 	if len(entries) > line {
 		entries = entries[len(entries)-line:]
 	}
+	sort.SliceStable(entries, func(i, j int) bool {
+		// 无法解析时间的孤立行放在末尾；其余条目按最新时间优先。
+		if entries[i].Timestamp == 0 {
+			return false
+		}
+		if entries[j].Timestamp == 0 {
+			return true
+		}
+		return entries[i].Timestamp > entries[j].Timestamp
+	})
 	return common.LogDetailsResponse{Items: entries}, nil
 }
 

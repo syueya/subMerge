@@ -169,21 +169,8 @@ func ensureSystemRules(tx *gorm.DB) error {
 			}
 			continue
 		}
-		// 旧默认出口对齐：不覆盖用户明显改过的
+		// 仅补齐系统规则的分类，不修改已有 MATCH 的出口
 		switch def.Type {
-		case "MATCH":
-			// 仍是「默认走直连/默认走代理」且目标为 直连/日本JP/PROXY/US → 对齐美国US
-			if err := tx.Model(&database.Rule{}).
-				Where("type = ?", "MATCH").
-				Where("target IN ?", []string{common.GroupNameDirect, common.TargetDirect, "日本JP", "PROXY", "US"}).
-				Where("note IN ?", []string{"默认走直连", "默认走代理", ""}).
-				Updates(map[string]interface{}{
-					"target":   def.Target,
-					"note":     def.Note,
-					"category": def.Category,
-				}).Error; err != nil {
-				return err
-			}
 		case "GEOIP":
 			if err := tx.Model(&database.Rule{}).
 				Where("type = ? AND UPPER(payload) = ?", "GEOIP", "CN").

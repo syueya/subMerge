@@ -29,8 +29,8 @@ func TestEnsureMatchIsLastAfterSeedSync(t *testing.T) {
 		{Type: "DOMAIN-SUFFIX", Payload: "github.com", Target: "美国US", Enabled: true, SortOrder: 100, Note: "GitHub"},
 		{Type: "DOMAIN", Payload: "zrpt.cc", Target: "直连", Enabled: true, SortOrder: 311, Note: "自然"},
 		{Type: "GEOIP", Payload: "CN", Target: "直连", Enabled: true, SortOrder: 900, Note: "国内直连", Category: "国内"},
-		// 历史错位：MATCH 在 GEOIP 前
-		{Type: "MATCH", Payload: "", Target: "日本JP", Enabled: true, SortOrder: 343, Note: "默认走代理", Category: "兜底"},
+		// 历史错位：MATCH 在 GEOIP 前，目标仍是旧美国默认出口
+		{Type: "MATCH", Payload: "", Target: "美国US", Enabled: true, SortOrder: 343, Note: "默认走代理", Category: "兜底"},
 		{Type: "DOMAIN-SUFFIX", Payload: "xiaxiazi.ccwu.cc", Target: "直连", Enabled: true, SortOrder: 312, Note: "个人域名"},
 	}
 	for i := range fixture {
@@ -71,7 +71,7 @@ func TestEnsureMatchIsLastAfterSeedSync(t *testing.T) {
 		t.Fatalf("last rule type=%s payload=%s order=%d, want MATCH last; all=%v",
 			last.Type, last.Payload, last.SortOrder, summarizeOrders(rows))
 	}
-	// 旧默认 MATCH（日本JP + 默认走代理）应对齐到美国US
+	// 旧 MATCH（美国US + 默认走代理）应保持原出口
 	if last.Target != "美国US" {
 		t.Fatalf("MATCH target=%s, want 美国US", last.Target)
 	}

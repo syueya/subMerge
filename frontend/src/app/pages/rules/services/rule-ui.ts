@@ -98,6 +98,138 @@ export function sortRules(rules: Rule[]): Rule[] {
 	return [...rules].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
 }
 
+export type RuleMoveAction = 'up' | 'down' | 'top';
+
+/**
+ * 调整业务规则顺序，保留系统规则在原有锚点位置。
+ * 返回值会重新编号，便于页面在重排请求完成前立即反映新顺序。
+ */
+export function moveRuleOrder(rules: Rule[], ruleID: number, action: RuleMoveAction): Rule[] {
+	const ordered = sortRules(rules);
+	const movableIndexes: number[] = [];
+	const movable: Rule[] = [];
+	for (let i = 0; i < ordered.length; i++) {
+		if (isSystemRule(ordered[i])) continue;
+		movableIndexes.push(i);
+		movable.push(ordered[i]);
+	}
+	const index = movable.findIndex((rule) => rule.id === ruleID);
+	if (index < 0) return ordered;
+
+	const targetIndex = action === 'up' ? index - 1 : action === 'down' ? index + 1 : 0;
+	if (targetIndex < 0 || targetIndex >= movable.length || targetIndex === index) return ordered;
+	const [target] = movable.splice(index, 1);
+	movable.splice(targetIndex, 0, target);
+
+	const result = [...ordered];
+	for (let i = 0; i < movableIndexes.length; i++) {
+		result[movableIndexes[i]] = { ...movable[i], sortOrder: (movableIndexes[i] + 1) * 10 };
+	}
+	return result.map((rule, i) => ({ ...rule, sortOrder: (i + 1) * 10 }));
+}
+
+export type RuleGroupMode = 'category' | 'target';
+export type RuleSectionMoveAction = 'up' | 'down';
+
+function ruleGroupKey(rule: Rule, mode: RuleGroupMode): string {
+	return (mode === 'category' ? rule.category || '' : rule.target || '').trim();
+}
+
+function businessRules(rules: Rule[]): { ordered: Rule[]; movable: Rule[] } {
+	const ordered = sortRules(rules);
+	return { ordered, movable: ordered.filter((rule) => !isSystemRule(rule)) };
+}
+
+function mergeBusinessRules(ordered: Rule[], movable: Rule[]): Rule[] {
+	let next = 0;
+	return ordered.map((rule, index) => {
+		if (isSystemRule(rule)) return { ...rule, sortOrder: (index + 1) * 10 };
+		const replacement = movable[next++];
+		return { ...replacement, sortOrder: (index + 1) * 10 };
+	});
+}
+
+/** 将规则置于当前分类或策略组的第一条业务规则之前。 */
+export function moveRuleWithinGroup(rules: Rule[], ruleID: number, mode: RuleGroupMode): Rule[] {
+	const { ordered, movable } = businessRules(rules);
+	const index = movable.findIndex((rule) => rule.id === ruleID);
+	if (index < 0) return ordered;
+	const key = ruleGroupKey(movable[index], mode);
+	const firstInGroup = movable.findIndex((rule) => ruleGroupKey(rule, mode) === key);
+	if (firstInGroup < 0 || firstInGroup === index) return ordered;
+	const [target] = movable.splice(index, 1);
+	movable.splice(firstInGroup, 0, target);
+	return mergeBusinessRules(ordered, movable);
+}
+
+export function canMoveRule(rules: Rule[], ruleID: number, action: RuleMoveAction): boolean {
+	const ordered = sortRules(rules);
+	const movable = ordered.filter((rule) => !isSystemRule(rule));
+	const index = movable.findIndex((rule) => rule.id === ruleID);
+	if (index < 0) return false;
+	if (action === 'up' || action === 'top') return index > 0;
+	return index < movable.length - 1;
+}
+
+export function canMoveRuleWithinGroup(
+	rules: Rule[],
+	ruleID: number,
+	mode: RuleGroupMode,
+): boolean {
+	const { movable } = businessRules(rules);
+	const index = movable.findIndex((rule) => rule.id === ruleID);
+	if (index < 0) return false;
+	const key = ruleGroupKey(movable[index], mode);
+	return movable.findIndex((rule) => ruleGroupKey(rule, mode) === key) < index;
+}
+
+/** 将当前分类或策略组的业务规则整理为连续块，并移动到相邻业务组。 */
+export function moveRuleGroup(
+	rules: Rule[],
+	groupKey: string,
+	mode: RuleGroupMode,
+	action: RuleSectionMoveAction,
+	groupOrder: string[] = [],
+): Rule[] {
+	const { ordered, movable } = businessRules(rules);
+	const members = new Map<string, Rule[]>();
+	for (const rule of movable) {
+		const key = ruleGroupKey(rule, mode);
+		if (!members.has(key)) members.set(key, []);
+		members.get(key)!.push(rule);
+	}
+	const groups = [
+		...groupOrder.map((key) => key.trim()).filter((key, index, all) => all.indexOf(key) === index),
+		...members.keys(),
+	].filter((key, index, all) => members.has(key) && all.indexOf(key) === index);
+	const index = groups.indexOf(groupKey.trim());
+	if (index < 0) return ordered;
+	const targetIndex = action === 'up' ? index - 1 : index + 1;
+	if (targetIndex < 0 || targetIndex >= groups.length) return ordered;
+	const [target] = groups.splice(index, 1);
+	groups.splice(targetIndex, 0, target);
+	const next = groups.flatMap((key) => members.get(key) || []);
+	return mergeBusinessRules(ordered, next);
+}
+
+export function canMoveRuleGroup(
+	rules: Rule[],
+	groupKey: string,
+	mode: RuleGroupMode,
+	action: RuleSectionMoveAction,
+	groupOrder: string[] = [],
+): boolean {
+	const movable = sortRules(rules).filter((rule) => !isSystemRule(rule));
+	const ruleKeys = new Set(movable.map((rule) => ruleGroupKey(rule, mode)));
+	const groups = [
+		...groupOrder.map((key) => key.trim()).filter((key, index, all) => all.indexOf(key) === index),
+		...ruleKeys,
+	].filter((key, index, all) => ruleKeys.has(key) && all.indexOf(key) === index);
+	const index = groups.indexOf(groupKey.trim());
+	if (index < 0) return false;
+	return action === 'up' ? index > 0 : index < groups.length - 1;
+}
+
 /** 面板分组：按业务分类聚合，组内仍保持全局顺序；空分类（刚新建）也会显示 */
 export function buildCategorySections(
 	rules: Rule[],

@@ -10,13 +10,26 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/submerge/submerge/backend/internal/applog"
+	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/version"
 )
 
-// DefaultSourceFetchUA 仅在未设置 SOURCE_FETCH_UA 时的兜底。
-// 正式配置请写 .env 的 SOURCE_FETCH_UA（客户端升级时改环境变量即可，不必改代码）。
-// 格式与 Clash Verge Rev 一致：clash-verge/v{ver}
+// DefaultSourceFetchUA 是订阅源请求的默认 User-Agent。
 const DefaultSourceFetchUA = "clash-verge/v2.5.3"
+
+const DefaultPublicBaseURL = "http://localhost:8080"
+
+const (
+	DefaultSourceFetchTimeout = 30 * time.Second
+	DefaultSourceMaxBytes     = 8 << 20
+	DefaultRefreshInterval    = 24 * time.Hour
+	DefaultIPGeoTimeout       = 5 * time.Second
+	DefaultGeoIPURL           = "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat"
+	DefaultGeoSiteURL         = "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"
+	DefaultMetaDBURL          = "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb"
+	DefaultASNURL             = "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"
+	DefaultIPGeoURL           = "https://ipwho.is/{ip}"
+)
 
 // Config 应用配置
 type Config struct {
@@ -35,13 +48,13 @@ type Config struct {
 	RateLimitLogin     int
 	RateLimitSub       int
 	CORSOrigins        []string
-	// TrustedProxies 可信反向代理的 IP/CIDR 列表（如 Docker 网关、Nginx）。
+	// TrustedProxies 可信反向代理的 IP/CIDR 列表，由系统设置加载。
 	// 仅当请求来自这些代理时才采信 X-Forwarded-For/X-Real-IP 得到真实客户端 IP，
 	// 否则用连接对端地址。留空=不信任任何代理（ClientIP 恒为对端地址）。
 	// 与 CookieSecure 独立：前者管「真实 IP」，后者管「会话 Cookie 是否仅 HTTPS」。
 	TrustedProxies []string
-	// CookieSecure 会话 Cookie 是否带 Secure。默认 false，便于 http://IP:端口 登录；
-	// HTTPS 反代/公网请设 COOKIE_SECURE=true。不跟 APP_ENV、PUBLIC_BASE_URL 联动。
+	// CookieSecure 会话 Cookie 是否带 Secure，由系统设置加载。默认 false，便于 http://IP:端口 登录；
+	// HTTPS 反代/公网请在系统设置中开启。不跟 APP_ENV、PUBLIC_BASE_URL 联动。
 	CookieSecure bool
 	Version      string
 	// LogOutput: console | file | both | none；未设置时默认 both
@@ -51,14 +64,15 @@ type Config struct {
 	// LogRetentionDays 日志保留天数；默认 7，0 表示不自动清理
 	LogRetentionDays int
 	// DebugLogging 是否输出地区/过滤等详细 DEBUG 日志。
-	DebugLogging bool
-	GeoDir       string
-	GeoIPURL     string
-	GeoSiteURL   string
-	MetaDBURL    string
-	ASNURL       string
-	IPGeoURL     string
-	IPGeoTimeout time.Duration
+	DebugLogging     bool
+	GeoDir           string
+	GeoIPURL         string
+	GeoSiteURL       string
+	MetaDBURL        string
+	ASNURL           string
+	IPGeoURL         string
+	IPGeoTimeout     time.Duration
+	OutboundProxyURL string
 }
 
 // Load 从环境变量加载配置
@@ -70,23 +84,7 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	sourceTimeout, err := getDuration("SOURCE_FETCH_TIMEOUT", 30*time.Second)
-	if err != nil {
-		return nil, err
-	}
-	// 单位固定为小时，环境变量只写数字，如 24
-	refreshInterval, err := getHoursDuration("SOURCE_REFRESH_INTERVAL", 24*time.Hour)
-	if err != nil {
-		return nil, err
-	}
-	sourceMaxBytes, err := getInt64("SOURCE_MAX_BYTES", 8<<20)
-	if err != nil {
-		return nil, err
-	}
-	ipGeoTimeout, err := getDuration("IP_GEO_TIMEOUT", 5*time.Second)
-	if err != nil {
-		return nil, err
-	}
+	appEnv := getEnv("APP_ENV", "development")
 	rateLimitLogin, err := getInt("RATE_LIMIT_LOGIN", 10)
 	if err != nil {
 		return nil, err
@@ -95,69 +93,60 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	// 0 = 不清理；默认 7 天
-	logRetentionDays, err := getIntAllowZero("LOG_RETENTION_DAYS", 7)
-	if err != nil {
-		return nil, err
-	}
-	// 开发环境默认开启详细日志，生产环境默认关闭；显式配置优先。
-	appEnv := getEnv("APP_ENV", "development")
-	debugLogging, err := getBool("DEBUG_LOGGING", !strings.EqualFold(strings.TrimSpace(appEnv), "production"))
-	if err != nil {
-		return nil, err
-	}
-	// 默认 false：http://IP 可登录；HTTPS 部署显式 COOKIE_SECURE=true
-	cookieSecure, err := getBool("COOKIE_SECURE", false)
-	if err != nil {
-		return nil, err
-	}
-
 	// 数据 / 库 / 静态 / 日志目录一律按工作目录推导，不提供环境变量覆盖
 	// （避免 Docker/.env 再抄一遍路径；部署只需选对工作目录）
 	dataDir := defaultDataDir()
-	logOutput := applog.NormalizeOutput(getEnv("LOG_OUTPUT", "both"))
+	encryptionKey, err := loadEncryptionKey(dataDir)
+	if err != nil {
+		return nil, err
+	}
 
 	cfg := &Config{
 		Env:                appEnv,
 		HTTPAddr:           getEnv("HTTP_ADDR", ":8080"),
-		PublicBaseURL:      strings.TrimRight(getEnv("PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
+		PublicBaseURL:      DefaultPublicBaseURL,
 		DataDir:            dataDir,
 		DBPath:             filepath.Join(dataDir, "submerge.db"),
 		StaticDir:          defaultStaticDir(),
-		EncryptionKey:      getEnv("ENCRYPTION_KEY", ""),
+		EncryptionKey:      encryptionKey,
 		SessionTTL:         sessionTTL,
-		SourceFetchTimeout: sourceTimeout,
-		SourceMaxBytes:     sourceMaxBytes,
-		// 默认见 DefaultSourceFetchUA；SOURCE_FETCH_UA 可覆盖
-		SourceFetchUA:   getEnv("SOURCE_FETCH_UA", DefaultSourceFetchUA),
-		RefreshInterval: refreshInterval,
-		RateLimitLogin:  rateLimitLogin,
-		RateLimitSub:    rateLimitSub,
-		CORSOrigins:     splitCSV(getEnv("CORS_ORIGINS", "http://localhost:4200")),
-		TrustedProxies:  splitCSV(getEnv("TRUSTED_PROXIES", "")),
-		CookieSecure:    cookieSecure,
+		SourceFetchTimeout: DefaultSourceFetchTimeout,
+		SourceMaxBytes:     DefaultSourceMaxBytes,
+		SourceFetchUA:      DefaultSourceFetchUA,
+		RefreshInterval:    DefaultRefreshInterval,
+		RateLimitLogin:     rateLimitLogin,
+		RateLimitSub:       rateLimitSub,
+		CORSOrigins:        splitCSV(getEnv("CORS_ORIGINS", "http://localhost:4200")),
+		TrustedProxies:     nil,
+		CookieSecure:       false,
 		// 版本 / 路径固定，不走环境变量
 		Version:          version.String(),
-		LogOutput:        logOutput,
+		LogOutput:        applog.NormalizeOutput("both"),
 		LogDir:           defaultLogDir(),
-		LogRetentionDays: logRetentionDays,
-		DebugLogging:     debugLogging,
+		LogRetentionDays: 7,
+		DebugLogging:     !strings.EqualFold(strings.TrimSpace(appEnv), "production"),
 		GeoDir:           defaultGeoDir(),
-		GeoIPURL:         getEnv("GEOIP_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat"),
-		GeoSiteURL:       getEnv("GEOSITE_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"),
-		MetaDBURL:        getEnv("GEODB_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb"),
-		ASNURL:           getEnv("GEOASN_URL", "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"),
-		IPGeoURL:         getEnv("IP_GEO_URL", "https://ipwho.is/{ip}"),
-		IPGeoTimeout:     ipGeoTimeout,
+		GeoIPURL:         DefaultGeoIPURL,
+		GeoSiteURL:       DefaultGeoSiteURL,
+		MetaDBURL:        DefaultMetaDBURL,
+		ASNURL:           DefaultASNURL,
+		IPGeoURL:         DefaultIPGeoURL,
+		IPGeoTimeout:     DefaultIPGeoTimeout,
+		OutboundProxyURL: "",
 	}
 
 	if len(cfg.EncryptionKey) < 32 {
 		return nil, fmt.Errorf("ENCRYPTION_KEY must be at least 32 characters")
 	}
-	if cfg.SourceMaxBytes <= 0 {
-		return nil, fmt.Errorf("SOURCE_MAX_BYTES must be greater than zero")
-	}
 	return cfg, nil
+}
+
+func loadEncryptionKey(dataDir string) (string, error) {
+	raw := os.Getenv("ENCRYPTION_KEY")
+	if strings.TrimSpace(raw) != "" {
+		return raw, nil
+	}
+	return crypto.LoadOrCreateKey(filepath.Join(dataDir, "crypto.key"))
 }
 
 func getEnv(key, def string) string {
@@ -307,21 +296,4 @@ func splitCSV(s string) []string {
 		}
 	}
 	return out
-}
-
-// getBool 解析布尔环境变量：true/1/yes/on 与 false/0/no/off（大小写不敏感）。
-// 未设置时用 def；非法值返回错误。
-func getBool(key string, def bool) (bool, error) {
-	v := strings.TrimSpace(os.Getenv(key))
-	if v == "" {
-		return def, nil
-	}
-	switch strings.ToLower(v) {
-	case "1", "true", "yes", "on":
-		return true, nil
-	case "0", "false", "no", "off":
-		return false, nil
-	default:
-		return false, fmt.Errorf("%s must be true/false (or 1/0, yes/no, on/off)", key)
-	}
 }

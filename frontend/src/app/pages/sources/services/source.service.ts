@@ -1,14 +1,15 @@
 import { HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, Subscription, shareReplay, tap } from 'rxjs';
-import { ApiService } from '@common/net/api.service';
+import { Observable, Subscription, finalize, shareReplay, tap } from 'rxjs';
+import { ApiRequestOptions, ApiService } from '@common/net/api.service';
 import { CachedRequest } from '@common/net/cached-request';
 import { DialogService } from '@common/services/dialog.service';
 import { withWtHttpCacheBypass } from '@common/net/session-http-cache';
 import { ListResponse, ProxyNode, RefreshAllResult, RefreshSourceResult, RegionCatalogResponse, SourceUpsertBody, SubscriptionSource } from '@data-struct';
+import { formatRefreshMsg } from './source-refresh.util';
 
-/** 拉取全部可能串行很久；默认 30s 不够，给 10 分钟 */
-const REFRESH_ALL_TIMEOUT_MS = 10 * 60 * 1000;
+/** 后台拉取可能包含网络等待和解析；默认 30s 不够，给 10 分钟 */
+const REFRESH_BACKGROUND_TIMEOUT_MS = 10 * 60 * 1000;
 
 @Injectable({ providedIn: 'root' })
 export class SourceService {
@@ -26,9 +27,14 @@ export class SourceService {
   private readonly proxiesCache = new CachedRequest<ListResponse<ProxyNode>>(context => this.api.get('/proxies', { context }));
 
   private refreshAllSub: Subscription | null = null;
+  private readonly refreshSubs = new Map<number, Subscription>();
 
   /** 跨页面共享：后台拉取全部进行中，不随页面销毁丢失 */
   readonly refreshingAll = signal(false);
+  /** 跨页面共享：正在后台拉取的单个订阅源 ID */
+  readonly refreshingIds = signal<ReadonlySet<number>>(new Set());
+  /** 每次单源后台任务结束时递增，供列表页静默刷新 */
+  readonly refreshCompletionVersion = signal(0);
 
   list(forceRefresh = false): Observable<ListResponse<SubscriptionSource>> {
     return this.sourcesCache.get(forceRefresh);
@@ -75,12 +81,41 @@ export class SourceService {
     return this.api.post<{ deleted: number }>('/sources/batch-delete', { ids }).pipe(tap(() => this.invalidateSourcesAndProxies()));
   }
 
-  refresh(id: number): Observable<RefreshSourceResult> {
-    return this.api.post<RefreshSourceResult>(`/sources/${id}/refresh`).pipe(tap(() => this.invalidateSourcesAndProxies()));
+  refresh(id: number, options?: ApiRequestOptions): Observable<RefreshSourceResult> {
+    return this.api.post<RefreshSourceResult>(`/sources/${id}/refresh`, {}, options).pipe(tap(() => this.invalidateSourcesAndProxies()));
+  }
+
+  /** 启动单源后台拉取：请求不绑定列表组件生命周期，也不触发全屏 loading。 */
+  startBackgroundRefresh(id: number): boolean {
+    if (this.refreshSubs.has(id) || this.refreshingAll()) return false;
+
+    this.refreshingIds.update(ids => new Set(ids).add(id));
+    const sub = this.refresh(id, {
+      timeoutMs: REFRESH_BACKGROUND_TIMEOUT_MS,
+      noLoadingSpinner: true,
+    }).pipe(
+      finalize(() => {
+        this.refreshSubs.delete(id);
+        this.refreshingIds.update(ids => {
+          const next = new Set(ids);
+          next.delete(id);
+          return next;
+        });
+        this.refreshCompletionVersion.update(version => version + 1);
+      }),
+    ).subscribe({
+      next: result => void this.dialog.success(formatRefreshMsg(result, '拉取成功')),
+      error: (err: Error) => void this.dialog.error(err?.message || '拉取失败'),
+    });
+    this.refreshSubs.set(id, sub);
+    return true;
   }
 
   refreshAll(): Observable<RefreshAllResult> {
-    return this.api.post<RefreshAllResult>('/sources/refresh-all', {}, { timeoutMs: REFRESH_ALL_TIMEOUT_MS }).pipe(tap(() => this.invalidateSourcesAndProxies()));
+    return this.api.post<RefreshAllResult>('/sources/refresh-all', {}, {
+      timeoutMs: REFRESH_BACKGROUND_TIMEOUT_MS,
+      noLoadingSpinner: true,
+    }).pipe(tap(() => this.invalidateSourcesAndProxies()));
   }
 
   /**
@@ -88,7 +123,7 @@ export class SourceService {
    * 完成用短 toast（无换行，避免弹阻塞对话框）；关标签页后前端无法再提示，后端仍会继续跑完。
    */
   startBackgroundRefreshAll(): boolean {
-    if (this.refreshingAll()) return false;
+    if (this.refreshingAll() || this.refreshSubs.size > 0) return false;
 
     this.refreshingAll.set(true);
     this.refreshAllSub?.unsubscribe();

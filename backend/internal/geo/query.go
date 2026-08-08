@@ -72,14 +72,17 @@ func (s *Service) appendIPLookups(result *QueryResponse, ip net.IP) {
 }
 
 func (s *Service) LookupIPGeo(ctx context.Context, raw string) (IPGeoResponse, error) {
-	if s.ipGeo == nil {
+	s.ipGeoMu.RLock()
+	client := s.ipGeo
+	s.ipGeoMu.RUnlock()
+	if client == nil {
 		return IPGeoResponse{}, errors.New("IP geo client unavailable")
 	}
 	parsed := net.ParseIP(strings.TrimSpace(raw))
 	if parsed == nil {
 		return IPGeoResponse{}, errors.New("invalid IP")
 	}
-	result, err := s.ipGeo.Lookup(ctx, parsed)
+	result, err := client.Lookup(ctx, parsed)
 	if err != nil {
 		return IPGeoResponse{}, err
 	}

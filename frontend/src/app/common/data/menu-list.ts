@@ -50,6 +50,11 @@ export const MenuList: MenuItem[] = [
         route: '/main/net-check'
       },
       {
+        displayName: '系统设置',
+        iconName: 'settings',
+        route: '/main/settings/outbound-proxy'
+      },
+      {
         displayName: '系统日志',
         iconName: 'list-details',
         route: '/main/logs'

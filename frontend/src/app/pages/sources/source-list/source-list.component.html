@@ -12,7 +12,7 @@
     </button>
   }
   <button mat-stroked-button color="primary" type="button"
-    [disabled]="busy() || refreshingAll() || dataSource.data.length === 0"
+    [disabled]="busy() || refreshingAll() || hasRefreshingSources() || dataSource.data.length === 0"
     (click.debounceTime)="refreshAll()"
   >
     {{ refreshingAll() ? '拉取中…' : '拉取全部' }}
@@ -60,7 +60,7 @@
         </div>
       </div>
       <div class="d-flex justify-content-center gap-8 m-b-16">
-        <button mat-icon-button color="primary" type="button" matTooltip="拉取" [disabled]="busy() || refreshingAll()" (click.debounceTime)="refresh(row)">
+        <button mat-icon-button color="primary" type="button" matTooltip="{{ refreshingIds().has(row.id) ? '拉取中' : '拉取' }}" [disabled]="busy() || refreshingAll() || refreshingIds().has(row.id)" (click.debounceTime)="refresh(row)">
           <i-tabler name="cloud-download" class="icon-24 d-flex align-items-center"></i-tabler>
         </button>
         <button mat-icon-button color="primary" type="button" matTooltip="节点" (click.debounceTime)="openProxies(row)">
@@ -150,18 +150,18 @@
         <td mat-cell *matCellDef="let row" class="f-s-14">
           <div>
             <span [class]="statusClass(row.refreshStatus)">{{ statusText(row.refreshStatus) }}</span>
-          </div>
-          <div class="f-s-12 text-muted m-t-4" [title]="row.lastRefreshAt || ''">{{ formatTime(row.lastRefreshAt) }}</div>
-          @if (row.lastError) {
+            @if (row.lastError) {
             <div class="f-s-12 text-error m-t-4" [title]="row.lastError">{{ row.lastError }}</div>
           }
+          </div>
+          <div class="f-s-12 text-muted m-t-4" >{{ formatTime(row.lastRefreshAt) }}</div>
         </td>
       </ng-container>
 
       <ng-container matColumnDef="action" stickyEnd>
         <th mat-header-cell *matHeaderCellDef>操作</th>
         <td mat-cell *matCellDef="let row">
-          <button mat-icon-button color="primary" type="button" matTooltip="拉取" [disabled]="busy() || refreshingAll()" (click.debounceTime)="refresh(row)">
+          <button mat-icon-button color="primary" type="button" matTooltip="{{ refreshingIds().has(row.id) ? '拉取中' : '拉取' }}" [disabled]="busy() || refreshingAll() || refreshingIds().has(row.id)" (click.debounceTime)="refresh(row)">
             <i-tabler name="cloud-download" class="icon-24 d-flex align-items-center"></i-tabler>
           </button>
           <button mat-icon-button color="primary" type="button" matTooltip="节点" (click.debounceTime)="openProxies(row)">

@@ -21,14 +21,20 @@ import { DialogService } from '@common/services/dialog.service';
 import {
 	buildCategorySections,
 	buildTargetSections,
+	canMoveRule,
+	canMoveRuleGroup,
+	canMoveRuleWithinGroup,
 	categoryToRemember,
 	defaultRuleTarget,
 	isSystemRule,
+	moveRuleGroup,
+	moveRuleOrder,
+	moveRuleWithinGroup,
 	sortRules,
 } from '../services/rule-ui';
 import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
-import { takeUntil } from 'rxjs';
+import { takeUntil, finalize } from 'rxjs';
 import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
 import { BatchImportComponent } from '../batch-import/batch-import.component';
 import { NewCategoryFormComponent } from '../new-category-form/new-category-form.component';
@@ -61,6 +67,7 @@ export class RuleHomeComponent extends CmParentComponent implements OnInit {
 	selectedIds = signal<Set<number>>(new Set());
 	batchTarget = signal('');
 	batchBusy = signal(false);
+	sortBusy = signal(false);
 	selectedCount = computed(() => this.selectedIds().size);
 
 	readonly badgeOk = BADGE_OK;
@@ -107,6 +114,13 @@ export class RuleHomeComponent extends CmParentComponent implements OnInit {
 		return buildCategorySections(this.filteredRules(), this.extraCategories());
 	});
 
+	readonly allSections = computed<CategorySection[]>(() => {
+		if (this.viewMode() === 'target') {
+			return buildTargetSections(this.sorted(), this.groups().map((g) => g.name));
+		}
+		return buildCategorySections(this.sorted(), this.extraCategories());
+	});
+
 	readonly orphanCount = computed(
 		() => this.sorted().filter((r) => this.isOrphanTarget(r.target)).length,
 	);
@@ -144,6 +158,78 @@ export class RuleHomeComponent extends CmParentComponent implements OnInit {
 
 	isSystemRule(rule: { type?: string; payload?: string } | null | undefined): boolean {
 		return isSystemRule(rule);
+	}
+
+	canMoveRule(rule: Rule, action: 'up' | 'down'): boolean {
+		return !this.sortBusy() && canMoveRule(this.rules(), rule.id, action);
+	}
+
+	canMoveRuleWithinGroup(rule: Rule): boolean {
+		return (
+			!this.sortBusy() &&
+			canMoveRuleWithinGroup(this.rules(), rule.id, this.viewMode())
+		);
+	}
+
+	canMoveRuleTop(rule: Rule): boolean {
+		return this.canMoveRuleWithinGroup(rule);
+	}
+
+	hasMovableSection(section: CategorySection): boolean {
+		return section.rules.some((rule) => !this.isSystemRule(rule));
+	}
+
+	canMoveSection(key: string, action: 'up' | 'down'): boolean {
+		const order = this.allSections()
+			.filter((section) => section.rules.some((rule) => !this.isSystemRule(rule)))
+			.map((section) => section.key);
+		return (
+			!this.sortBusy() &&
+			canMoveRuleGroup(this.rules(), key, this.viewMode(), action, order)
+		);
+	}
+
+	private persistRuleOrder(previous: Rule[], next: Rule[]): void {
+		const orderedIds = sortRules(next).map((item) => item.id);
+		this.rules.set(next);
+		this.sortBusy.set(true);
+		this.svc
+			.reorder(orderedIds)
+			.pipe(
+				takeUntil(this.$destroy),
+				finalize(() => this.sortBusy.set(false)),
+			)
+			.subscribe({
+				next: () => {
+					this.reload(false, true);
+					this.notifyDraftChanged();
+				},
+				error: (e: Error) => {
+					this.rules.set(previous);
+					void this.dialog.error(e.message);
+				},
+			});
+	}
+
+	moveRule(rule: Rule, action: 'up' | 'down' | 'top'): void {
+		if (action === 'top') {
+			if (!this.canMoveRuleWithinGroup(rule)) return;
+			const previous = this.rules();
+			this.persistRuleOrder(previous, moveRuleWithinGroup(previous, rule.id, this.viewMode()));
+			return;
+		}
+		if (!this.canMoveRule(rule, action)) return;
+		const previous = this.rules();
+		this.persistRuleOrder(previous, moveRuleOrder(previous, rule.id, action));
+	}
+
+	moveSection(key: string, action: 'up' | 'down'): void {
+		if (!this.canMoveSection(key, action)) return;
+		const previous = this.rules();
+		const order = this.allSections()
+			.filter((section) => section.rules.some((rule) => !this.isSystemRule(rule)))
+			.map((section) => section.key);
+		this.persistRuleOrder(previous, moveRuleGroup(previous, key, this.viewMode(), action, order));
 	}
 
 	setViewMode(mode: 'category' | 'target'): void {

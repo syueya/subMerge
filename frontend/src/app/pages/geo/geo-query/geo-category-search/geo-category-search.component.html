@@ -15,22 +15,9 @@
     <cm-form-field class="col-24 col-md-18">
       <mat-label>分类关键词</mat-label>
       <mat-form-field appearance="outline" class="w-full" color="primary">
-        <input
-          matInput
-          [(ngModel)]="reverseKeyword"
-          (ngModelChange)="commitReverseKeyword()"
-          placeholder="例如 google、ads、cn"
-          (keyup.enter)="reverse()"
-        />
+        <input matInput [(ngModel)]="reverseKeyword" (ngModelChange)="commitReverseKeyword()" placeholder="例如 google、ads、cn" (keyup.enter)="reverse()" />
       </mat-form-field>
-      <button
-        formFieldAction
-        mat-flat-button
-        color="primary"
-        type="button"
-        [disabled]="reverseLoading()"
-        (click.debounceTime)="reverse()"
-      >
+      <button formFieldAction mat-flat-button color="primary" type="button" [disabled]="reverseLoading()" (click.debounceTime)="reverse()">
         {{ reverseLoading() ? '查询中…' : '查看条目' }}
       </button>
     </cm-form-field>
@@ -52,21 +39,9 @@
     <cm-form-field class="col-24 col-md-12">
       <mat-label>搜索关键词</mat-label>
       <mat-form-field appearance="outline" class="w-full" color="primary">
-        <input
-          matInput
-          [(ngModel)]="searchKeyword"
-          (keyup.enter)="openDatabaseSearch()"
-          [placeholder]="reverseFile === 'asn' ? '例如 15169、Google' : '例如 CN、US、AS'"
-        />
+        <input matInput [(ngModel)]="searchKeyword" (keyup.enter)="openDatabaseSearch()" [placeholder]="reverseFile === 'asn' ? '例如 15169、Google' : '例如 CN、US、AS'" />
       </mat-form-field>
-      <button
-        formFieldAction
-        mat-flat-button
-        color="primary"
-        type="button"
-        [disabled]="searchLoading()"
-        (click.debounceTime)="openDatabaseSearch()"
-      >
+      <button formFieldAction mat-flat-button color="primary" type="button" [disabled]="searchLoading()" (click.debounceTime)="openDatabaseSearch()">
         {{ searchLoading() ? '搜索中…' : '搜索记录' }}
       </button>
     </cm-form-field>
@@ -87,11 +62,7 @@
   <div class="m-t-8 p-12 rounded b-1">
     <div style="max-height: 13rem; overflow-y: auto">
       @if (visibleCategories().length) {
-        <mat-chip-listbox
-          class="d-flex flex-wrap"
-          [value]="reverseCategory"
-          (change)="onCategoryChipChange($event)"
-        >
+        <mat-chip-listbox class="d-flex flex-wrap" [value]="reverseCategory" (change)="onCategoryChipChange($event)">
           @for (item of visibleCategories(); track item.name) {
             <mat-chip-option [value]="item.name">
               {{ item.name }}
@@ -126,18 +97,5 @@
 @if (reverseResult(); as result) {
   @if (result.message) {
     <p class="f-s-12 text-warning m-t-16 m-b-0">{{ result.message }}</p>
-  } @else {
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-8 m-t-16">
-      <span class="f-s-14 text-muted">已加载 {{ result.items?.length || 0 }} 条，共 {{ result.total }} 条</span>
-      <button
-        mat-stroked-button
-        color="primary"
-        type="button"
-        [disabled]="reverseLoading()"
-        (click.debounceTime)="openReverseEntries(result, true)"
-      >
-        查看条目
-      </button>
-    </div>
   }
 }

@@ -5,16 +5,11 @@ import { SharedBusinessModule } from '../_shared/shared-business.module';
 import { BatchImportComponent } from './batch-import/batch-import.component';
 import { NewCategoryFormComponent } from './new-category-form/new-category-form.component';
 import { RuleHomeComponent } from './rule-home/rule-home.component';
-import { RuleFormComponent } from './rule-form/rule-form.component';
+import { RuleFormModule } from './rule-form/rule-form.module';
 import { RulesRoutingModule } from './rules-routing.module';
 
 @NgModule({
-  declarations: [
-    RuleHomeComponent,
-    RuleFormComponent,
-    BatchImportComponent,
-    NewCategoryFormComponent
-  ],
-  imports: [AppCommonModule, SharedBusinessModule, RouterModule, RulesRoutingModule]
+  declarations: [RuleHomeComponent, BatchImportComponent, NewCategoryFormComponent],
+  imports: [AppCommonModule, SharedBusinessModule, RuleFormModule, RouterModule, RulesRoutingModule]
 })
 export class RulesModule {}

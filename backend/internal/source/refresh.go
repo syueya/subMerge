@@ -65,8 +65,9 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 	}
 
 	mode := normalizeRegionMode(row.RegionMode)
-	applog.Info("[refresh] source id=%d name=%q mode=%s defaultRegion=%s upstreamBytes=%d ua=%q",
-		row.ID, row.Name, mode, row.Region, len(body), s.userAgent)
+	_, _, userAgent := s.RuntimeOptions()
+	applog.Info("[refresh] 拉取并解析完成 source id=%d name=%q mode=%s defaultRegion=%s upstreamBytes=%d ua=%q",
+		row.ID, row.Name, mode, row.Region, len(body), userAgent)
 
 	// 过滤 + 地区识别 + 改名去重（无 DB 副作用）
 	stats, err := prepareProxies(row.ID, row.Name, mode, row.Region, proxies, filter)
@@ -90,20 +91,20 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 	if err != nil {
 		return common.RefreshSourceResponse{}, err
 	}
-	applog.Info("[refresh] ok source id=%d name=%q previous=%d kept=%d added=%d removed=%d modified=%d skipped=%d upstream=%d parsed=%d filterDropped=%v regionConflicts=%d",
+	applog.Info("[refresh] 刷新成功 source id=%d name=%q previous=%d kept=%d added=%d removed=%d modified=%d skipped=%d upstream=%d parsed=%d filterDropped=%v regionConflicts=%d",
 		row.ID, row.Name, changeStats.previous, changeStats.kept, changeStats.added,
 		changeStats.removed, changeStats.modified, stats.skipped, parseStats.Total, parseStats.Valid,
 		stats.filterDropped, stats.regionConflictTotal)
 	if len(stats.filteredNames) > 0 {
-		applog.Debug("[refresh] filtered source id=%d name=%q total=%d samples=%d omitted=%d reasons=%v",
+		applog.Debug("[refresh] 已过滤节点 source id=%d name=%q total=%d samples=%d omitted=%d reasons=%v",
 			row.ID, row.Name, stats.filteredTotal, len(stats.filteredNames),
 			stats.filteredTotal-len(stats.filteredNames), stats.filterDropped)
 	}
 	if stats.regionConflictTotal > 0 {
-		applog.Debug("[region-detect] conflict source id=%d total=%d samples=%d",
+		applog.Debug("[region-detect] 地区识别冲突 source id=%d total=%d samples=%d",
 			row.ID, stats.regionConflictTotal, len(stats.regionConflicts))
 		for i, conflict := range stats.regionConflicts {
-			applog.Debug("[region-detect] conflict sample=%d name=%q flag=%s keyword=%s resolved=%s",
+			applog.Debug("[region-detect] 冲突样例=%d name=%q flag=%s keyword=%s resolved=%s",
 				i+1, conflict.Name, conflict.FlagRegion, conflict.KeywordRegion, conflict.ResolvedRegion)
 		}
 	}
@@ -258,7 +259,7 @@ func (s *Service) ResetStuckRefresh() error {
 		return res.Error
 	}
 	if res.RowsAffected > 0 {
-		applog.Warn("[startup] reset %d stuck refreshing source(s) to failed", res.RowsAffected)
+		applog.Warn("[startup] 启动时重置 %d 个卡住的刷新任务为失败", res.RowsAffected)
 	}
 	return nil
 }
@@ -267,10 +268,10 @@ func (s *Service) ResetStuckRefresh() error {
 func (s *Service) RefreshAll() common.RefreshAllResponse {
 	var rows []database.Source
 	if err := s.db.Where("enabled = ?", true).Order("id asc").Find(&rows).Error; err != nil {
-		applog.Error("[refresh-all] list enabled sources failed: %v", err)
+		applog.Error("[refresh-all] 获取启用订阅源失败: %v", err)
 		return common.RefreshAllResponse{}
 	}
-	applog.Info("[refresh-all] start total=%d", len(rows))
+	applog.Info("[refresh-all] 开始批量刷新 total=%d", len(rows))
 	out := common.RefreshAllResponse{
 		Total:   len(rows),
 		Results: make([]common.RefreshAllItem, 0, len(rows)),
@@ -282,7 +283,6 @@ func (s *Service) RefreshAll() common.RefreshAllResponse {
 			item.OK = false
 			item.Error = err.Error()
 			out.Failed++
-			applog.Warn("[refresh-all] fail id=%d name=%q: %v", r.ID, r.Name, err)
 		} else {
 			item.OK = true
 			item.Previous = res.Previous
@@ -297,14 +297,14 @@ func (s *Service) RefreshAll() common.RefreshAllResponse {
 
 		out.Results = append(out.Results, item)
 	}
-	applog.Info("[refresh-all] done ok=%d failed=%d total=%d", out.OK, out.Failed, out.Total)
+	applog.Info("[refresh-all] 批量刷新完成 ok=%d failed=%d total=%d", out.OK, out.Failed, out.Total)
 	return out
 }
 
 func (s *Service) failRefresh(row database.Source, cause error) (common.RefreshSourceResponse, error) {
 	// 入库 / 对外展示的错误必须脱敏；日志里 cause 本身若经 fetch 也已 masked
 	errText := cause.Error()
-	applog.Error("[refresh] fail source id=%d name=%q: %s", row.ID, row.Name, errText)
+	applog.Error("[refresh] 刷新失败 source id=%d name=%q: %s", row.ID, row.Name, errText)
 	row.RefreshStatus = string(common.RefreshStatusFailed)
 	row.LastError = errText
 	if err := s.db.Save(&row).Error; err != nil {
@@ -325,7 +325,7 @@ func logRegionDetectSummary(
 	regionCounts, methodCounts map[string]int,
 	samples, fallbackSamples []string,
 ) {
-	applog.Info("[region-detect] source id=%d name=%q mode=%s default=%s kept=%d regions=%s methods=%s",
+	applog.Info("[region-detect] 地区识别汇总 source id=%d name=%q mode=%s default=%s kept=%d regions=%s methods=%s",
 		sourceID, sourceName, mode, defaultRegion, kept,
 		formatCountMap(regionCounts), formatCountMap(methodCounts))
 
@@ -337,12 +337,12 @@ func logRegionDetectSummary(
 			if end > len(samples) {
 				end = len(samples)
 			}
-			applog.Debug("[region-detect] samples id=%d (%d-%d/%d): %s",
+			applog.Debug("[region-detect] 地区样本 id=%d (%d-%d/%d): %s",
 				sourceID, i+1, end, len(samples), strings.Join(samples[i:end], " | "))
 		}
 	}
 	if n := methodCounts["fallback"]; n > 0 {
-		msg := fmt.Sprintf("[region-detect] fallback id=%d count=%d default=%s", sourceID, n, defaultRegion)
+		msg := fmt.Sprintf("[region-detect] 地区识别回退 id=%d count=%d default=%s", sourceID, n, defaultRegion)
 		if len(fallbackSamples) > 0 {
 			msg += " names=[" + strings.Join(fallbackSamples, ", ") + "]"
 			if n > len(fallbackSamples) {

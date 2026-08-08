@@ -178,7 +178,7 @@ func (st *refreshStats) dropFiltered(sourceID uint, p ParsedProxy, reason, extra
 	if len(st.filteredNames) < maxFilteredNameSamples {
 		st.filteredNames = append(st.filteredNames, label)
 	}
-	applog.Debug("[refresh] filter drop source id=%d reason=%q type=%s port=%d",
+	applog.Debug("[refresh] 过滤节点 source id=%d reason=%q type=%s port=%d",
 		sourceID, reason, p.Type, p.Port)
 }
 

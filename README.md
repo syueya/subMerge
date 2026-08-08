@@ -13,7 +13,7 @@
 ## 本地开发
 
 ```bash
-cp .env.example .env   # 改 ENCRYPTION_KEY（≥32 字符）
+cp .env.example .env   # 新环境可留空 ENCRYPTION_KEY；已有部署请保留原密钥
 
 cd backend && go run .
 
@@ -39,8 +39,9 @@ cd frontend && npm start
 | 本地开发（项目根 / `backend/`） | `backend/defaults/geo/`（仓库可带默认文件） |
 | Docker（`WORKDIR=/app`） | `/app/defaults/geo`（**镜像不含默认数据**） |
 
-页面的「更新数据」会从以下地址下载并校验后原子覆盖该目录，服务随后重载索引。地址可通过环境变量覆盖：`GEOIP_URL`、`GEOSITE_URL`、`GEODB_URL`、`GEOASN_URL`。运行进程必须对该目录有写权限。
+页面的「更新数据」会从系统设置中配置的地址下载并校验后原子覆盖该目录，服务随后重载索引。Geo 下载地址、订阅源 User-Agent、超时、刷新间隔、日志和出站代理统一在管理端「设置 → 系统设置」中修改，并保存到 SQLite；不再读取同名环境变量。运行进程必须对该目录有写权限。
 
+升级前如果 `.env` 中配置过这些网页设置项（包括公开访问地址、可信反向代理、Cookie Secure、订阅源、Geo、日志和出站代理），升级后不会继续生效，请登录系统设置页面重新保存。已有数据库中的出站代理配置会保留；没有数据库配置时使用代码默认值。
 Docker 部署请挂载 volume 到 `/app/defaults/geo`（见 compose 的 `./geo`）。首次启动若目录为空（或任一必需文件不可用），进程会**后台自动拉取一次**；失败只记日志，可稍后在 `/geo` 点「更新数据」或重启。不挂 volume 时容器重建会丢已下载文件并再次自动拉取。
 
 `geosite.dat` 支持按分类反查域名条目；GeoIP 文件反查的是其实际保存的 CIDR。`geoip.metadb` 与 ASN 数据库不保存域名，因此不能从分类反查域名。
@@ -68,7 +69,7 @@ cd backend && go build -o ../bin/submerge .
 空库时从 `backend/defaults/` 写入（已有数据不覆盖；改 YAML 需重新编译）：
 
 - **策略组**：直连 / 拒绝 / 常用国家 / 其他国家
-- **分流**：业务规则见 `defaults/rules.yaml`；系统规则由代码固定生成（广告→拒绝、国内 GEOIP→直连、MATCH→美国）
+- **分流**：业务规则见 `defaults/rules.yaml`；系统规则由代码固定生成（广告→拒绝、国内 GEOIP→直连、MATCH→香港）
 
 成员语法：`ALL`、`REGION:US`、`REGION:OTHER`、`SOURCE:源名`、`SOURCE:id:N`、`DIRECT`/`REJECT`、组名或节点名。
 
@@ -77,11 +78,11 @@ Clash 规则行只含 `TYPE,payload,target`（`MATCH,target`），不含业务�
 ## 安全
 
 - 管理后台登录；上游 URL 加密存储；token 只存哈希
-- 会话 Cookie：HttpOnly + SameSite=Lax；是否 Secure 由 `COOKIE_SECURE` 控制（默认 `false`）
+- 会话 Cookie：HttpOnly + SameSite=Lax；Secure 开关在「设置 → 系统设置」中配置，HTTPS 反代通常开启
 - 数据库与密钥不要放静态目录；Docker 用独立 volume；管理端口勿裸暴露公网
-- `ENCRYPTION_KEY` 至少 32 字符（`openssl rand -hex 32`）；`PUBLIC_BASE_URL` 填对外访问根地址（生成订阅链接用）
-- `TRUSTED_PROXIES`：可信反代 IP/CIDR。管限流/审计的真实客户端 IP；无反代留空
-- `COOKIE_SECURE`：`true` 时 Cookie 仅 HTTPS 发送。与 `TRUSTED_PROXIES` **独立**——HTTPS 反代通常两个都配；`http://IP` 访问保持默认 `false`
+- `ENCRYPTION_KEY` 可显式配置（建议生产环境使用外部 Secret）；留空时首次启动会在 `data/crypto.key` 自动生成 32 字节随机密钥。已有部署不要清空或更换原密钥
+- 可信反代 IP/CIDR 和公开访问地址在「设置 → 系统设置」中配置；可信代理变更后需重启服务。无反代时可信代理留空。
+- Cookie Secure 与可信代理独立：HTTPS 反代通常开启 Secure，纯 HTTP 访问保持关闭。
 - 单管理员模型：首次 bootstrap 建号；无多用户 / 角色体系。自动化用 API Key 作用域，客户端用分享 Token
 
 ## 上线检查清单
@@ -90,29 +91,19 @@ Clash 规则行只含 `TYPE,payload,target`（`MATCH,target`），不含业务�
 
 | 变量 | 生产建议 |
 |------|----------|
-| `ENCRYPTION_KEY` | `openssl rand -hex 32`，≥32 字符；**切勿**沿用 compose 示例占位 |
+| `ENCRYPTION_KEY` | 新环境可省略，首次启动自动生成并保存到 `data/crypto.key`；已有部署继续使用原密钥，生产环境建议使用外部 Secret |
 | `APP_ENV` | `production` |
-| `PUBLIC_BASE_URL` | 浏览器实际访问根地址（如 `https://sub.example.com`），影响订阅链接生成 |
-| `COOKIE_SECURE` | 纯 HTTP/`IP:端口` 保持 `false`；HTTPS 反代设 `true` |
-| `TRUSTED_PROXIES` | 有 Nginx/Caddy/NPM/Docker 网桥时填反代 CIDR；裸跑留空 |
-| `SOURCE_REFRESH_INTERVAL` | 按需（小时）；改后重启 |
-| `LOG_RETENTION_DAYS` | 建议 ≥7；磁盘紧可缩短 |
 | `TZ` | 与运维时区一致，默认 `Asia/Shanghai` |
 
-本地可直接改 `.env`；Docker 改 `docker-public/docker-submerge/docker-compose.yaml` 的 `environment`。
+本地可直接改 `.env`；Docker 改 `docker-public/docker-submerge/docker-compose.yaml` 的 `environment`。公开访问地址、可信反向代理和 Cookie Secure，以及订阅源、Geo、日志和出站代理请在「设置 → 系统设置」修改；可信反向代理变更后需要重启服务。
 
 ### 2. Docker Compose 示例改法
 
 ```yaml
 environment:
   - APP_ENV=production
-  - ENCRYPTION_KEY=<openssl rand -hex 32 的结果>
-  - PUBLIC_BASE_URL=https://你的域名
-  - TRUSTED_PROXIES=172.16.0.0/12   # 按实际反代网段改；无反代删此行或留空
-  - COOKIE_SECURE=true              # 仅 HTTPS 时
-  - SOURCE_REFRESH_INTERVAL=24
-  - LOG_OUTPUT=both
-  - LOG_RETENTION_DAYS=7
+  # 新环境可省略 ENCRYPTION_KEY；首次启动会在 /app/data/crypto.key 生成
+  # 已有部署请继续注入原 ENCRYPTION_KEY，不要改成空值
   - TZ=Asia/Shanghai
 volumes:
   - ./data:/app/data   # SQLite 与密钥材料，务必备份
@@ -138,10 +129,10 @@ volumes:
 
 ### 4. 运维与备份
 
-- **备份**：定期拷贝 `data/`（含 SQLite 与加密 salt）；升级或改 `ENCRYPTION_KEY` 前必须先备份
-- **日志**：`log/` 按 `LOG_RETENTION_DAYS` 清理；排障时看审计与应用日志
+- **备份**：定期拷贝 `data/`（含 SQLite、`crypto.salt` 与自动生成的 `crypto.key`）；升级或改 `ENCRYPTION_KEY` 前必须先备份
+- **日志**：`log/` 的保留天数在「设置 → 系统设置」中配置；排障时看审计与应用日志
 - **Geo**：Docker 镜像不含默认 geo；挂载 `/app/defaults/geo`；首次缺失时启动后台自动下载，也可在 `/geo` 手动更新；进程需对该目录有写权限（entrypoint 会 chown）
-- **密钥轮换**：更换 `ENCRYPTION_KEY` 会导致已加密字段无法解密，需有迁移方案；日常不要随意改
+- **密钥轮换**：更换 `ENCRYPTION_KEY` 或删除自动生成的 `data/crypto.key` 会导致已加密字段无法解密，需有迁移方案；日常不要随意改
 
 ### 5. 已知产品边界
 

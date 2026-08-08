@@ -71,17 +71,6 @@ func (s *Service) SeedDefaults() error {
 				return err
 			}
 		}
-		// 旧 MATCH 指向短码/PROXY → 美国US（默认兜底）
-		for _, bad := range []string{"US", "PROXY"} {
-			if err := tx.Model(&database.Rule{}).
-				Where("type = ? AND target = ?", "MATCH", bad).
-				Updates(map[string]interface{}{
-					"target": common.GroupNameDefaultUS,
-					"note":   "默认走代理",
-				}).Error; err != nil {
-				return err
-			}
-		}
 		// 补「其他国家」组（非常用地区节点）
 		if err := ensureNamedGroup(tx, common.GroupNameOther, "url-test", []string{common.RegionTokenOther}, 50); err != nil {
 			return err
@@ -90,7 +79,7 @@ func (s *Service) SeedDefaults() error {
 		if err := repairURLTestGroups(tx); err != nil {
 			return err
 		}
-		// 系统规则（广告/国内/MATCH）由代码托管，缺则补、旧默认出口可对齐
+			// 系统规则（广告/国内/MATCH）由代码托管，缺则补；已有 MATCH 出口不改
 		if err := ensureSystemRules(tx); err != nil {
 			return err
 		}
