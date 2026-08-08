@@ -32,7 +32,7 @@
               <mat-option [value]="t.value">{{ t.text }}</mat-option>
             }
             </mat-select>
-            <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
+            <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
           </mat-form-field>
       </cm-form-field>
 
@@ -44,14 +44,14 @@
           <mat-label>测速 URL<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
             <input matInput formControlName="url" [placeholder]="defaultTestURL" />
-            <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
+            <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
           </mat-form-field>
         </cm-form-field>
         <cm-form-field class="col-24 col-md-8" [help]="'重新测速间隔（秒）。例如 300 = 每 5 分钟测一次。'">
             <mat-label>测速间隔（秒）<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
             <mat-form-field appearance="outline" class="w-full" color="primary">
               <input matInput type="number" min="30" step="30" formControlName="interval" />
-              <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
+              <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
             </mat-form-field>
         </cm-form-field>
       }
@@ -134,7 +134,7 @@
 
 <cm-dialog-footer>
 
-  
+
   <button mat-flat-button color="primary" type="button" [disabled]="isSubmitting" (click.debounceTime)="submit()">
     {{ isSubmitting ? '保存中...' : isUpdate ? '保存修改' : '创建策略组' }}
   </button>

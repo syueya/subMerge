@@ -24,7 +24,7 @@
               <mat-option [value]="orphan">{{ orphan }}（已不存在）</mat-option>
             }
           </mat-select>
-          <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
+          <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
         </mat-form-field>
         @if (data.groups.length === 0) {
           <p class="f-s-12 text-muted m-b-12">
@@ -65,7 +65,7 @@
               <mat-option [value]="t.value">{{ t.text }}</mat-option>
             }
           </mat-select>
-          <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
+          <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
         </mat-form-field>
       </cm-form-field>
 
@@ -74,7 +74,7 @@
           <mat-label>{{ payloadLabelText() }}<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
             <input matInput formControlName="payload" [placeholder]="payloadPlaceholderText()" />
-            <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
+            <mat-error class="m-b-16 text-right"><cm-form-field-error></cm-form-field-error></mat-error>
           </mat-form-field>
         </cm-form-field>
       }
@@ -91,7 +91,7 @@
 
 <cm-dialog-footer>
 
-  
+
   <button mat-flat-button color="primary" type="button" [disabled]="isSubmitting" (click.debounceTime)="submit()">
     {{ isSubmitting ? '保存中...' : isUpdate ? '更新规则' : '添加规则' }}
   </button>
