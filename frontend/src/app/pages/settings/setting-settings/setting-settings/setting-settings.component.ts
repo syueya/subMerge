@@ -56,7 +56,7 @@ export class SettingSettingsComponent extends CmParentFormComponent {
 
   save(): void {
     if (this.saving()) return;
-    if (this.form.invalid) { this.form.markAllAsTouched(); void this.dialog.error('请检查系统设置中的无效字段'); return; }
+    if (this.form.invalid) { this.form.markAllAsTouched(); this.form.updateValueAndValidity(); void this.dialog.error('请检查系统设置中的无效字段'); return; }
     this.saving.set(true);
     const raw = this.form.getRawValue();
     const payload = { ...raw, sourceMaxBytes: raw.sourceMaxBytes * 1048576 };

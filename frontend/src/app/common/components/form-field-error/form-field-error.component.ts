@@ -15,18 +15,13 @@ export enum ErrorsDefault {
   InvalidChar = 'chars',
   ConfirmPasswordMismatch = 'confirmPasswordMismatch',
   userNameInvalid = 'userNameInvalid',
-  CronMinIntervalInvalid = 'cronMinIntervalInvalid'
+  CronMinIntervalInvalid = 'cronMinIntervalInvalid',
+  Pattern = 'pattern'
 }
 
 @Component({
     selector: 'cm-form-field-error',
-    template: `
-    @if (computedError) {
-
-      {{ computedError | async }}
-    
-}
-  `,
+    template: `@if (computedError | async; as err) { {{ err }} }`,
     encapsulation: ViewEncapsulation.None,
     changeDetection: ChangeDetectionStrategy.Default,
     standalone: false
@@ -52,6 +47,7 @@ export class FormFieldErrorComponent implements AfterViewInit {
     [ErrorsDefault.ConfirmPasswordMismatch, '两次输入的密码不一致'],
     [ErrorsDefault.userNameInvalid, '用户名必须为字母开头，包含大小写、数字至少一种'],
     [ErrorsDefault.CronMinIntervalInvalid, '最低执行间隔应该大于{{minInterval}}分钟'],
+    [ErrorsDefault.Pattern, '格式不正确'],
   ]);
 
   @Input() control?: AbstractControl;
@@ -129,6 +125,9 @@ export class FormFieldErrorComponent implements AfterViewInit {
         }
         if (key === ErrorsDefault.CronMinIntervalInvalid) {
           return of(this.getTranslationOrValue(value, { minInterval: this.minInterval }));
+        }
+        if (key === ErrorsDefault.Pattern) {
+          return of(this.getTranslationOrValue(value));
         }
       } else {
         return of('字段未定义');

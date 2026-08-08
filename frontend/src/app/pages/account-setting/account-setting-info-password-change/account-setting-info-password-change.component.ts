@@ -18,11 +18,11 @@ export class AccountSettingInfoPasswordChangeComponent extends CmParentFormCompo
   override isSubmitting = false;
 
   override editForm = new FormGroup({
-    oldPassword: new FormControl('', [Validators.required, Validators.minLength(1), Validators.maxLength(72)]),
-    password: new FormControl('', [Validators.required, Validators.minLength(10), Validators.maxLength(72)]),
+    oldPassword: new FormControl('', [Validators.required, Validators.minLength(6), Validators.maxLength(72)]),
+    password: new FormControl('', [Validators.required, Validators.minLength(6), Validators.maxLength(72)]),
     passwordSecond: new FormControl('', [
       Validators.required,
-      Validators.minLength(10),
+      Validators.minLength(6),
       Validators.maxLength(72),
       validateConfirmPassword('password')
     ])
