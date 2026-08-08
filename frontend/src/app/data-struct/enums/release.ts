@@ -9,7 +9,7 @@ export const ReleaseStatus = {
 	RolledBack: 'rolled_back',
 } as const;
 
-export const RELEASE_STATUS_OPTIONS: readonly EnumOption<ReleaseStatus>[] = [
+export const RELEASE_STATUS_OPTIONS: ReadonlyArray<EnumOption<ReleaseStatus>> = [
 	{ value: 'draft', text: '草稿' },
 	{ value: 'published', text: '当前生效' },
 	// 被更新发布/回滚顶替后的旧版，并非「曾执行过回滚操作」

@@ -214,7 +214,7 @@ path === '/api/releases' ||
   }
 
   private stableSerialize(value: unknown): string {
-    if (value == null || value === '') {
+    if (value === null || value === undefined || value === '') {
       return '';
     }
     if (typeof value === 'string') {

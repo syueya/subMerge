@@ -1,16 +1,18 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+import { DialogService } from '@common/services/dialog.service';
 import {
 	BatchImportDialogData,
 	RULE_TYPE_OPTIONS,
 	RuleType,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { RuleService } from '../services/rule.service';
-import { buildCategoryOptions } from '../services/rule-ui';
-import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { finalize, takeUntil } from 'rxjs';
+
+import { buildCategoryOptions } from '../services/rule-ui';
+import { RuleService } from '../services/rule.service';
+
 
 @Component({
 	selector: 'app-batch-import',
@@ -77,7 +79,7 @@ ruleTypes = RULE_TYPE_OPTIONS;
 					const parts = [`已导入 ${res.created} 条`];
 					if (res.skipped) parts.push(`跳过 ${res.skipped} 条`);
 					if (res.errors?.length) parts.push(`提示 ${res.errors.length} 条`);
-					void this.dialog.success(parts.join('，') + '（草稿，需发布后生效）');
+					void this.dialog.success(`${parts.join('，')  }（草稿，需发布后生效）`);
 					if (res.errors?.length) {
 						console.warn('batch import notes', res.errors);
 					}

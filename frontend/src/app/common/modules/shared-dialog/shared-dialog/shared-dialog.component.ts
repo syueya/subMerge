@@ -4,9 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { IconsModule } from '@common/modules/icons/icons.module';
 import { CmSharedDialogDataModel } from '@common/modules/shared-dialog/enum/CmSharedDialogDataModel';
 import { CmSharedDialogData } from '@common/modules/shared-dialog/interfaces/CmSharedDialogData';
-import { IconsModule } from '@common/modules/icons/icons.module';
 
 /**
  * 确认/提示弹窗。

@@ -1,14 +1,16 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { catchError, of, takeUntil } from 'rxjs';
+import { CmParentComponent } from '@common/parents/parent/parent.component';
 import { DialogService } from '@common/services/dialog.service';
 import { formatDateTime } from '@common/util';
 import { BADGE_WARN, Release } from '@data-struct';
+import { catchError, of, takeUntil } from 'rxjs';
+
 import { DraftStatusStore } from '../../releases/services/draft-status.store';
 import { ReleaseService } from '../../releases/services/release.service';
 import { RuleService } from '../../rules/services/rule.service';
 import { SourceService } from '../../sources/services/source.service';
 import { TokenService } from '../../tokens/services/token.service';
-import { CmParentComponent } from '@common/parents/parent/parent.component';
+
 
 @Component({
 	selector: 'app-dashboard-home',

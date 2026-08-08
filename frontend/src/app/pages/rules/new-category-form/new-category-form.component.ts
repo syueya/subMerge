@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatDialogRef } from '@angular/material/dialog';
-import { DialogService } from '@common/services/dialog.service';
-import { CATEGORY_NEW_VALUE } from '../services/rule-ui';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+import { DialogService } from '@common/services/dialog.service';
+
+import { CATEGORY_NEW_VALUE } from '../services/rule-ui';
 
 @Component({
 	selector: 'app-new-category-form',

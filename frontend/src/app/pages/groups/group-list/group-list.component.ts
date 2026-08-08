@@ -1,4 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+	import { CmParentComponent } from '@common/parents/parent/parent.component';
+	import { DialogService } from '@common/services/dialog.service';
 import {
 		BADGE_MUTED,
 		BADGE_OK,
@@ -9,13 +12,11 @@ import {
 		Rule,
 		enumText,
 	} from '@data-struct';
-	import { DialogService } from '@common/services/dialog.service';
-	import { DraftStatusStore } from '../../releases/services/draft-status.store';
-	import { SourceService } from '../../sources/services/source.service';
-	import { RuleService } from '../../rules/services/rule.service';
-	import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
 	import { takeUntil } from 'rxjs';
-	import { CmParentComponent } from '@common/parents/parent/parent.component';
+
+	import { DraftStatusStore } from '../../releases/services/draft-status.store';
+	import { RuleService } from '../../rules/services/rule.service';
+	import { SourceService } from '../../sources/services/source.service';
 	import { GroupFormComponent } from '../group-form/group-form.component';
 
 @Component({
@@ -32,9 +33,9 @@ export class GroupListComponent extends CmParentComponent implements OnInit {
 
 	groups = signal<ProxyGroup[]>([]);
 	rules = signal<Rule[]>([]);
-	regionCatalog = signal<{ code: string; name: string }[]>([]);
+	regionCatalog = signal<Array<{ code: string; name: string }>>([]);
 	extraRegionCodes = signal<string[]>([]);
-	knownSources = signal<{ id: number; name: string }[]>([]);
+	knownSources = signal<Array<{ id: number; name: string }>>([]);
 	override isLoading = signal(true);
 
 	readonly defaultTestInterval = 300;
@@ -90,7 +91,7 @@ export class GroupListComponent extends CmParentComponent implements OnInit {
 				.pipe(takeUntil(this.$destroy))
 				.subscribe({
 					next: (r) => {
-						const sources: { id: number; name: string }[] = [];
+						const sources: Array<{ id: number; name: string }> = [];
 						const extras = new Set(this.extraRegionCodes());
 						const catalogCodes = new Set(this.regionCatalog().map((x) => x.code));
 						for (const s of r.items || []) {

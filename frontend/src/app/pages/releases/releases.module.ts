@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { AppCommonModule } from '@common/common.module';
+
 import { SharedBusinessModule } from '../_shared/shared-business.module';
 import { PublishNoteFormComponent } from './publish-note-form/publish-note-form.component';
 import { ReleaseDetailComponent } from './release-detail/release-detail.component';

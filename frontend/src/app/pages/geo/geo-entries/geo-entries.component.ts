@@ -1,8 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
-import { BADGE_MUTED, GeoEntriesAddRuleResult, GeoEntriesDialogData, GeoEntriesDialogResult, GeoEntryRow } from '@data-struct';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
+import { BADGE_MUTED, GeoEntriesAddRuleResult, GeoEntriesDialogData, GeoEntriesDialogResult, GeoEntryRow } from '@data-struct';
 
 @Component({
   selector: 'app-geo-entries',

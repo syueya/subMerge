@@ -2,6 +2,7 @@ package netcheck
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 )
@@ -67,18 +68,43 @@ func normalizeTargetURL(value string) (string, error) {
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return "", fmt.Errorf("目标 URL 只支持 http/https")
 	}
+	if err := validateTargetHost(parsed.Hostname()); err != nil {
+		return "", err
+	}
 	return raw, nil
 }
 
+func validateTargetHost(host string) error {
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return fmt.Errorf("目标主机解析失败")
+	}
+	for _, ip := range ips {
+		if isBlockedTargetIP(ip) {
+			return fmt.Errorf("目标地址禁止访问内网或保留地址")
+		}
+	}
+	return nil
+}
+
+func isBlockedTargetIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+	cgnat := &net.IPNet{IP: net.IPv4(100, 64, 0, 0), Mask: net.CIDRMask(10, 32)}
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() || cgnat.Contains(ip)
+}
+
 func normalizeProxy(proxyCfg ProxyConfig) (ProxyConfig, error) {
-		raw := strings.TrimSpace(proxyCfg.URL)
-		if !proxyCfg.Enabled {
-			return ProxyConfig{Enabled: false, URL: raw}, nil
-		}
-		if raw == "" {
-			// 已启用但未填地址 — 由调用方决定回退策略
-			return ProxyConfig{Enabled: true, URL: ""}, nil
-		}
+	raw := strings.TrimSpace(proxyCfg.URL)
+	if !proxyCfg.Enabled {
+		return ProxyConfig{Enabled: false, URL: raw}, nil
+	}
+	if raw == "" {
+		// 已启用但未填地址 — 由调用方决定回退策略
+		return ProxyConfig{Enabled: true, URL: ""}, nil
+	}
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Hostname() == "" {
 		return ProxyConfig{}, fmt.Errorf("代理地址无效")

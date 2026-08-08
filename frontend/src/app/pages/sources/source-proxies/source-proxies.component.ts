@@ -1,10 +1,12 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { BADGE_MUTED, BADGE_OK, BADGE_WARN, ProxyNode, SourceProxiesDialogData, SubscriptionSource } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { SourceService } from '../services/source.service';
-import { Subject, debounceTime, distinctUntilChanged, finalize, takeUntil } from 'rxjs';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
+import { DialogService } from '@common/services/dialog.service';
+import { BADGE_MUTED, BADGE_OK, BADGE_WARN, ProxyNode, SourceProxiesDialogData, SubscriptionSource } from '@data-struct';
+import { Subject, debounceTime, distinctUntilChanged, finalize, takeUntil } from 'rxjs';
+
+import { SourceService } from '../services/source.service';
+
 
 /** 搜索归一化：去零宽字符 + NFKC（全角→半角）+ 小写 */
 function normalizeSearch(s: string): string {
@@ -18,7 +20,7 @@ function normalizeSearch(s: string): string {
 /** 节点是否命中关键词（分字段 includes，单字母也可） */
 function proxyMatchesQuery(p: ProxyNode, q: string): boolean {
   if (!q) return true;
-  const fields = [p.name, p.server, p.type, p.region, p.issue || '', p.port != null ? String(p.port) : ''];
+  const fields = [p.name, p.server, p.type, p.region, p.issue || '', p.port !== null && p.port !== undefined ? String(p.port) : ''];
   return fields.some(f => normalizeSearch(String(f ?? '')).includes(q));
 }
 

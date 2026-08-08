@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/submerge/submerge/backend/internal/outbound"
@@ -91,6 +94,17 @@ func buildHTTPClient(proxyCfg ProxyConfig, timeoutSec int) (*http.Client, error)
 	if err != nil {
 		return nil, fmt.Errorf("代理解析失败：%w", err)
 	}
+	if proxyURL(proxyCfg) == "" {
+		dialer := &net.Dialer{Timeout: timeout, KeepAlive: 30 * time.Second}
+		dialer.Control = func(network, address string, rawConn syscall.RawConn) error {
+			host, _, err := net.SplitHostPort(address)
+			if err != nil || isBlockedTargetIP(net.ParseIP(host)) {
+				return fmt.Errorf("目标地址禁止访问内网或保留地址")
+			}
+			return nil
+		}
+		transport.DialContext = dialer.DialContext
+	}
 	return &http.Client{
 		Timeout:   timeout,
 		Transport: transport,
@@ -127,6 +141,13 @@ func checkTarget(client *http.Client, target Target, timeoutSec int) TargetResul
 
 func doHTTP(client *http.Client, rawURL, method string, timeoutSec int) HTTPResult {
 	started := time.Now()
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Hostname() == "" {
+		return failedHTTP(int(time.Since(started).Milliseconds()), "构建请求失败：目标 URL 无效")
+	}
+	if err := validateTargetHost(parsed.Hostname()); err != nil {
+		return failedHTTP(int(time.Since(started).Milliseconds()), err.Error())
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, method, rawURL, nil)

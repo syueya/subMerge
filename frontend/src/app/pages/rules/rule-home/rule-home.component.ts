@@ -1,4 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+import { CmParentComponent } from '@common/parents/parent/parent.component';
+import { DialogService } from '@common/services/dialog.service';
 import {
 	BADGE_MUTED,
 	BADGE_OK,
@@ -15,9 +18,13 @@ import {
 	RuleType,
 	enumText,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
+import { takeUntil, finalize } from 'rxjs';
+
+import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
 	import { DraftStatusStore } from '../../releases/services/draft-status.store';
-	import { RuleService } from '../services/rule.service';
+import { BatchImportComponent } from '../batch-import/batch-import.component';
+import { NewCategoryFormComponent } from '../new-category-form/new-category-form.component';
+import { RuleFormComponent } from '../rule-form/rule-form.component';
 import {
 	buildCategorySections,
 	buildTargetSections,
@@ -32,13 +39,7 @@ import {
 	moveRuleWithinGroup,
 	sortRules,
 } from '../services/rule-ui';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-import { CmParentComponent } from '@common/parents/parent/parent.component';
-import { takeUntil, finalize } from 'rxjs';
-import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
-import { BatchImportComponent } from '../batch-import/batch-import.component';
-import { NewCategoryFormComponent } from '../new-category-form/new-category-form.component';
-import { RuleFormComponent } from '../rule-form/rule-form.component';
+	import { RuleService } from '../services/rule.service';
 
 @Component({
 	selector: 'app-rule-home',

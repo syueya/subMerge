@@ -7,8 +7,8 @@ import { IconsModule } from '@common/modules/icons/icons.module';
 
 import { CmCheckboxItemGroupComponent } from './checkbox-item-group/checkbox-item-group.component';
 import { CmCollapsePanelComponent } from './collapse-panel/collapse-panel.component';
-import { CmDialogHeaderComponent } from './dialog-header/dialog-header.component';
 import { CmDialogFooterComponent } from './dialog-footer/dialog-footer.component';
+import { CmDialogHeaderComponent } from './dialog-header/dialog-header.component';
 import { FilterActionsComponent } from './filter-actions/filter-actions.component';
 import { FilterResultCountComponent } from './filter-result-count/filter-result-count.component';
 import { FormFieldErrorComponent } from './form-field-error/form-field-error.component';

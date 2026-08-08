@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+
 import { NetCheckPageComponent } from './net-check-page/net-check-page.component';
 
 const routes: Routes = [

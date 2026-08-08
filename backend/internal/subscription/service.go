@@ -52,7 +52,7 @@ func (s *Service) baseURLSnapshot() string {
 	return s.baseURL
 }
 
-func (s *Service) List() (common.TokenListResponse, error) {
+func (s *Service) List(allowPlain bool) (common.TokenListResponse, error) {
 	var rows []database.ShareToken
 	if err := s.db.Order("id desc").Find(&rows).Error; err != nil {
 		return common.TokenListResponse{}, err
@@ -63,7 +63,7 @@ func (s *Service) List() (common.TokenListResponse, error) {
 	}
 	items := make([]common.ShareToken, 0, len(rows))
 	for _, r := range rows {
-		items = append(items, s.toView(r, nameByID))
+		items = append(items, s.toView(r, nameByID, allowPlain))
 	}
 	return common.TokenListResponse{Items: items}, nil
 }
@@ -108,7 +108,7 @@ func (s *Service) Create(name string, sourceIDs []uint, groupMode common.TokenGr
 		return common.ShareToken{}, err
 	}
 	nameByID, _ := s.sourceNameMap()
-	return s.toView(row, nameByID), nil
+	return s.toView(row, nameByID, true), nil
 }
 
 func (s *Service) Update(id uint, req common.UpdateTokenRequest) (common.ShareToken, error) {
@@ -159,7 +159,7 @@ func (s *Service) Update(id uint, req common.UpdateTokenRequest) (common.ShareTo
 		return common.ShareToken{}, err
 	}
 	nameByID, _ := s.sourceNameMap()
-	return s.toView(row, nameByID), nil
+	return s.toView(row, nameByID, true), nil
 }
 
 // Revoke 作废令牌：保留行与访问统计，Status=revoked，旧订阅链接立即失效。
@@ -192,7 +192,7 @@ func (s *Service) Regenerate(id uint) (common.ShareToken, error) {
 		return common.ShareToken{}, err
 	}
 	nameByID, _ := s.sourceNameMap()
-	return s.toView(row, nameByID), nil
+	return s.toView(row, nameByID, true), nil
 }
 
 // Delete 硬删除令牌行，释放 TokenHash 唯一索引。

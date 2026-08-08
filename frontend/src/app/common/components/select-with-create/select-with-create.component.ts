@@ -60,7 +60,7 @@ export class SelectWithCreateComponent implements ControlValueAccessor, OnInit, 
 
   writeValue(value: string | null): void {
     this.writing = true;
-    const v = value == null ? '' : String(value);
+    const v = value === null || value === undefined ? '' : String(value);
     this.committedValue = v;
     this.inputCtrl.setValue(this.displayTextFor(v), { emitEvent: false });
     this.writing = false;

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
 import { ApiService } from '@common/net/api.service';
 import { SystemSettingsUpdate, SystemSettingsView } from '@data-struct';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class SystemSettingsService {

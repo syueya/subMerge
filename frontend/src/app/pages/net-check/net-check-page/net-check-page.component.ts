@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { CmParentComponent } from '@common/parents/parent/parent.component';
 import { CmDialogOpenService, CM_DIALOG_WIDTH } from '@common/modules/dialog/dialog-open.service';
+import { CmParentComponent } from '@common/parents/parent/parent.component';
 import { DialogService } from '@common/services/dialog.service';
 import {
   BADGE_ERR,
@@ -12,6 +12,7 @@ import {
   NetCheckSummary,
 } from '@data-struct';
 import { takeUntil } from 'rxjs';
+
 import { NetCheckTargetManageComponent } from '../net-check-target-manage/net-check-target-manage.component';
 import { NetCheckService } from '../services/net-check.service';
 

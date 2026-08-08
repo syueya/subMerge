@@ -17,5 +17,5 @@ export class CmDialogFooterComponent {
 	/** true 时取消按钮交由 (cancel) 事件处理，不默认触发 mat-dialog-close */
 	@Input() customCancel = false;
 	/** customCancel=true 时的取消点击回调 */
-	@Output() cancel = new EventEmitter<void>();
+	@Output() readonly cancel = new EventEmitter<void>();
 }

@@ -27,7 +27,7 @@ export enum ErrorsDefault {
 }
   `,
     encapsulation: ViewEncapsulation.None,
-    changeDetection: ChangeDetectionStrategy.Default,
+    changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
 export class FormFieldErrorComponent {

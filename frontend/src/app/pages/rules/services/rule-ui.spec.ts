@@ -1,4 +1,5 @@
 import { Rule } from '@data-struct';
+
 import {
   canMoveRule,
   canMoveRuleGroup,

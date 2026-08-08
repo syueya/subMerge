@@ -21,7 +21,7 @@ export const RuleType = {
 	MATCH: 'MATCH',
 } as const;
 
-export const RULE_TYPE_OPTIONS: readonly EnumOption<RuleType>[] = [
+export const RULE_TYPE_OPTIONS: ReadonlyArray<EnumOption<RuleType>> = [
 	{ value: 'DOMAIN', text: '域名' },
 	{ value: 'DOMAIN-SUFFIX', text: '域名后缀' },
 	{ value: 'DOMAIN-KEYWORD', text: '域名关键词' },

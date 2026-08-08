@@ -1,12 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { RULE_TYPE_OPTIONS, RuleFormDialogData, RuleType } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { RuleService } from '../services/rule.service';
-import { buildCategoryOptions, isMatchType, isSystemRule, orphanTargetValue, payloadLabel, payloadPlaceholder, payloadTip } from '../services/rule-ui';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+import { DialogService } from '@common/services/dialog.service';
+import { RULE_TYPE_OPTIONS, RuleFormDialogData, RuleType } from '@data-struct';
 import { finalize, takeUntil } from 'rxjs';
+
+import { buildCategoryOptions, isMatchType, isSystemRule, orphanTargetValue, payloadLabel, payloadPlaceholder, payloadTip } from '../services/rule-ui';
+import { RuleService } from '../services/rule.service';
+
 
 @Component({
   selector: 'app-rule-form',
@@ -109,7 +111,7 @@ export class RuleFormComponent extends CmParentFormComponent {
       category
     };
     this.isSubmitting = true;
-    const req = this.data.rule == null ? this.svc.createRule(body) : this.svc.updateRule(this.data.rule.id, body);
+    const req = (this.data.rule === null || this.data.rule === undefined) ? this.svc.createRule(body) : this.svc.updateRule(this.data.rule.id, body);
     req
       .pipe(
         takeUntil(this.$destroy),

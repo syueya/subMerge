@@ -1,10 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { finalize, takeUntil } from 'rxjs';
-import { DialogService } from '@common/services/dialog.service';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
-import { SystemSettingsService } from '../../services/system-settings.service';
+import { DialogService } from '@common/services/dialog.service';
 import { SystemSettingsView } from '@data-struct';
+import { finalize, takeUntil } from 'rxjs';
+
+import { SystemSettingsService } from '../../services/system-settings.service';
+
 
 @Component({
   selector: 'app-setting-settings',

@@ -33,10 +33,16 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 	if err := s.db.First(&row, id).Error; err != nil {
 		return common.RefreshSourceResponse{}, err
 	}
-	row.RefreshStatus = string(common.RefreshStatusRunning)
-	if err := s.db.Save(&row).Error; err != nil {
+	if err := s.db.Model(&database.Source{}).
+		Where("id = ?", id).
+		Update("refresh_status", string(common.RefreshStatusRunning)).Error; err != nil {
 		return common.RefreshSourceResponse{}, fmt.Errorf("mark source refresh running: %w", err)
 	}
+	var running database.Source
+	if err := s.db.First(&running, id).Error; err != nil {
+		return common.RefreshSourceResponse{}, err
+	}
+	row = running
 
 	rawURL, err := s.box.Decrypt(row.URLEncrypted)
 	if err != nil {
@@ -87,7 +93,11 @@ func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
 		return s.failRefresh(row, err)
 	}
 
-	view, err := s.toView(row)
+	viewRow := row
+	if err := s.db.First(&viewRow, row.ID).Error; err != nil {
+		return common.RefreshSourceResponse{}, err
+	}
+	view, err := s.toView(viewRow)
 	if err != nil {
 		return common.RefreshSourceResponse{}, err
 	}
@@ -147,20 +157,24 @@ func (s *Service) persistRefresh(
 	body []byte,
 	userInfo SubscriptionUserInfo,
 ) (proxyChangeStats, error) {
-	var oldProxies []database.Proxy
-	if err := s.db.Where("source_id = ?", row.ID).Find(&oldProxies).Error; err != nil {
-		return proxyChangeStats{}, fmt.Errorf("load existing proxies: %w", err)
-	}
-	changeStats := diffProxySnapshots(oldProxies, kept)
-
-	oldEnabled := map[string]bool{}
-	for _, op := range oldProxies {
-		if op.Fingerprint != "" {
-			oldEnabled[op.Fingerprint] = op.Enabled
-		}
-	}
-
+	var changeStats proxyChangeStats
 	err := s.db.Transaction(func(tx *gorm.DB) error {
+		var current database.Source
+		if err := tx.First(&current, row.ID).Error; err != nil {
+			return err
+		}
+		var oldProxies []database.Proxy
+		if err := tx.Where("source_id = ?", row.ID).Find(&oldProxies).Error; err != nil {
+			return fmt.Errorf("load existing proxies: %w", err)
+		}
+		changeStats = diffProxySnapshots(oldProxies, kept)
+
+		oldEnabled := map[string]bool{}
+		for _, op := range oldProxies {
+			if op.Fingerprint != "" {
+				oldEnabled[op.Fingerprint] = op.Enabled
+			}
+		}
 		if err := tx.Unscoped().Where("source_id = ?", row.ID).Delete(&database.Proxy{}).Error; err != nil {
 			return err
 		}
@@ -184,23 +198,24 @@ func (s *Service) persistRefresh(
 			}
 		}
 		now := time.Now()
-		row.RefreshStatus = string(common.RefreshStatusSuccess)
-		row.LastRefreshAt = &now
-		row.LastError = ""
-		row.SnapshotYAML = string(body)
-		// 有 userinfo 头则覆盖；无头则清零，避免展示过期残留
-		if userInfo.HasAny() {
-			row.TrafficUpload = userInfo.Upload
-			row.TrafficDownload = userInfo.Download
-			row.TrafficTotal = userInfo.Total
-			row.TrafficExpire = userInfo.Expire
-		} else {
-			row.TrafficUpload = 0
-			row.TrafficDownload = 0
-			row.TrafficTotal = 0
-			row.TrafficExpire = 0
+		updates := map[string]interface{}{
+			"refresh_status":  string(common.RefreshStatusSuccess),
+			"last_refresh_at": &now,
+			"last_error":      "",
+			"snapshot_yaml":   string(body),
 		}
-		return tx.Save(row).Error
+		if userInfo.HasAny() {
+			updates["traffic_upload"] = userInfo.Upload
+			updates["traffic_download"] = userInfo.Download
+			updates["traffic_total"] = userInfo.Total
+			updates["traffic_expire"] = userInfo.Expire
+		} else {
+			updates["traffic_upload"] = 0
+			updates["traffic_download"] = 0
+			updates["traffic_total"] = 0
+			updates["traffic_expire"] = 0
+		}
+		return tx.Model(&database.Source{}).Where("id = ?", current.ID).Updates(updates).Error
 	})
 	if err != nil {
 		return proxyChangeStats{}, err
@@ -305,12 +320,17 @@ func (s *Service) failRefresh(row database.Source, cause error) (common.RefreshS
 	// 入库 / 对外展示的错误必须脱敏；日志里 cause 本身若经 fetch 也已 masked
 	errText := cause.Error()
 	applog.Error("[refresh] 刷新失败 source id=%d name=%q: %s", row.ID, row.Name, errText)
-	row.RefreshStatus = string(common.RefreshStatusFailed)
-	row.LastError = errText
-	if err := s.db.Save(&row).Error; err != nil {
+	if err := s.db.Model(&database.Source{}).Where("id = ?", row.ID).Updates(map[string]interface{}{
+		"refresh_status": string(common.RefreshStatusFailed),
+		"last_error":     errText,
+	}).Error; err != nil {
 		return common.RefreshSourceResponse{}, fmt.Errorf("refresh failed (%s); save failure state: %w", errText, err)
 	}
-	view, err := s.toView(row)
+	var current database.Source
+	if err := s.db.First(&current, row.ID).Error; err != nil {
+		return common.RefreshSourceResponse{}, err
+	}
+	view, err := s.toView(current)
 	if err != nil {
 		return common.RefreshSourceResponse{}, err
 	}

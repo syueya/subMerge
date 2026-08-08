@@ -1,11 +1,12 @@
 import { HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, Subscription, finalize, shareReplay, tap } from 'rxjs';
 import { ApiRequestOptions, ApiService } from '@common/net/api.service';
 import { CachedRequest } from '@common/net/cached-request';
-import { DialogService } from '@common/services/dialog.service';
 import { withWtHttpCacheBypass } from '@common/net/session-http-cache';
+import { DialogService } from '@common/services/dialog.service';
 import { ListResponse, ProxyNode, RefreshAllResult, RefreshSourceResult, RegionCatalogResponse, SourceUpsertBody, SubscriptionSource } from '@data-struct';
+import { Observable, Subscription, finalize, shareReplay, tap } from 'rxjs';
+
 import { formatRefreshMsg } from './source-refresh.util';
 
 /** 后台拉取可能包含网络等待和解析；默认 30s 不够，给 10 分钟 */
@@ -159,7 +160,7 @@ export class SourceService {
 
   listProxies(sourceId?: number, forceRefresh = false): Observable<ListResponse<ProxyNode>> {
     // 只缓存全量节点列表（跨页共用的那份）；按源过滤的查询直接透传。
-    if (sourceId == null) {
+    if (sourceId === null || sourceId === undefined) {
       return this.proxiesCache.get(forceRefresh);
     }
     const params = new HttpParams().set('sourceId', sourceId);

@@ -25,7 +25,7 @@ export const APIKeyScope = {
 } as const;
 
 /** 权限 chips：全部优先；读取 / 写入 / 发布可组合（* 覆盖三者） */
-export const API_KEY_SCOPE_OPTIONS: readonly EnumOption<APIKeyScope>[] = [
+export const API_KEY_SCOPE_OPTIONS: ReadonlyArray<EnumOption<APIKeyScope>> = [
 	{ value: '*', text: '全部' },
 	{ value: 'read', text: '读取' },
 	{ value: 'write', text: '写入' },

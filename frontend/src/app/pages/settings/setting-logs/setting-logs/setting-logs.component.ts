@@ -4,9 +4,9 @@ import { FormBuilder, FormControl } from '@angular/forms';
 import { ServiceQueryParams } from '@common/interfaces';
 import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
 import { formatDate } from '@common/util';
+import { SystemLogs, SystemLogsType } from '@data-struct';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, takeUntil } from 'rxjs';
 
-import { SystemLogs, SystemLogsType } from '@data-struct';
 import { LogService } from '../services/log.service';
 
 @Component({

@@ -9,7 +9,7 @@ export const ProxyGroupType = {
 	LoadBalance: 'load-balance',
 } as const;
 
-export const PROXY_GROUP_TYPE_OPTIONS: readonly EnumOption<ProxyGroupType>[] = [
+export const PROXY_GROUP_TYPE_OPTIONS: ReadonlyArray<EnumOption<ProxyGroupType>> = [
 	{ value: 'select', text: '手动选择' },
 	{ value: 'url-test', text: '自动测速' },
 	{ value: 'fallback', text: '故障转移' },

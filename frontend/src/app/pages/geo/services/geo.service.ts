@@ -1,8 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, Subscription } from 'rxjs';
-import { GeoCategoriesResponse, GeoIPGeoResponse, GeoQueryResponse, GeoReverseResponse, GeoSearchResponse, GeoStatus, GeoUpdateResponse } from '@data-struct';
 import { ApiService } from '@common/net/api.service';
 import { DialogService } from '@common/services/dialog.service';
+import { GeoCategoriesResponse, GeoIPGeoResponse, GeoQueryResponse, GeoReverseResponse, GeoSearchResponse, GeoStatus, GeoUpdateResponse } from '@data-struct';
+import { Observable, Subscription } from 'rxjs';
 
 const GEO_RESOURCE_NAME: Record<string, string> = {
   'geoip.dat': 'GeoIP',

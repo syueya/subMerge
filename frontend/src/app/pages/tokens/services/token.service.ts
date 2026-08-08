@@ -1,5 +1,4 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
 import { ApiService } from '@common/net/api.service';
 import { CachedRequest } from '@common/net/cached-request';
 import {
@@ -8,6 +7,7 @@ import {
 	TokenGroupMode,
 	TokenUpsertBody,
 } from '@data-struct';
+import { Observable, tap } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class TokenService {

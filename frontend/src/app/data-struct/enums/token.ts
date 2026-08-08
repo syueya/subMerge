@@ -9,7 +9,7 @@ export const TokenStatus = {
 	Revoked: 'revoked',
 } as const;
 
-export const TOKEN_STATUS_OPTIONS: readonly EnumOption<TokenStatus>[] = [
+export const TOKEN_STATUS_OPTIONS: ReadonlyArray<EnumOption<TokenStatus>> = [
 	{ value: 'active', text: '启用' },
 	{ value: 'disabled', text: '禁用' },
 	{ value: 'revoked', text: '已撤销' },
@@ -30,7 +30,7 @@ export const TokenGroupMode = {
 	Custom: 'custom',
 } as const;
 
-export const TOKEN_GROUP_MODE_OPTIONS: readonly EnumOption<TokenGroupMode>[] = [
+export const TOKEN_GROUP_MODE_OPTIONS: ReadonlyArray<EnumOption<TokenGroupMode>> = [
 	{ value: 'auto', text: '自动' },
 	{ value: 'all', text: '全部' },
 	{ value: 'custom', text: '自定义' },

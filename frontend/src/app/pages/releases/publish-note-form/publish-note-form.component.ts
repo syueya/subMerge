@@ -1,8 +1,8 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { BADGE_ERR, BADGE_MUTED, BADGE_OK, BADGE_WARN, DraftChange } from '@data-struct';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+import { BADGE_ERR, BADGE_MUTED, BADGE_OK, BADGE_WARN, DraftChange } from '@data-struct';
 
 export interface PublishNoteFormData {
   changes: DraftChange[];

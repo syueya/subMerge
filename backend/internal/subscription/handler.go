@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/apiresp"
+	"github.com/submerge/submerge/backend/internal/middleware"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +22,8 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) List(c *gin.Context) {
-	res, err := h.svc.List()
+	allowPlain := middleware.GetAuthType(c) == middleware.AuthTypeSession
+	res, err := h.svc.List(allowPlain)
 	if err != nil {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "list tokens failed")
 		return
@@ -60,6 +62,10 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 	item, err := h.svc.Update(id, req)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			apiresp.Fail(c, http.StatusNotFound, "not_found", "token not found")
+			return
+		}
 		if errors.Is(err, ErrInvalidTokenConfig) {
 			apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 			return
@@ -78,6 +84,10 @@ func (h *Handler) Revoke(c *gin.Context) {
 	}
 	item, err := h.svc.Revoke(id)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			apiresp.Fail(c, http.StatusNotFound, "not_found", "token not found")
+			return
+		}
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "revoke token failed")
 		return
 	}
@@ -91,6 +101,10 @@ func (h *Handler) Regenerate(c *gin.Context) {
 	}
 	item, err := h.svc.Regenerate(id)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			apiresp.Fail(c, http.StatusNotFound, "not_found", "token not found")
+			return
+		}
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "regenerate token failed")
 		return
 	}

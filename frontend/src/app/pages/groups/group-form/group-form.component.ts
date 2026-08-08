@@ -1,16 +1,18 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+import { DialogService } from '@common/services/dialog.service';
 import {
 	GroupFormDialogData,
 	PROXY_GROUP_TYPE_OPTIONS,
 	ProxyGroup,
 	regionLabel,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { RuleService } from '../../rules/services/rule.service';
-import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { finalize, takeUntil } from 'rxjs';
+
+import { RuleService } from '../../rules/services/rule.service';
+
 
 @Component({
 	selector: 'app-group-form',
@@ -33,7 +35,7 @@ members = signal<string[]>([]);
 	customMember = signal('');
 
 	memberPresets = computed(() => {
-		const base: { value: string; text: string }[] = [
+		const base: Array<{ value: string; text: string }> = [
 			{ value: 'ALL', text: '全部节点 (ALL)' },
 			{ value: 'DIRECT', text: '引擎直连 (DIRECT)' },
 			{ value: 'REJECT', text: '引擎拒绝 (REJECT)' },
@@ -135,7 +137,7 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 				this.editForm.patchValue({ url: this.defaultTestURL });
 			}
 			const interval = this.editForm.get('interval')?.value;
-			if (interval == null || interval < 1) {
+			if ((interval === null || interval === undefined) || interval < 1) {
 				this.editForm.patchValue({ interval: this.defaultTestInterval });
 			}
 		}
@@ -160,7 +162,7 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 				void this.dialog.error('自动测速/故障转移请填写测速 URL');
 				return;
 			}
-			if (interval == null || interval < 1) {
+			if ((interval === null || interval === undefined) || interval < 1) {
 				void this.dialog.error('请填写有效的测速间隔（秒）');
 				return;
 			}
@@ -186,10 +188,9 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 		}
 
 		this.isSubmitting = true;
-		const req =
-			this.data.group == null
-				? this.svc.createGroup(body)
-				: this.svc.updateGroup(this.data.group.id, body);
+const req = (this.data.group === null || this.data.group === undefined)
+					? this.svc.createGroup(body)
+					: this.svc.updateGroup(this.data.group.id, body);
 		req
 			.pipe(
 				takeUntil(this.$destroy),
@@ -197,7 +198,7 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 			)
 			.subscribe({
 				next: () => {
-					void this.dialog.success(this.data.group == null ? '策略组已创建' : '策略组已更新');
+					void this.dialog.success((this.data.group === null || this.data.group === undefined) ? '策略组已创建' : '策略组已更新');
 					this.dialogRef.close(true);
 				},
 				error: (e: Error) => void this.dialog.error(e.message),

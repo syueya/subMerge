@@ -1,13 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatChipListboxChange } from '@angular/material/chips';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { ApiService } from '@common/net/api.service';
 import {
 	MatchableRule,
 	RuleMatchDialogData,
 	RuleMatchDialogResult,
 	RuleMatchResult,
 } from '@data-struct';
-import { ApiService } from '@common/net/api.service';
 
 @Component({
 	selector: 'app-rule-match-dialog',

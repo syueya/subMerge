@@ -31,9 +31,9 @@ func (s *Service) findActiveToken(rawToken string) (database.ShareToken, error) 
 	}
 }
 
-func (s *Service) toView(r database.ShareToken, nameByID map[uint]string) common.ShareToken {
+func (s *Service) toView(r database.ShareToken, nameByID map[uint]string, allowPlain bool) common.ShareToken {
 	plain := ""
-	if r.TokenEncrypted != "" && s.box != nil {
+	if allowPlain && r.TokenEncrypted != "" && s.box != nil {
 		if p, err := s.box.Decrypt(r.TokenEncrypted); err == nil {
 			plain = p
 		}

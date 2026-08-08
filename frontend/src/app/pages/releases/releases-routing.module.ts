@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+
 import { ReleaseListComponent } from './release-list/release-list.component';
 
 const routes: Routes = [

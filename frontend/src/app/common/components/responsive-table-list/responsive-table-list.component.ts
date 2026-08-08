@@ -20,7 +20,7 @@ export class ResponsiveTableListComponent {
   readonly tableHeight = input('calc(100vh - 275px)');
   readonly noDataTitle = input('暂无数据');
   readonly contentOnly = input(false);
-  readonly trackBy = input<TrackByFunction<any> | undefined>(undefined);
+  readonly trackBy = input<TrackByFunction<unknown> | undefined>(undefined);
   readonly cardTitle = input<string | ((item: unknown) => unknown) | undefined>(undefined);
   readonly cardBadge = input<string | ((item: unknown) => unknown) | undefined>(undefined);
   readonly cardFields = input<ResponsiveCardField[]>([]);

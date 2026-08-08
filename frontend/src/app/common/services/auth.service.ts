@@ -3,12 +3,12 @@ import { Router } from '@angular/router';
 import { AvatarList } from '@common/data/avatar-list';
 import { UserInfo } from '@common/interfaces/UserInfo';
 import { CmMessageService } from '@common/modules/message';
-import { SessionHttpCacheService } from '../net/session-http-cache';
 import { STORAGE_USERINFO_KEY } from '@common/util';
+import { AdminUser } from '@data-struct';
 import { BehaviorSubject, Observable, lastValueFrom, map, tap } from 'rxjs';
 
 import { ApiService } from '../net/api.service';
-import { AdminUser } from '@data-struct';
+import { SessionHttpCacheService } from '../net/session-http-cache';
 
 /**
  * SubMerge 鉴权（单管理员）：

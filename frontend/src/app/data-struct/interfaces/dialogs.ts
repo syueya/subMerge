@@ -69,9 +69,9 @@ export interface BatchImportDialogData {
 export interface GroupFormDialogData {
   group: ProxyGroup | null;
   groups: ProxyGroup[];
-  regionCatalog: { code: string; name: string }[];
+  regionCatalog: Array<{ code: string; name: string }>;
   extraRegionCodes: string[];
-  knownSources: { id: number; name: string }[];
+  knownSources: Array<{ id: number; name: string }>;
 }
 
 export interface ReleaseDetailDialogData {

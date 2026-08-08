@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+
 import { RuleHomeComponent } from './rule-home/rule-home.component';
 
 const routes: Routes = [

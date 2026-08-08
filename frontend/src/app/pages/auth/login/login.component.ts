@@ -1,8 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { CmMessageService } from '@common/modules/message';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
 import { AuthService } from '@common/services';
-import { CmMessageService } from '@common/modules/message';
 
 @Component({
   selector: 'app-login',

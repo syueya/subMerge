@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
 import { ApiService } from '@common/net/api.service';
 import { CachedRequest } from '@common/net/cached-request';
 import { ListResponse, MatchableRule, ProxyGroup, Rule, RuleMatchResult } from '@data-struct';
+import { Observable, tap } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class RuleService {

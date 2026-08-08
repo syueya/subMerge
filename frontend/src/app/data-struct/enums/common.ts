@@ -9,7 +9,7 @@ export function enumText(
 	value: string | null | undefined,
 	fallback = value ?? '-',
 ): string {
-	if (value == null || value === '') return String(fallback);
+	if ((value === null || value === undefined) || value === '') return String(fallback);
 	return options.find((o) => o.value === value)?.text ?? String(fallback);
 }
 

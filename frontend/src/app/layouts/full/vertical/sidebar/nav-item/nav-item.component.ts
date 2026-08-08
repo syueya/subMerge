@@ -4,10 +4,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
-import { filter } from 'rxjs/operators';
 import { MenuItem } from '@common/interfaces';
 import { IconsModule } from '@common/modules/icons/icons.module';
 import { CoreService } from '@common/services/core.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-nav-item',

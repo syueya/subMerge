@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './common/guard/AuthGuard';
 import { AppErrorComponent } from './common/error/error.component';
+import { authGuard } from './common/guard/AuthGuard';
 import { BlankComponent } from './layouts/blank/blank.component';
 import { FullComponent } from './layouts/full/full.component';
 

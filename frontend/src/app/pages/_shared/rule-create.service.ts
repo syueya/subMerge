@@ -1,12 +1,13 @@
 import { Injectable, inject } from '@angular/core';
-import { forkJoin, take } from 'rxjs';
+import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
 import { DialogService } from '@common/services/dialog.service';
 import { RuleFormDialogData } from '@data-struct';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+import { forkJoin, take } from 'rxjs';
+
 import { DraftStatusStore } from '../releases/services/draft-status.store';
 import { RuleFormComponent } from '../rules/rule-form/rule-form.component';
-import { RuleService } from '../rules/services/rule.service';
 import { defaultRuleTarget } from '../rules/services/rule-ui';
+import { RuleService } from '../rules/services/rule.service';
 
 @Injectable({ providedIn: 'root' })
 export class RuleCreateService {

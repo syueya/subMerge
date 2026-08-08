@@ -10,7 +10,7 @@ export const RefreshStatus = {
 	Running: 'running',
 } as const;
 
-export const REFRESH_STATUS_OPTIONS: readonly EnumOption<RefreshStatus>[] = [
+export const REFRESH_STATUS_OPTIONS: ReadonlyArray<EnumOption<RefreshStatus>> = [
 	{ value: 'idle', text: '未刷新' },
 	{ value: 'success', text: '成功' },
 	{ value: 'failed', text: '失败' },
