@@ -59,4 +59,6 @@ export interface NetCheckSummary {
 export interface NetCheckResponse {
   summary: NetCheckSummary;
   results: NetCheckResult[];
+  proxyInfo?: string;
+  proxyMode?: 'proxy' | 'direct' | '';
 }

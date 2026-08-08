@@ -7,7 +7,7 @@
     <mat-card-content class="p-16 page-fill__panel">
       <div class="page-fill__fixed">
         <cm-form-field
-          [help]="'勾选「启用代理」后，检测经该代理访问目标；不勾选则由服务器直连。支持 http、https、socks5、socks5h。代理仅当前页有效，不落库。'"
+          [help]="'勾选「启用代理」后，检测经该代理访问目标；不勾选则由服务器直连。支持 http、https、socks5、socks5h。留空地址时回退到系统设置的出站代理。代理仅当前页有效，不落库。'"
         >
           <mat-label>代理 URL</mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
@@ -46,6 +46,14 @@
               <span [class]="badgeOk">{{ item.ok }} 成功</span>
               <span [class]="item.fail ? badgeErr : badgeMuted">{{ item.fail }} 失败</span>
               <span class="f-s-12 text-muted">共 {{ item.total }} 个目标 · 用时 {{ formatMs(item.durationMs) }}</span>
+              @if (proxyMode(); as mode) {
+                <span [class]="mode === 'proxy' ? badgeOk : badgeMuted" class="d-inline-flex align-items-center gap-4">
+                  @if (mode === 'proxy') {
+                    <i-tabler name="world" class="icon-14"></i-tabler>
+                  }
+                  {{ proxyInfo() }}
+                </span>
+              }
             } @else {
               <span class="f-s-12 text-muted">尚未开始检测</span>
             }

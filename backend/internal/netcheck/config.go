@@ -71,13 +71,14 @@ func normalizeTargetURL(value string) (string, error) {
 }
 
 func normalizeProxy(proxyCfg ProxyConfig) (ProxyConfig, error) {
-	raw := strings.TrimSpace(proxyCfg.URL)
-	if !proxyCfg.Enabled {
-		return ProxyConfig{Enabled: false, URL: raw}, nil
-	}
-	if raw == "" {
-		return ProxyConfig{}, fmt.Errorf("启用代理时必须填写代理地址")
-	}
+		raw := strings.TrimSpace(proxyCfg.URL)
+		if !proxyCfg.Enabled {
+			return ProxyConfig{Enabled: false, URL: raw}, nil
+		}
+		if raw == "" {
+			// 已启用但未填地址 — 由调用方决定回退策略
+			return ProxyConfig{Enabled: true, URL: ""}, nil
+		}
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Hostname() == "" {
 		return ProxyConfig{}, fmt.Errorf("代理地址无效")

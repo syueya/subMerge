@@ -19,11 +19,12 @@ const (
 
 // Service 网络检测配置与出站探测。
 type Service struct {
-	db *gorm.DB
+	db             *gorm.DB
+	systemProxyURL func() string
 }
 
-func NewService(db *gorm.DB) *Service {
-	return &Service{db: db}
+func NewService(db *gorm.DB, systemProxyURL func() string) *Service {
+	return &Service{db: db, systemProxyURL: systemProxyURL}
 }
 
 func DefaultConfig() Config {
@@ -81,17 +82,52 @@ func (s *Service) Check(req CheckRequest) (CheckResponse, error) {
 	if req.Targets != nil {
 		cfg.Targets = req.Targets
 	}
-	if req.Proxy != nil {
-		cfgRun := runConfig{
-			Proxy:       *req.Proxy,
-			Timeout:     cfg.Timeout,
-			AutoRefresh: cfg.AutoRefresh,
-			Targets:     cfg.Targets,
+var proxyInfo, proxyMode string
+		if req.Proxy != nil {
+			proxy := *req.Proxy
+			if proxy.Enabled {
+				if proxy.URL == "" {
+					// 启用代理但未填地址时回退到系统代理
+					if s.systemProxyURL != nil {
+						proxy.URL = s.systemProxyURL()
+					}
+					if proxy.URL != "" {
+						proxyInfo = "使用系统代理"
+						proxyMode = "proxy"
+					} else {
+						proxyInfo = "未使用代理（直连）"
+						proxyMode = "direct"
+					}
+				} else {
+					proxyInfo = "使用代理"
+					proxyMode = "proxy"
+				}
+			} else {
+				proxyInfo = "未使用代理（直连）"
+				proxyMode = "direct"
+			}
+			cfgRun := runConfig{
+				Proxy:       proxy,
+				Timeout:     cfg.Timeout,
+				AutoRefresh: cfg.AutoRefresh,
+				Targets:     cfg.Targets,
+			}
+			result, err := runChecks(cfgRun)
+			if err != nil {
+				return CheckResponse{}, err
+			}
+			result.ProxyInfo = proxyInfo
+			result.ProxyMode = proxyMode
+			return result, nil
 		}
-		return runChecks(cfgRun)
+		result, err := runChecks(runConfig{Timeout: cfg.Timeout, AutoRefresh: cfg.AutoRefresh, Targets: cfg.Targets})
+		if err != nil {
+			return CheckResponse{}, err
+		}
+		result.ProxyInfo = "未使用代理（直连）"
+		result.ProxyMode = "direct"
+		return result, nil
 	}
-	return runChecks(runConfig{Timeout: cfg.Timeout, AutoRefresh: cfg.AutoRefresh, Targets: cfg.Targets})
-}
 
 func (s *Service) loadOrCreateRow() (database.NetCheckSetting, error) {
 	var row database.NetCheckSetting

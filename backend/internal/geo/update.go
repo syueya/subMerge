@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 
 	"github.com/oschwald/maxminddb-golang"
+
+		"github.com/submerge/submerge/backend/internal/applog"
 )
 
 func (s *Service) Update(ctx context.Context) UpdateResponse {
@@ -29,13 +31,21 @@ func (s *Service) Update(ctx context.Context) UpdateResponse {
 		if err == nil {
 			err = replaceResource(s.dir, item.name, body)
 		}
-		out := UpdateItem{Name: item.name, Updated: err == nil}
-		if err != nil {
-			out.Error = err.Error()
-		}
+out := UpdateItem{Name: item.name, Updated: err == nil}
+			if err != nil {
+				out.Error = err.Error()
+				applog.Error("[geo] %s 更新失败: %v", item.name, err)
+			}
 		result.Items = append(result.Items, out)
 	}
 	s.snap = s.loadSnapshot()
+	ok := 0
+	for _, item := range result.Items {
+		if item.Updated {
+			ok++
+		}
+	}
+	applog.Info("[geo] 更新完成 成功=%d/%d", ok, len(result.Items))
 	return result
 }
 

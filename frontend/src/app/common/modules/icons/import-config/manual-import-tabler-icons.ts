@@ -45,6 +45,7 @@ import {
   IconBrandSpeedtest,
   IconShieldCheck,
   IconGlobe,
+  IconSettings,
 } from '@luoxiao123/angular-tabler-icons/icons';
 
 export const ManualImportTablerIcons = {
@@ -94,4 +95,5 @@ export const ManualImportTablerIcons = {
   IconBrandSpeedtest,
   IconShieldCheck,
   IconGlobe,
+  IconSettings,
 };

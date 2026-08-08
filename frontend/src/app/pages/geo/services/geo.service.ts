@@ -53,7 +53,7 @@ export class GeoService {
 
     this.updating.set(true);
     this.updateSub?.unsubscribe();
-    this.updateSub = this.api.post<GeoUpdateResponse>('/geo/update', {}).subscribe({
+    this.updateSub = this.api.post<GeoUpdateResponse>('/geo/update', {}, { noLoadingSpinner: true }).subscribe({
       next: result => {
         this.updating.set(false);
         this.updateSub = null;

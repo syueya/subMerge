@@ -89,18 +89,20 @@ func main() {
 	})
 	geoSvc.SetIPGeoClient(ipGeoClient)
 	geoSvc.Load()
-	netCheckSvc := netcheck.NewService(db)
-	refreshScheduler := systemsettings.NewRefreshScheduler(cfg.RefreshInterval, func() { sourceSvc.RefreshAll() })
-	defer refreshScheduler.Close()
-	applySettings := func(settings systemsettings.Settings) error {
+var sysProxyURL string
+		netCheckSvc := netcheck.NewService(db, func() string { return sysProxyURL })
+		refreshScheduler := systemsettings.NewRefreshScheduler(cfg.RefreshInterval, func() { sourceSvc.RefreshAll() })
+		defer refreshScheduler.Close()
+		applySettings := func(settings systemsettings.Settings) error {
 		if err := sourceSvc.SetRuntimeOptions(settings.SourceFetchTimeout, settings.SourceMaxBytes, settings.SourceFetchUA); err != nil {
 			return err
 		}
 		proxyURL := settings.ProxyURL
-		if !settings.ProxyEnabled {
-			proxyURL = ""
-		}
-		if err := sourceSvc.SetProxy(proxyURL); err != nil {
+if !settings.ProxyEnabled {
+				proxyURL = ""
+			}
+			sysProxyURL = proxyURL
+			if err := sourceSvc.SetProxy(proxyURL); err != nil {
 			return err
 		}
 		if err := geoSvc.SetURLs(geo.URLs{GeoIP: settings.GeoIPURL, GeoSite: settings.GeoSiteURL, MetaDB: settings.GeoDBURL, ASN: settings.GeoASNURL}); err != nil {

@@ -68,8 +68,11 @@ type Summary struct {
 
 // CheckResponse 检测 API 响应
 type CheckResponse struct {
-	Summary Summary        `json:"summary"`
-	Results []TargetResult `json:"results"`
+	Summary   Summary        `json:"summary"`
+	Results   []TargetResult `json:"results"`
+	ProxyInfo string         `json:"proxyInfo,omitempty"`
+	// ProxyMode: proxy=使用了代理 | direct=未使用代理（直连）| ""=未触发
+	ProxyMode string `json:"proxyMode,omitempty"`
 }
 
 // runConfig 内部完整运行配置（持久项 + 临时代理）

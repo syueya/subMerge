@@ -28,6 +28,8 @@ export class NetCheckPageComponent extends CmParentComponent implements OnInit, 
   readonly config = signal<NetCheckConfig>({ timeout: 10, autoRefresh: 0, targets: [] });
   readonly results = signal<NetCheckResult[]>([]);
   readonly summary = signal<NetCheckSummary | null>(null);
+  readonly proxyInfo = signal('');
+  readonly proxyMode = signal('');
   readonly loading = signal(false);
   readonly badgeOk = BADGE_OK;
   readonly badgeErr = BADGE_ERR;
@@ -87,10 +89,6 @@ export class NetCheckPageComponent extends CmParentComponent implements OnInit, 
 
   runCheck(targets?: NetCheckConfig['targets']): void {
     if (this.loading()) return;
-    if (this.proxyEnabled && !this.proxyURL.trim()) {
-      void this.dialog.error('已启用代理，请填写代理 URL');
-      return;
-    }
 
     const request: NetCheckRequest = {
       proxy: { enabled: this.proxyEnabled, url: this.proxyURL.trim() },
@@ -103,11 +101,13 @@ export class NetCheckPageComponent extends CmParentComponent implements OnInit, 
       .check(request)
       .pipe(takeUntil(this.$destroy))
       .subscribe({
-        next: (response) => {
-          this.results.set(response.results || []);
-          this.summary.set(response.summary);
-          this.loading.set(false);
-        },
+next: (response) => {
+                  this.results.set(response.results || []);
+                  this.summary.set(response.summary);
+                  this.proxyInfo.set(response.proxyInfo || '');
+                  this.proxyMode.set(response.proxyMode || '');
+                  this.loading.set(false);
+                },
         error: (err: Error) => {
           this.loading.set(false);
           void this.dialog.error(err.message);
