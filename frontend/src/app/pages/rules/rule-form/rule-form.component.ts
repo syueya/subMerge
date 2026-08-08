@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ValidatorFn, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { DialogService } from '@common/services/dialog.service';
@@ -32,7 +32,7 @@ export class RuleFormComponent extends CmParentFormComponent {
     const type = (rule?.type as RuleType) || (this.data.defaultType as RuleType) || RuleType.DOMAIN_SUFFIX;
     this.editForm = this.fb.group({
       type: [{ value: type, disabled: false }, [Validators.required]],
-      payload: [rule?.payload ?? this.data.defaultPayload ?? ''],
+      payload: [rule?.payload ?? this.data.defaultPayload ?? '', [this.payloadRequiredValidator()]],
       target: [rule?.target || this.data.defaultTarget || '', [Validators.required]],
       enabled: [rule?.enabled ?? true],
       note: [rule?.note || ''],
@@ -43,6 +43,14 @@ export class RuleFormComponent extends CmParentFormComponent {
       this.editForm.get('payload')?.disable({ emitEvent: false });
       this.editForm.get('category')?.disable({ emitEvent: false });
     }
+  }
+
+  private payloadRequiredValidator(): ValidatorFn {
+    return (control: AbstractControl) => {
+      const type = control.parent?.get('type')?.value;
+      if (!type || isMatchType(type)) return null;
+      return String(control.value || '').trim() ? null : { required: true };
+    };
   }
 
   get systemLocked(): boolean {
@@ -88,19 +96,15 @@ export class RuleFormComponent extends CmParentFormComponent {
     if (this.isMatch()) {
       this.editForm.patchValue({ payload: '' });
     }
+    this.editForm.get('payload')?.updateValueAndValidity();
   }
 
   submit(): void {
     if (this.isSubmitting) return;
+    this.editForm.get('payload')?.updateValueAndValidity();
+    this.editForm.markAllAsTouched();
+    if (this.editForm.invalid) return;
     const raw = this.editForm.getRawValue();
-    if (!this.isMatch() && !String(raw.payload || '').trim()) {
-      void this.dialog.error(`请填写「${this.payloadLabelText()}」`);
-      return;
-    }
-    if (!String(raw.target || '').trim()) {
-      void this.dialog.error('请选择目标出口');
-      return;
-    }
     const category = String(raw.category || '').trim();
     const body = {
       type: raw.type,

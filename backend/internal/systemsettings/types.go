@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/outbound"
 )
 
@@ -21,13 +22,35 @@ func TrustedProxyList(raw string) []string {
 	return items
 }
 
+func durationFromSeconds(seconds int) (time.Duration, error) {
+	if seconds <= 0 {
+		return 0, fmt.Errorf("timeout must be greater than zero")
+	}
+	return time.Duration(seconds) * time.Second, nil
+}
+
+func parseTimeout(raw string) (time.Duration, error) {
+	raw = strings.TrimSpace(raw)
+	if seconds, err := strconv.Atoi(raw); err == nil {
+		return durationFromSeconds(seconds)
+	}
+	duration, err := time.ParseDuration(raw)
+	if err != nil || duration <= 0 {
+		if err == nil {
+			err = fmt.Errorf("must be greater than zero")
+		}
+		return 0, fmt.Errorf("invalid timeout %q: %w", raw, err)
+	}
+	return duration, nil
+}
+
 func assign(s *Settings, key, value string) error {
 	value = strings.TrimSpace(value)
 	switch key {
 	case KeySourceFetchUA:
 		s.SourceFetchUA = value
 	case KeySourceFetchTimeout:
-		v, err := time.ParseDuration(value)
+		v, err := parseTimeout(value)
 		if err != nil {
 			return fmt.Errorf("source fetch timeout: %w", err)
 		}
@@ -55,7 +78,7 @@ func assign(s *Settings, key, value string) error {
 	case KeyIPGeoURL:
 		s.IPGeoURL = value
 	case KeyIPGeoTimeout:
-		v, err := time.ParseDuration(value)
+		v, err := parseTimeout(value)
 		if err != nil {
 			return fmt.Errorf("ip geo timeout: %w", err)
 		}
@@ -103,7 +126,7 @@ func applyUpdate(s *Settings, req UpdateRequest) error {
 		s.SourceFetchUA = *req.SourceFetchUA
 	}
 	if req.SourceFetchTimeout != nil {
-		v, err := time.ParseDuration(strings.TrimSpace(*req.SourceFetchTimeout))
+		v, err := durationFromSeconds(*req.SourceFetchTimeout)
 		if err != nil {
 			return err
 		}
@@ -131,14 +154,9 @@ func applyUpdate(s *Settings, req UpdateRequest) error {
 		s.IPGeoURL = *req.IPGeoURL
 	}
 	if req.IPGeoTimeout != nil {
-		// 兼容两种格式：带单位 "5s" 或纯数字 "5"（按秒）
-		v, err := time.ParseDuration(strings.TrimSpace(*req.IPGeoTimeout))
+		v, err := durationFromSeconds(*req.IPGeoTimeout)
 		if err != nil {
-			seconds, atoiErr := strconv.Atoi(strings.TrimSpace(*req.IPGeoTimeout))
-			if atoiErr != nil {
-				return err
-			}
-			v = time.Duration(seconds) * time.Second
+			return err
 		}
 		s.IPGeoTimeout = v
 	}
@@ -200,9 +218,8 @@ func validate(s Settings) error {
 	if s.LogRetentionDays < 0 {
 		return fmt.Errorf("log retention days cannot be negative")
 	}
-	base, err := url.Parse(s.PublicBaseURL)
-	if err != nil || (base.Scheme != "http" && base.Scheme != "https") || base.Host == "" || base.RawQuery != "" || base.Fragment != "" {
-		return fmt.Errorf("public base URL must be a valid HTTP or HTTPS URL without query or fragment")
+	if err := config.ValidatePublicBaseURL(s.PublicBaseURL); err != nil {
+		return err
 	}
 	for _, raw := range strings.Split(s.TrustedProxies, ",") {
 		item := strings.TrimSpace(raw)

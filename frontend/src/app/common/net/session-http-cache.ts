@@ -192,6 +192,7 @@ path === '/api/releases' ||
 		      path === '/api/logs/details' ||
 		      path === '/api/geo/status' ||
 		      path === '/api/geo/categories' ||
+		      path === '/api/net-check/config' ||
 		      path === '/api/auth/me' ||
 		      path === '/api/health'
 	    ) {

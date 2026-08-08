@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -30,6 +31,22 @@ const (
 	DefaultASNURL             = "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"
 	DefaultIPGeoURL           = "https://ipwho.is/{ip}"
 )
+
+func ValidatePublicBaseURL(raw string) error {
+	raw = strings.TrimSpace(raw)
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Hostname() == "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || strings.Contains(raw, "#") {
+		return fmt.Errorf("public base URL must be a valid HTTP or HTTPS URL without query or fragment")
+
+	}
+	if u.Port() != "" {
+		port, err := strconv.Atoi(u.Port())
+		if err != nil || port < 1 || port > 65535 {
+			return fmt.Errorf("public base URL must use a valid port")
+		}
+	}
+	return nil
+}
 
 // Config 应用配置
 type Config struct {

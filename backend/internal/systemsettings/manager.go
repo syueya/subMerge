@@ -58,7 +58,7 @@ type Settings struct {
 
 type UpdateRequest struct {
 	SourceFetchUA      *string `json:"sourceFetchUA"`
-	SourceFetchTimeout *string `json:"sourceFetchTimeout"`
+	SourceFetchTimeout *int    `json:"sourceFetchTimeout"`
 	SourceMaxBytes     *int64  `json:"sourceMaxBytes"`
 	RefreshInterval    *int    `json:"refreshInterval"`
 	GeoIPURL           *string `json:"geoipUrl"`
@@ -66,7 +66,7 @@ type UpdateRequest struct {
 	GeoDBURL           *string `json:"geodbUrl"`
 	GeoASNURL          *string `json:"geoasnUrl"`
 	IPGeoURL           *string `json:"ipGeoUrl"`
-	IPGeoTimeout       *string `json:"ipGeoTimeout"`
+	IPGeoTimeout       *int    `json:"ipGeoTimeout"`
 	LogOutput          *string `json:"logOutput"`
 	DebugLogging       *bool   `json:"debugLogging"`
 	LogRetentionDays   *int    `json:"logRetentionDays"`
@@ -86,7 +86,7 @@ type View struct {
 
 type SettingsView struct {
 	SourceFetchUA      string `json:"sourceFetchUA"`
-	SourceFetchTimeout string `json:"sourceFetchTimeout"`
+	SourceFetchTimeout int    `json:"sourceFetchTimeout"`
 	SourceMaxBytes     int64  `json:"sourceMaxBytes"`
 	RefreshInterval    int    `json:"refreshInterval"`
 	GeoIPURL           string `json:"geoipUrl"`
@@ -94,7 +94,7 @@ type SettingsView struct {
 	GeoDBURL           string `json:"geodbUrl"`
 	GeoASNURL          string `json:"geoasnUrl"`
 	IPGeoURL           string `json:"ipGeoUrl"`
-	IPGeoTimeout       string `json:"ipGeoTimeout"`
+	IPGeoTimeout       int    `json:"ipGeoTimeout"`
 	LogOutput          string `json:"logOutput"`
 	DebugLogging       bool   `json:"debugLogging"`
 	LogRetentionDays   int    `json:"logRetentionDays"`
@@ -227,7 +227,7 @@ func (m *Manager) View() View {
 
 func (m *Manager) viewLocked() View {
 	s := m.current
-	sv := SettingsView{SourceFetchUA: s.SourceFetchUA, SourceFetchTimeout: s.SourceFetchTimeout.String(), SourceMaxBytes: s.SourceMaxBytes, RefreshInterval: int(s.RefreshInterval / time.Hour), GeoIPURL: s.GeoIPURL, GeoSiteURL: s.GeoSiteURL, GeoDBURL: s.GeoDBURL, GeoASNURL: s.GeoASNURL, IPGeoURL: s.IPGeoURL, IPGeoTimeout: s.IPGeoTimeout.String(), LogOutput: s.LogOutput, DebugLogging: s.DebugLogging, LogRetentionDays: s.LogRetentionDays, ProxyEnabled: s.ProxyEnabled, ProxyConfigured: s.ProxyURL != "", ProxyMaskedURL: outbound.MaskURL(s.ProxyURL), PublicBaseURL: s.PublicBaseURL, TrustedProxies: s.TrustedProxies, CookieSecure: s.CookieSecure}
+	sv := SettingsView{SourceFetchUA: s.SourceFetchUA, SourceFetchTimeout: int(s.SourceFetchTimeout / time.Second), SourceMaxBytes: s.SourceMaxBytes, RefreshInterval: int(s.RefreshInterval / time.Hour), GeoIPURL: s.GeoIPURL, GeoSiteURL: s.GeoSiteURL, GeoDBURL: s.GeoDBURL, GeoASNURL: s.GeoASNURL, IPGeoURL: s.IPGeoURL, IPGeoTimeout: int(s.IPGeoTimeout / time.Second), LogOutput: s.LogOutput, DebugLogging: s.DebugLogging, LogRetentionDays: s.LogRetentionDays, ProxyEnabled: s.ProxyEnabled, ProxyConfigured: s.ProxyURL != "", ProxyMaskedURL: outbound.MaskURL(s.ProxyURL), PublicBaseURL: s.PublicBaseURL, TrustedProxies: s.TrustedProxies, CookieSecure: s.CookieSecure}
 	return View{Settings: sv, Source: m.sources(), Override: copyBoolMap(m.overrides), RestartRequired: m.restartRequired}
 }
 

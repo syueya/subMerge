@@ -108,6 +108,7 @@ get regionMode(): RegionMode {
 
 	submit(): void {
 		if (this.isSubmitting) return;
+		this.editForm.markAllAsTouched();
 		const raw = this.editForm.getRawValue();
 		const name = String(raw.name || '').trim();
 		const region = String(raw.region || '')

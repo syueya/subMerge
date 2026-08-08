@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ValidatorFn, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { DialogService } from '@common/services/dialog.service';
@@ -76,9 +76,24 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 			name: [g?.name || '', [Validators.required, Validators.maxLength(64)]],
 			type: [type, [Validators.required]],
 			enabled: [g?.enabled ?? true],
-			url: [g?.url || this.defaultTestURL],
-			interval: [g?.interval ?? this.defaultTestInterval],
+				url: [g?.url || this.defaultTestURL, [this.testUrlValidator()]],
+				interval: [g?.interval ?? this.defaultTestInterval, [this.testIntervalValidator()]],
 		});
+	}
+
+	private testUrlValidator(): ValidatorFn {
+		return (control: AbstractControl) => {
+			if (!this.needsTestParams(control.parent?.get('type')?.value)) return null;
+			return String(control.value || '').trim() ? null : { required: true };
+		};
+	}
+
+	private testIntervalValidator(): ValidatorFn {
+		return (control: AbstractControl) => {
+			if (!this.needsTestParams(control.parent?.get('type')?.value)) return null;
+			const value = Number(control.value);
+			return Number.isFinite(value) && value >= 30 ? null : { min: { min: 30, actual: control.value } };
+		};
 	}
 
 	memberGroupOptions(): ProxyGroup[] {
@@ -131,20 +146,23 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 	}
 
 	onGroupTypeChange(type: string): void {
-		this.editForm.patchValue({ type });
+			this.editForm.patchValue({ type });
+			this.editForm.get('url')?.updateValueAndValidity();
+			this.editForm.get('interval')?.updateValueAndValidity();
 		if (this.needsTestParams(type)) {
 			if (!String(this.editForm.get('url')?.value || '').trim()) {
 				this.editForm.patchValue({ url: this.defaultTestURL });
 			}
 			const interval = this.editForm.get('interval')?.value;
-			if ((interval === null || interval === undefined) || interval < 1) {
-				this.editForm.patchValue({ interval: this.defaultTestInterval });
+				if ((interval === null || interval === undefined) || interval < 30) {
+					this.editForm.patchValue({ interval: this.defaultTestInterval });
 			}
 		}
 	}
 
 	submit(): void {
 		if (this.isSubmitting) return;
+		this.editForm.markAllAsTouched();
 		const raw = this.editForm.getRawValue();
 		const name = String(raw.name || '').trim();
 		const members = this.members();
@@ -152,18 +170,24 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 			void this.dialog.error('请填写策略组名称');
 			return;
 		}
-		if (members.length === 0) {
-			void this.dialog.error('请至少选择一个成员');
-			return;
-		}
-		const interval = raw.interval;
+			if (members.length === 0) {
+				void this.dialog.error('请至少选择一个成员');
+				return;
+			}
+			this.editForm.get('url')?.markAsTouched();
+			this.editForm.get('interval')?.markAsTouched();
+			if (this.editForm.invalid) {
+				this.editForm.markAllAsTouched();
+				return;
+			}
+			const interval = raw.interval;
 		if (this.needsTestParams(raw.type)) {
 			if (!String(raw.url || '').trim()) {
 				void this.dialog.error('自动测速/故障转移请填写测速 URL');
 				return;
 			}
-			if ((interval === null || interval === undefined) || interval < 1) {
-				void this.dialog.error('请填写有效的测速间隔（秒）');
+				if ((interval === null || interval === undefined) || interval < 30) {
+					void this.dialog.error('请填写有效的测速间隔（秒）');
 				return;
 			}
 		}

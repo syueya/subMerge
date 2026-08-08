@@ -1,6 +1,6 @@
 <cm-page-toolbar title="系统设置" description="可调整的应用配置统一保存在数据库中，不读取同名环境变量；敏感信息不会完整显示。">
-  <button mat-flat-button color="primary" type="button" [disabled]="saving()" (click)="save()">{{ saving() ? '保存中…' : '保存系统设置' }}</button>
-  <button mat-stroked-button type="button" [disabled]="saving()" (click)="reset()">恢复系统默认</button>
+  <button mat-flat-button color="primary" type="button" [disabled]="saving()" (click)="save()">{{ saving() ? '保存中…' : '保存' }}</button>
+  <button mat-stroked-button type="button" [disabled]="saving()" (click)="reset()">恢复默认</button>
 </cm-page-toolbar>
 
 @if (loading()) {
@@ -25,10 +25,13 @@
                     <mat-label>启用Secure</mat-label>
                     <mat-slide-toggle formControlName="cookieSecure"></mat-slide-toggle>
                   </cm-form-field>
-                  <cm-form-field class="col-24 col-md-8" [help]="help('对外公开访问地址，影响管理端生成的订阅链接。', 'deployment.public_base_url')">
-                    <mat-label>公开访问地址</mat-label>
+                  <cm-form-field class="col-24 col-md-8" [help]="help('对外公开访问地址，影响管理端生成的订阅链接；支持 http/https、端口和路径，不支持查询参数或片段。', 'deployment.public_base_url')">
+                    <mat-label>公开访问地址<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="publicBaseUrl" placeholder="https://sub.example.com">
+                      <mat-error>
+                        <cm-form-field-error></cm-form-field-error>
+                      </mat-error>
                     </mat-form-field>
                   </cm-form-field>
                   <cm-form-field class="col-24 col-md-8" [help]="help('无反向代理请留空；多个地址用逗号分隔；保存后需重启服务生效。', 'deployment.trusted_proxies')">
@@ -59,9 +62,10 @@
                     </mat-form-field>
                   </cm-form-field>
                   <cm-form-field class="col-24 col-md-8" [help]="'0 表示不自动清理'">
-                    <mat-label>日志保留天数</mat-label>
+                    <mat-label>日志保留天数<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput type="number" formControlName="logRetentionDays">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
                 </div>
@@ -89,6 +93,9 @@
                     <mat-label>代理 URL</mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="proxyUrl" placeholder="http://127.0.0.1:7890">
+                      <mat-error>
+                        <cm-form-field-error></cm-form-field-error>
+                      </mat-error>
                     </mat-form-field>
                   </cm-form-field>
                 </div>
@@ -97,30 +104,35 @@
                 <h3 class="m-b-12">订阅源</h3>
                 <div class="row p-8">
                   <cm-form-field class="col-24 col-md-6" [help]="help('拉取订阅源使用的客户端标识，部分订阅源会校验来源。', 'source.fetch.ua')">
-                    <mat-label>User-Agent</mat-label>
+                    <mat-label>User-Agent<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="sourceFetchUA">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
 
                   <cm-form-field class="col-24 col-md-6" [help]="help('拉取订阅源的请求超时时间。', 'source.fetch.timeout')">
-                    <mat-label>请求超时</mat-label>
+                    <mat-label>请求超时（秒）<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
+
                     <mat-form-field appearance="outline" class="w-full">
-                      <input matInput formControlName="sourceFetchTimeout" placeholder="30s">
+                      <input matInput type="number" min="1" formControlName="sourceFetchTimeout" placeholder="30">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
 
                   <cm-form-field class="col-24 col-md-6" [help]="help('单次拉取订阅允许的最大响应体大小，超出后丢弃。', 'source.fetch.max_bytes')">
-                    <mat-label>最大响应大小（MB）</mat-label>
+                    <mat-label>最大响应大小（MB）<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput type="number" formControlName="sourceMaxBytes">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
 
                   <cm-form-field class="col-24 col-md-6" [help]="help('自动刷新订阅的间隔，范围 1-720 小时。', 'source.refresh.hours') + '保存后立即影响后续拉取；刷新间隔保存后需重启服务生效。'">
-                    <mat-label>自动刷新间隔（小时）</mat-label>
+                    <mat-label>自动刷新间隔（小时）<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput type="number" formControlName="refreshInterval">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
                 </div>
@@ -130,44 +142,50 @@
                 <h3 class="m-b-12">Geo 与 IP 归属地</h3>
                 <div class="row p-8">
                   <cm-form-field class="col-24 col-md-12" [help]="'独立 IP 归属地查询接口 URL，用于根据 IP 地址定位所在地区。'">
-                    <mat-label>IP 归属地 URL</mat-label>
+                    <mat-label>IP 归属地 URL<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="ipGeoUrl">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
 
                   <cm-form-field class="col-24 col-md-12" [help]="'查询 IP 归属地的请求超时时间。'">
-                    <mat-label>IP 归属地超时（秒）</mat-label>
+                    <mat-label>IP 归属地超时（秒）<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput type="number" formControlName="ipGeoTimeout">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
 
                   <cm-form-field class="col-24 col-md-24" [help]="'GeoIP 数据库下载地址，用于按 IP 判断所属地区。'">
-                    <mat-label>GeoIP URL</mat-label>
+                    <mat-label>GeoIP URL<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="geoipUrl">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
 
                   <cm-form-field class="col-24 col-md-24" [help]="'GeoSite 站点分类数据库下载地址，用于分流规则按站点匹配。'">
-                    <mat-label>GeoSite URL</mat-label>
+                    <mat-label>GeoSite URL<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="geositeUrl">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
 
                   <cm-form-field class="col-24 col-md-24" [help]="'GeoDB 数据库下载地址。'">
-                    <mat-label>GeoDB URL</mat-label>
+                    <mat-label>GeoDB URL<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="geodbUrl">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
 
                   <cm-form-field class="col-24 col-md-24" [help]="'Geo ASN 数据库下载地址，用于按 ASN 归属判断。'">
-                    <mat-label>Geo ASN URL</mat-label>
+                    <mat-label>Geo ASN URL<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="geoasnUrl">
+                      <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
                     </mat-form-field>
                   </cm-form-field>
                 </div>

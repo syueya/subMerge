@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, Input, ViewEncapsulation, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, Input, ViewEncapsulation, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArrayName, FormGroupDirective, FormGroupName, NgControl, ValidationErrors } from '@angular/forms';
-import { MatFormField } from '@angular/material/form-field';
+import { MAT_FORM_FIELD } from '@angular/material/form-field';
 import { Observable, of } from 'rxjs';
 
 export enum ErrorsDefault {
@@ -27,12 +28,14 @@ export enum ErrorsDefault {
 }
   `,
     encapsulation: ViewEncapsulation.None,
-    changeDetection: ChangeDetectionStrategy.OnPush,
+    changeDetection: ChangeDetectionStrategy.Default,
     standalone: false
 })
-export class FormFieldErrorComponent {
+export class FormFieldErrorComponent implements AfterViewInit {
   readonly ngControl = inject(NgControl, { optional: true, self: true });
-  readonly filed = inject(MatFormField, { optional: true });
+  readonly filed = inject(MAT_FORM_FIELD, { optional: true });
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly formArrayName = inject<FormArrayName | null>(FormArrayName, { optional: true, self: true });
   private readonly formGroupName = inject<FormGroupName | null>(FormGroupName, { optional: true, self: true });
   private readonly formGroup = inject<FormGroupDirective | null>(FormGroupDirective, { optional: true, self: true });
@@ -56,7 +59,7 @@ export class FormFieldErrorComponent {
   @Input() tip: string | ValidationErrors | null = null;
 
   get computedError(): Observable<string> | null {
-    if (this.invalid && this.touched) {
+    if (this.invalid) {
       return this.error;
     }
     return null;
@@ -180,10 +183,6 @@ export class FormFieldErrorComponent {
     return !!this._control && this._control.invalid;
   }
 
-  private get touched(): boolean {
-    return !!this._control && this._control.touched;
-  }
-
   private get _control(): AbstractControl | null {
     if (this.control) {
       return this.control;
@@ -213,6 +212,14 @@ export class FormFieldErrorComponent {
     }
 
     return null;
+  }
+
+  ngAfterViewInit(): void {
+    const control = this._control;
+    if (control) {
+      control.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.changeDetector.markForCheck());
+    }
+    this.filed?._control.stateChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.changeDetector.markForCheck());
   }
 
   constructor() {

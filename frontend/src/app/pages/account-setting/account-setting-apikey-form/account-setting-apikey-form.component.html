@@ -41,8 +41,11 @@
               {{ opt.text }}
             </mat-chip-option>
           }
-        </mat-chip-listbox>
-      </div>
+          </mat-chip-listbox>
+          @if (isScopeInvalid()) {
+            <mat-error>请至少选择一个权限</mat-error>
+          }
+        </div>
     </div>
   </div>
 </form>

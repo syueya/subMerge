@@ -37,6 +37,11 @@ export class AccountSettingApikeyFormComponent extends CmParentFormComponent {
 
 	/** chip-listbox 当前选中值（多选） */
 	selectedScopes = signal<APIKeyScope[]>(['read']);
+	readonly scopeTouched = signal(false);
+
+	isScopeInvalid(): boolean {
+		return this.scopeTouched() && this.selectedScopes().length === 0;
+	}
 
 	constructor() {
 		super();
@@ -70,6 +75,7 @@ export class AccountSettingApikeyFormComponent extends CmParentFormComponent {
 				? [raw as APIKeyScope]
 				: [];
 		this.selectedScopes.set(this.resolveScopeSelection(this.selectedScopes(), values));
+		this.scopeTouched.set(true);
 		this.editForm.markAsDirty();
 	}
 
@@ -118,8 +124,8 @@ export class AccountSettingApikeyFormComponent extends CmParentFormComponent {
 			return;
 		}
 		const selected = this.scopesForSubmit();
+		this.scopeTouched.set(true);
 		if (selected.length === 0) {
-			void this.dialog.error('请至少选择一个权限');
 			return;
 		}
 

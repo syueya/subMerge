@@ -11,7 +11,7 @@
       </cm-form-field>
 
       <cm-form-field class="col-24 col-md-5" [help]="'仅写匹配内容时'">
-        <mat-label>默认类型</mat-label>
+        <mat-label>默认类型<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <mat-select formControlName="defaultType">
             @for (t of ruleTypes; track t.value) {
@@ -20,17 +20,19 @@
               }
             }
           </mat-select>
+          <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
         </mat-form-field>
       </cm-form-field>
 
       <cm-form-field class="col-24 col-md-5">
-        <mat-label>默认出口</mat-label>
+        <mat-label>默认出口<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
         <mat-form-field appearance="outline" class="w-full" color="primary">
           <mat-select formControlName="defaultTarget">
             @for (g of data.groups; track g.id) {
               <mat-option [value]="g.name">{{ g.name }}</mat-option>
             }
           </mat-select>
+          <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
         </mat-form-field>
       </cm-form-field>
 
@@ -63,6 +65,7 @@
             formControlName="text"
             placeholder="个人,DOMAIN-SUFFIX,example.com,直连,域名"
           ></textarea>
+          <mat-error><cm-form-field-error></cm-form-field-error></mat-error>
         </mat-form-field>
       </cm-form-field>
     </div>

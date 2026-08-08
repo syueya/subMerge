@@ -1,5 +1,5 @@
 <div class="page-fill">
-  <cm-page-toolbar title="网络检测" description="可临时填写代理后检测连通性；代理仅当前页有效，不落库。检测目标、超时与自动刷新在「检测设置」中维护。">
+  <cm-page-toolbar title="网络检测" description="可为本页检测临时指定代理；不会修改系统设置中的全局出站代理。检测目标、超时与自动刷新在「检测设置」中维护。">
     <button mat-flat-button color="primary" type="button" (click.debounceTime)="openTargetManage()">检测设置</button>
   </cm-page-toolbar>
 
@@ -7,9 +7,9 @@
     <mat-card-content class="p-16 page-fill__panel">
       <div class="page-fill__fixed">
         <cm-form-field
-          [help]="'勾选「启用代理」后，检测经该代理访问目标；不勾选则由服务器直连。支持 http、https、socks5、socks5h。留空地址时回退到系统设置的出站代理。代理仅当前页有效，不落库。'"
+          [help]="'启用后，本次检测经该代理访问目标；不勾选则服务器直连。支持 http、https、socks5、socks5h。留空地址时回退到系统设置中的全局出站代理。本次设置仅当前页面有效，不会修改系统设置。'"
         >
-          <mat-label>代理 URL</mat-label>
+          <mat-label>本次检测代理 URL</mat-label>
           <mat-form-field appearance="outline" class="w-full" color="primary">
             <input
               matInput
@@ -32,9 +32,9 @@
             <mat-checkbox
               [(ngModel)]="proxyEnabled"
               color="primary"
-              matTooltip="勾选后走上方代理访问目标；不勾选则服务器直连（不经过代理）"
+              matTooltip="启用后，本次检测走上方代理；不勾选则服务器直连（不经过代理）"
             >
-              启用代理
+              本次检测启用代理
             </mat-checkbox>
           </div>
         </cm-form-field>

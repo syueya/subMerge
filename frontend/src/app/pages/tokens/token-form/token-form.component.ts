@@ -169,6 +169,7 @@ export class TokenFormComponent extends CmParentFormComponent {
 
 	submit(): void {
 		if (this.isSubmitting) return;
+		this.editForm.markAllAsTouched();
 
 		let name = '';
 		if (!this.isEdit) {

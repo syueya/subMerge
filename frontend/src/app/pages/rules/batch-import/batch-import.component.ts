@@ -49,6 +49,7 @@ ruleTypes = RULE_TYPE_OPTIONS;
 
 	submit(): void {
 		if (this.isSubmitting) return;
+		this.editForm.markAllAsTouched();
 		const raw = this.editForm.getRawValue();
 		const text = String(raw.text || '').trim();
 		if (!text) {

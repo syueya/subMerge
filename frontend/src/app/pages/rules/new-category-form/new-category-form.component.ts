@@ -24,6 +24,7 @@ private dialog = inject(DialogService);
 	}
 
 	submit(): void {
+		this.editForm.markAllAsTouched();
 		const name = String(this.editForm.get('name')?.value || '').trim();
 		if (!name) {
 			void this.dialog.error('请填写分类名称');

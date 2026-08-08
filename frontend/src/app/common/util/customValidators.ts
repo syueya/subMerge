@@ -151,7 +151,32 @@ export function filePathValidator(): ValidatorFn {
   };
 }
 
-// url验证器：域名URL必须以http或https开头,且不能以/结尾
+export function publicBaseUrlValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const raw = String(control.value || '').trim();
+    if (!raw) return null;
+    try {
+      const url = new URL(raw);
+      const protocol = url.protocol.toLowerCase();
+      if (
+        (protocol !== 'http:' && protocol !== 'https:') ||
+        !url.hostname ||
+        url.pathname.startsWith('//') ||
+        url.search ||
+        url.hash
+      ) {
+        return { publicBaseUrl: '请输入合法的 HTTP/HTTPS 地址' };
+      }
+      if (url.port && (!/^\d+$/.test(url.port) || Number(url.port) < 1 || Number(url.port) > 65535)) {
+        return { publicBaseUrl: '端口号必须在 1-65535 范围内' };
+      }
+      return null;
+    } catch {
+      return { publicBaseUrl: '请输入合法的 HTTP/HTTPS 地址' };
+    }
+  };
+}
+
 export function hostValidator(base = false): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     if (!control.value) {

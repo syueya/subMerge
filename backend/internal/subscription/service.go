@@ -3,13 +3,13 @@ package subscription
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/applog"
+	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
 	"github.com/submerge/submerge/backend/internal/publish"
@@ -36,9 +36,8 @@ func NewService(db *gorm.DB, publishSvc *publish.Service, box *crypto.Box, baseU
 
 func (s *Service) SetBaseURL(baseURL string) error {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	u, err := url.Parse(baseURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
-		return fmt.Errorf("public base URL must be a valid HTTP or HTTPS URL without query or fragment")
+	if err := config.ValidatePublicBaseURL(baseURL); err != nil {
+		return err
 	}
 	s.baseMu.Lock()
 	s.baseURL = baseURL

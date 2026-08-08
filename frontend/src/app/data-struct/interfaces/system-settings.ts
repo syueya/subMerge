@@ -1,7 +1,7 @@
 export interface SystemSettingsView {
   settings: {
     sourceFetchUA: string;
-    sourceFetchTimeout: string;
+    sourceFetchTimeout: number;
     sourceMaxBytes: number;
     refreshInterval: number;
     geoipUrl: string;
@@ -9,7 +9,7 @@ export interface SystemSettingsView {
     geodbUrl: string;
     geoasnUrl: string;
     ipGeoUrl: string;
-    ipGeoTimeout: string;
+    ipGeoTimeout: number;
     logOutput: 'console' | 'file' | 'both' | 'none';
     debugLogging: boolean;
     logRetentionDays: number;
@@ -27,7 +27,7 @@ export interface SystemSettingsView {
 
 export interface SystemSettingsUpdate {
   sourceFetchUA?: string;
-  sourceFetchTimeout?: string;
+  sourceFetchTimeout?: number;
   sourceMaxBytes?: number;
   refreshInterval?: number;
   geoipUrl?: string;
@@ -35,7 +35,7 @@ export interface SystemSettingsUpdate {
   geodbUrl?: string;
   geoasnUrl?: string;
   ipGeoUrl?: string;
-  ipGeoTimeout?: string;
+  ipGeoTimeout?: number;
   logOutput?: 'console' | 'file' | 'both' | 'none';
   debugLogging?: boolean;
   logRetentionDays?: number;
