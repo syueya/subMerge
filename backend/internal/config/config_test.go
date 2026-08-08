@@ -100,7 +100,7 @@ func TestLoadDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.SessionTTL != 24*time.Hour || cfg.SourceMaxBytes != 8<<20 {
+	if cfg.SessionTTL != 24*time.Hour || cfg.SourceMaxBytes != 5<<20 {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if cfg.RefreshInterval != 24*time.Hour {

@@ -52,7 +52,7 @@ export const MenuList: MenuItem[] = [
       {
         displayName: '系统设置',
         iconName: 'settings',
-        route: '/main/settings/outbound-proxy'
+        route: '/main/settings/setting-settings'
       },
       {
         displayName: '系统日志',

@@ -43,6 +43,8 @@ import {
   IconPuzzle,
   IconId,
   IconBrandSpeedtest,
+  IconShieldCheck,
+  IconGlobe,
 } from '@luoxiao123/angular-tabler-icons/icons';
 
 export const ManualImportTablerIcons = {
@@ -89,5 +91,7 @@ export const ManualImportTablerIcons = {
   IconArrowBackUp,
   IconPuzzle,
   IconId,
-  IconBrandSpeedtest
+  IconBrandSpeedtest,
+  IconShieldCheck,
+  IconGlobe,
 };

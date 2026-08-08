@@ -21,7 +21,7 @@ const DefaultPublicBaseURL = "http://localhost:8080"
 
 const (
 	DefaultSourceFetchTimeout = 30 * time.Second
-	DefaultSourceMaxBytes     = 8 << 20
+	DefaultSourceMaxBytes     = 5 << 20
 	DefaultRefreshInterval    = 24 * time.Hour
 	DefaultIPGeoTimeout       = 5 * time.Second
 	DefaultGeoIPURL           = "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat"

@@ -1,11 +1,11 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { OutboundProxyComponent } from './outbound-proxy.component';
+import { SettingSettingsComponent } from './setting-settings/setting-settings.component';
 
 const routes: Routes = [
   {
     path: '',
-    component: OutboundProxyComponent,
+    component: SettingSettingsComponent,
     data: {
       hideBreadcrumb: true,
     },
@@ -16,4 +16,4 @@ const routes: Routes = [
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule],
 })
-export class OutboundProxyRoutingModule {}
+export class SettingSettingsRoutingModule {}

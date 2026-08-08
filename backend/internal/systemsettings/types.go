@@ -131,9 +131,14 @@ func applyUpdate(s *Settings, req UpdateRequest) error {
 		s.IPGeoURL = *req.IPGeoURL
 	}
 	if req.IPGeoTimeout != nil {
+		// 兼容两种格式：带单位 "5s" 或纯数字 "5"（按秒）
 		v, err := time.ParseDuration(strings.TrimSpace(*req.IPGeoTimeout))
 		if err != nil {
-			return err
+			seconds, atoiErr := strconv.Atoi(strings.TrimSpace(*req.IPGeoTimeout))
+			if atoiErr != nil {
+				return err
+			}
+			v = time.Duration(seconds) * time.Second
 		}
 		s.IPGeoTimeout = v
 	}
