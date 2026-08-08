@@ -3,7 +3,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { DialogService } from '@common/services/dialog.service';
-import { MSG_NAME_REQUIRED } from '@common/util';
+import { MSG_NAME_REQUIRED, hostValidator } from '@common/util';
 import {
 	DEFAULT_EXCLUDE_NAME_REGEX,
 	DEFAULT_EXCLUDE_SERVERS,
@@ -48,7 +48,7 @@ isUpdate: boolean;
 			name: [item?.name || '', [Validators.required, Validators.maxLength(64)]],
 			regionMode: [mode as RegionMode, [Validators.required]],
 			region: [region, [Validators.required]],
-			url: [''],
+			url: ['', hostValidator()],
 			enabled: [item?.enabled ?? true],
 			excludeNameRegex: [item?.excludeNameRegex ?? DEFAULT_EXCLUDE_NAME_REGEX],
 			excludeServers: [item?.excludeServers ?? DEFAULT_EXCLUDE_SERVERS],
@@ -56,7 +56,7 @@ isUpdate: boolean;
 		});
 
 		if (!this.isUpdate) {
-			this.editForm.get('url')?.setValidators([Validators.required]);
+			this.editForm.get('url')?.setValidators([Validators.required, hostValidator()]);
 			this.editForm.get('url')?.updateValueAndValidity();
 		}
 

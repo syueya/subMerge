@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { DialogService } from '@common/services/dialog.service';
-import { publicBaseUrlValidator } from '@common/util';
+import { hostValidator, proxyHostValidator } from '@common/util';
 import { SystemSettingsView } from '@data-struct';
 import { finalize, takeUntil } from 'rxjs';
 
@@ -28,18 +28,18 @@ export class SettingSettingsComponent extends CmParentFormComponent {
     sourceFetchTimeout: [30, [Validators.required, Validators.min(1)]],
     sourceMaxBytes: [5, [Validators.required, Validators.min(1)]],
     refreshInterval: [24, [Validators.required, Validators.min(1), Validators.max(720)]],
-    geoipUrl: ['', Validators.required],
-    geositeUrl: ['', Validators.required],
-    geodbUrl: ['', Validators.required],
-    geoasnUrl: ['', Validators.required],
+    geoipUrl: ['', [Validators.required, hostValidator()]],
+    geositeUrl: ['', [Validators.required, hostValidator()]],
+    geodbUrl: ['', [Validators.required, hostValidator()]],
+    geoasnUrl: ['', [Validators.required, hostValidator()]],
     ipGeoUrl: ['', Validators.required],
     ipGeoTimeout: [5, [Validators.required, Validators.min(1)]],
     logOutput: ['both' as 'console' | 'file' | 'both' | 'none'],
     debugLogging: false,
-    logRetentionDays: [7, [Validators.required, Validators.min(0), Validators.max(3650)]],
+    logRetentionDays: [7, [Validators.required, Validators.min(0), Validators.max(365)]],
     proxyEnabled: false,
-    proxyUrl: ['', Validators.pattern(/^(https?|socks5h?):\/\/[^\s]+$/)],
-    publicBaseUrl: ['http://localhost:8080', [Validators.required, publicBaseUrlValidator()]],
+    proxyUrl: ['', proxyHostValidator()],
+    publicBaseUrl: ['http://localhost:8080', [Validators.required, hostValidator()]],
     trustedProxies: [''],
     cookieSecure: false,
   });

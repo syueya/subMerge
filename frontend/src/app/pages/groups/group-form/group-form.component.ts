@@ -141,7 +141,7 @@ if (!code || code === 'UNK' || code === 'UNKNOWN') continue;
 		this.editForm.markAsDirty();
 	}
 
-	needsTestParams(type: string = this.editForm.get('type')?.value): boolean {
+	needsTestParams(type: string = this.editForm?.get('type')?.value): boolean {
 		return type === 'url-test' || type === 'fallback';
 	}
 

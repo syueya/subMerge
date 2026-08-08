@@ -151,10 +151,28 @@ export function filePathValidator(): ValidatorFn {
   };
 }
 
-export function publicBaseUrlValidator(): ValidatorFn {
+/**
+ * URL验证器：校验 http/https 地址合法性
+ * 使用 URL 构造函数解析，可校验协议、主机名、路径、查询参数、端口
+ * @param base 为 true 时仅校验协议前缀
+ * @returns
+ */
+export function hostValidator(base = false): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const raw = String(control.value || '').trim();
-    if (!raw) return null;
+    if (!raw) {
+      return null; // 如果控件值为空，不进行验证
+    }
+
+    // 基础模式：仅检查是否以http或https开头
+    if (base) {
+      if (!/^(https?:\/\/).*$/i.test(raw)) {
+        return { url: '域名必须以http或https开头' };
+      }
+      return null;
+    }
+
+    // 完整模式：使用 URL 构造函数解析，校验协议、主机名、路径、查询参数、端口
     try {
       const url = new URL(raw);
       const protocol = url.protocol.toLowerCase();
@@ -165,49 +183,24 @@ export function publicBaseUrlValidator(): ValidatorFn {
         url.search ||
         url.hash
       ) {
-        return { publicBaseUrl: '请输入合法的 HTTP/HTTPS 地址' };
+        return { url: '请输入合法的 HTTP/HTTPS 地址' };
       }
       if (url.port && (!/^\d+$/.test(url.port) || Number(url.port) < 1 || Number(url.port) > 65535)) {
-        return { publicBaseUrl: '端口号必须在 1-65535 范围内' };
+        return { url: '端口号必须在 1-65535 范围内' };
       }
-      return null;
     } catch {
-      return { publicBaseUrl: '请输入合法的 HTTP/HTTPS 地址' };
-    }
-  };
-}
-
-export function hostValidator(base = false): ValidatorFn {
-  return (control: AbstractControl): ValidationErrors | null => {
-    if (!control.value) {
-      return null; // 如果控件值为空，不进行验证
-    }
-    // 使用正则表达式检查URL是否以http或https开头
-    const urlPattern = /^(https?:\/\/).*$/i;
-    if (!urlPattern.test(control.value)) {
-      return { url: '域名必须以http或https开头' };
+      return { url: '请输入合法的 HTTP/HTTPS 地址' };
     }
 
-    if (!base) {
-      // 检查URL结尾是否包含/
-      if (control.value.endsWith('/')) {
-        return { url: '域名结尾不能出现/' };
-      }
+    // 检查URL结尾是否包含/
+    if (raw.endsWith('/')) {
+      return { url: '域名结尾不能出现/' };
+    }
 
-      // 使用正则表达式检查URL是否包含中文标点符号和其他特殊字符
-      const specialCharPattern = /[!#$%^&*()+=[\]{};'"\\|,<>?·~！#￥%……&*（）——+【】{}；：”“’‘、|，。《》？、]/;
-      if (specialCharPattern.test(control.value)) {
-        return { url: '域名中不允许包含中文标点符号和其他特殊字符' };
-      }
-      // 如果有两个冒号，则需要验证端口号格式
-      const colonCount = (control.value.match(/:/g) || []).length;
-      if (colonCount === 2) {
-        // 冒号后面的端口号必须是数字，且不大于5位
-        const portPattern = /^(https?:\/\/).*:(\d{1,5})$/i;
-        if (!portPattern.test(control.value)) {
-          return { url: '端口号必须是数字，且不大于5位' };
-        }
-      }
+    // 使用正则表达式检查URL是否包含中文标点符号和其他特殊字符
+    const specialCharPattern = /[!#$%^&*()+=[\]{};'"\\|,<>?·~！#￥%……&*（）——+【】{}；：”“’‘、|，。《》？、]/;
+    if (specialCharPattern.test(raw)) {
+      return { url: '域名中不允许包含中文标点符号和其他特殊字符' };
     }
 
     return null;
@@ -255,33 +248,4 @@ export function proxyHostValidator(): ValidatorFn {
   };
 }
 
-/**
- * 简单的化学式正则验证（支持常见格式，如H2O, CO2, Cu(OH)2等）
- * @returns
- */
-export function chemicalFormulaValidator(): ValidatorFn {
-  return (control: AbstractControl): ValidationErrors | null => {
-    if (!control.value) {
-      return null; // 如果控件值为空，不进行验证
-    }
 
-    const formula = control.value;
-
-    // 1. 验证是否以大写C开头
-    if (!/^C/.test(formula)) {
-      return { chemicalFormula: '化学式必须以大写C开头' };
-    }
-
-   // 2. 验证是否只包含 C、H、O、N、S 元素和数字
-    if (!/^[CHONS\d]+$/.test(formula)) {
-      return { chemicalFormula: '只能包含 C、H、O、N、S 元素和数字' };
-    }
-
-    // 2. 验证是否只包含 C、H、O、N、S 元素（忽略数字）
-    if (/[^CHONS\d]/.test(formula)) {
-      return { chemicalFormula: '只能包含 C、H、O、N、S 元素' };
-    }
-
-    return null;
-  };
-}
