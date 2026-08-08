@@ -13,7 +13,6 @@ import (
 	"github.com/submerge/submerge/backend/internal/apikey"
 	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/applog"
-	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/auth"
 	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/geo"
@@ -42,7 +41,6 @@ type Deps struct {
 	Outbound       *outbound.Handler
 	SystemSettings *systemsettings.Handler
 	Logs           *logs.Handler
-	Audit          *audit.Service
 	AuthMW         gin.HandlerFunc
 	LoginRL        gin.HandlerFunc
 	SubRL          gin.HandlerFunc
@@ -73,7 +71,7 @@ func NewRouter(d Deps) *gin.Engine {
 	r := gin.New()
 	// 默认不信任任何代理：c.ClientIP() 取 socket 源地址，防止 X-Forwarded-For 伪造。
 	// 部署在反向代理/Docker 后时，用 TRUSTED_PROXIES 配置可信代理 CIDR，
-	// 这样限流与审计才能拿到真实客户端 IP（否则所有请求都记成代理 IP）。
+	// 这样限流才能拿到真实客户端 IP（否则所有请求都记成代理 IP）。
 	if len(d.Cfg.TrustedProxies) > 0 {
 		if err := r.SetTrustedProxies(d.Cfg.TrustedProxies); err != nil {
 			applog.Warn("invalid TRUSTED_PROXIES, falling back to trusting none: %v", err)
@@ -196,15 +194,6 @@ func NewRouter(d Deps) *gin.Engine {
 			secured.GET("/releases/:id", scopeRead, d.Publish.Get)
 			secured.POST("/releases/:id/rollback", scopePublish, d.Publish.Rollback)
 			secured.DELETE("/releases/:id", scopePublish, d.Publish.Delete)
-
-			secured.GET("/audit", scopeRead, func(c *gin.Context) {
-				res, err := d.Audit.List(50, 0)
-				if err != nil {
-					apiresp.Fail(c, http.StatusInternalServerError, "internal", "list audit failed")
-					return
-				}
-				apiresp.OK(c, res)
-			})
 
 			if d.Logs != nil {
 				secured.GET("/logs", scopeRead, d.Logs.List)

@@ -64,7 +64,6 @@ func Open(dbPath string) (*gorm.DB, error) {
 		&ShareToken{},
 		&APIKey{},
 		&Release{},
-		&AuditLog{},
 		&NetCheckSetting{},
 		&OutboundProxySetting{},
 		&SystemSetting{},

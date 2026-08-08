@@ -10,8 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/apiresp"
-	"github.com/submerge/submerge/backend/internal/audit"
-	"github.com/submerge/submerge/backend/internal/middleware"
 	"gorm.io/gorm"
 )
 
@@ -20,12 +18,11 @@ var regionCodeRe = regexp.MustCompile(`^[A-Za-z0-9]{1,16}$`)
 
 // Handler 订阅源 HTTP
 type Handler struct {
-	svc   *Service
-	audit *audit.Service
+	svc *Service
 }
 
-func NewHandler(svc *Service, auditSvc *audit.Service) *Handler {
-	return &Handler{svc: svc, audit: auditSvc}
+func NewHandler(svc *Service) *Handler {
+	return &Handler{svc: svc}
 }
 
 func (h *Handler) List(c *gin.Context) {
@@ -51,8 +48,7 @@ func (h *Handler) ListRegions(c *gin.Context) {
 
 func (h *Handler) Create(c *gin.Context) {
 	var req common.CreateSourceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	if req.RegionMode != nil {
@@ -87,19 +83,16 @@ func (h *Handler) Create(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "create source failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "create_source", "source", item.Name, c.ClientIP())
 	apiresp.OK(c, item)
 }
 
 func (h *Handler) Update(c *gin.Context) {
-	id, err := apiresp.ParseID(c)
-	if err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+	id, ok := apiresp.RequireID(c)
+	if !ok {
 		return
 	}
 	var req common.UpdateSourceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	if req.Region != nil {
@@ -128,28 +121,24 @@ func (h *Handler) Update(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "update source failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "update_source", "source", item.Name, c.ClientIP())
 	apiresp.OK(c, item)
 }
 
 func (h *Handler) Delete(c *gin.Context) {
-	id, err := apiresp.ParseID(c)
-	if err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+	id, ok := apiresp.RequireID(c)
+	if !ok {
 		return
 	}
 	if err := h.svc.Delete(id); err != nil {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "delete source failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "delete_source", "source", strconv.FormatUint(uint64(id), 10), c.ClientIP())
-	apiresp.OK(c, map[string]bool{"success": true})
+	apiresp.Success(c)
 }
 
 func (h *Handler) BatchDelete(c *gin.Context) {
 	var req common.BatchDeleteSourcesRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	if err := validateSourceBatchIDs(req.IDs); err != nil {
@@ -165,14 +154,12 @@ func (h *Handler) BatchDelete(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "batch delete sources failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "batch_delete_sources", "source", strconv.Itoa(n), c.ClientIP())
 	apiresp.OK(c, map[string]int{"deleted": n})
 }
 
 func (h *Handler) Refresh(c *gin.Context) {
-	id, err := apiresp.ParseID(c)
-	if err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+	id, ok := apiresp.RequireID(c)
+	if !ok {
 		return
 	}
 	res, err := h.svc.Refresh(id)
@@ -180,15 +167,12 @@ func (h *Handler) Refresh(c *gin.Context) {
 		apiresp.FailDetails(c, http.StatusBadRequest, "refresh_failed", "refresh failed, previous snapshot retained", err.Error())
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "refresh_source", "source", res.Source.Name, c.ClientIP())
 	apiresp.OK(c, res)
 }
 
 // RefreshAll 刷新全部启用订阅源
 func (h *Handler) RefreshAll(c *gin.Context) {
 	res := h.svc.RefreshAll()
-	h.audit.Log(middleware.GetUsername(c), "refresh_all_sources", "source",
-		strconv.Itoa(res.OK)+"/"+strconv.Itoa(res.Total), c.ClientIP())
 	apiresp.OK(c, res)
 }
 
@@ -212,9 +196,8 @@ func (h *Handler) ListProxies(c *gin.Context) {
 }
 
 func (h *Handler) UpdateProxy(c *gin.Context) {
-	id, err := apiresp.ParseID(c)
-	if err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+	id, ok := apiresp.RequireID(c)
+	if !ok {
 		return
 	}
 	var req common.UpdateProxyRequest
@@ -231,14 +214,12 @@ func (h *Handler) UpdateProxy(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "update proxy failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "update_proxy", "proxy", item.Name, c.ClientIP())
 	apiresp.OK(c, item)
 }
 
 func (h *Handler) BatchUpdateProxies(c *gin.Context) {
 	var req common.BatchUpdateProxiesRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	if err := validateSourceBatchIDs(req.IDs); err != nil {
@@ -254,7 +235,6 @@ func (h *Handler) BatchUpdateProxies(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "batch update proxies failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "batch_update_proxies", "proxy", strconv.Itoa(n), c.ClientIP())
 	apiresp.OK(c, map[string]int{"updated": n})
 }
 

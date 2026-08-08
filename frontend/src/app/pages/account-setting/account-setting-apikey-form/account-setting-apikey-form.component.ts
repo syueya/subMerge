@@ -1,7 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatChipListboxChange } from '@angular/material/chips';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+import { DialogService } from '@common/services/dialog.service';
+import { MSG_NAME_REQUIRED } from '@common/util';
 import {
 	APIKey,
 	APIKeyFormDialogData,
@@ -9,8 +12,6 @@ import {
 	API_KEY_SCOPE_HINTS,
 	API_KEY_SCOPE_OPTIONS,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { finalize, takeUntil } from 'rxjs';
 
 import { ApiKeyService } from '../services/apikey.service';
@@ -126,7 +127,7 @@ export class AccountSettingApikeyFormComponent extends CmParentFormComponent {
 		const name = String(v.name || '').trim();
 		const note = String(v.note || '').trim();
 		if (!name) {
-			void this.dialog.error('请填写名称');
+			void this.dialog.error(MSG_NAME_REQUIRED);
 			return;
 		}
 

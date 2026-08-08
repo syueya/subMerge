@@ -3,25 +3,21 @@ package subscription
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/apiresp"
-	"github.com/submerge/submerge/backend/internal/audit"
-	"github.com/submerge/submerge/backend/internal/middleware"
 	"gorm.io/gorm"
 )
 
 // Handler 令牌与订阅 HTTP
 type Handler struct {
-	svc   *Service
-	audit *audit.Service
+	svc *Service
 }
 
-func NewHandler(svc *Service, auditSvc *audit.Service) *Handler {
-	return &Handler{svc: svc, audit: auditSvc}
+func NewHandler(svc *Service) *Handler {
+	return &Handler{svc: svc}
 }
 
 func (h *Handler) List(c *gin.Context) {
@@ -35,8 +31,7 @@ func (h *Handler) List(c *gin.Context) {
 
 func (h *Handler) Create(c *gin.Context) {
 	var req common.CreateTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	item, err := h.svc.Create(req.Name, req.SourceIDs, req.GroupMode, req.GroupNames)
@@ -51,19 +46,16 @@ func (h *Handler) Create(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "create token failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "create_token", "token", item.Name, c.ClientIP())
 	apiresp.OK(c, item)
 }
 
 func (h *Handler) Update(c *gin.Context) {
-	id, err := apiresp.ParseID(c)
-	if err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+	id, ok := apiresp.RequireID(c)
+	if !ok {
 		return
 	}
 	var req common.UpdateTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	item, err := h.svc.Update(id, req)
@@ -75,15 +67,13 @@ func (h *Handler) Update(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "update token failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "update_token", "token", item.Name, c.ClientIP())
 	apiresp.OK(c, item)
 }
 
 // Revoke 作废但保留记录（可再生成）
 func (h *Handler) Revoke(c *gin.Context) {
-	id, err := apiresp.ParseID(c)
-	if err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+	id, ok := apiresp.RequireID(c)
+	if !ok {
 		return
 	}
 	item, err := h.svc.Revoke(id)
@@ -91,14 +81,12 @@ func (h *Handler) Revoke(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "revoke token failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "revoke_token", "token", item.Name, c.ClientIP())
 	apiresp.OK(c, item)
 }
 
 func (h *Handler) Regenerate(c *gin.Context) {
-	id, err := apiresp.ParseID(c)
-	if err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+	id, ok := apiresp.RequireID(c)
+	if !ok {
 		return
 	}
 	item, err := h.svc.Regenerate(id)
@@ -106,15 +94,13 @@ func (h *Handler) Regenerate(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "regenerate token failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "regenerate_token", "token", item.Name, c.ClientIP())
 	apiresp.OK(c, item)
 }
 
 // Delete 永久删除（硬删）；作废请用 Revoke
 func (h *Handler) Delete(c *gin.Context) {
-	id, err := apiresp.ParseID(c)
-	if err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid id")
+	id, ok := apiresp.RequireID(c)
+	if !ok {
 		return
 	}
 	if err := h.svc.Delete(id); err != nil {
@@ -125,8 +111,7 @@ func (h *Handler) Delete(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "delete token failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "delete_token", "token", strconv.FormatUint(uint64(id), 10), c.ClientIP())
-	apiresp.OK(c, map[string]bool{"success": true})
+	apiresp.Success(c)
 }
 
 // Subscribe 公开订阅接口（无鉴权，依赖 token）

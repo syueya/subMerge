@@ -189,8 +189,9 @@ export class RuleHomeComponent extends CmParentComponent implements OnInit {
 		);
 	}
 
-	private persistRuleOrder(previous: Rule[], next: Rule[]): void {
+	private persistRuleOrder(previous: Rule[], next: Rule[], subject: string, action: 'up' | 'down' | 'top'): void {
 		const orderedIds = sortRules(next).map((item) => item.id);
+		const actionText = action === 'up' ? '上移' : action === 'down' ? '下移' : '置顶';
 		this.rules.set(next);
 		this.sortBusy.set(true);
 		this.svc
@@ -203,10 +204,11 @@ export class RuleHomeComponent extends CmParentComponent implements OnInit {
 				next: () => {
 					this.reload(false, true);
 					this.notifyDraftChanged();
+					void this.dialog.success(`${subject}${actionText}成功`);
 				},
 				error: (e: Error) => {
 					this.rules.set(previous);
-					void this.dialog.error(e.message);
+					void this.dialog.error(`${subject}${actionText}失败：${e.message}`);
 				},
 			});
 	}
@@ -215,12 +217,12 @@ export class RuleHomeComponent extends CmParentComponent implements OnInit {
 		if (action === 'top') {
 			if (!this.canMoveRuleWithinGroup(rule)) return;
 			const previous = this.rules();
-			this.persistRuleOrder(previous, moveRuleWithinGroup(previous, rule.id, this.viewMode()));
+			this.persistRuleOrder(previous, moveRuleWithinGroup(previous, rule.id, this.viewMode()), '规则', action);
 			return;
 		}
 		if (!this.canMoveRule(rule, action)) return;
 		const previous = this.rules();
-		this.persistRuleOrder(previous, moveRuleOrder(previous, rule.id, action));
+		this.persistRuleOrder(previous, moveRuleOrder(previous, rule.id, action), '规则', action);
 	}
 
 	moveSection(key: string, action: 'up' | 'down'): void {
@@ -229,7 +231,13 @@ export class RuleHomeComponent extends CmParentComponent implements OnInit {
 		const order = this.allSections()
 			.filter((section) => section.rules.some((rule) => !this.isSystemRule(rule)))
 			.map((section) => section.key);
-		this.persistRuleOrder(previous, moveRuleGroup(previous, key, this.viewMode(), action, order));
+		const subject = this.viewMode() === 'category' ? '分类' : '策略组';
+		this.persistRuleOrder(
+			previous,
+			moveRuleGroup(previous, key, this.viewMode(), action, order),
+			subject,
+			action,
+		);
 	}
 
 	setViewMode(mode: 'category' | 'target'): void {

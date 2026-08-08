@@ -8,6 +8,7 @@ import (
 	"time"
 
 	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/applog"
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
@@ -288,16 +289,16 @@ func (s *Service) toView(r database.APIKey, withPlainHint bool) common.APIKey {
 		Status:    common.APIKeyStatus(r.Status),
 		Note:      r.Note,
 		CreatedBy: r.CreatedBy,
-		CreatedAt: r.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt: r.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt: apiresp.FormatRFC3339(&r.CreatedAt),
+		UpdatedAt: apiresp.FormatRFC3339(&r.UpdatedAt),
 	}
 	if r.ExpiresAt != nil {
-		ts := r.ExpiresAt.UTC().Format(time.RFC3339)
-		v.ExpiresAt = &ts
+		s := apiresp.FormatRFC3339(r.ExpiresAt)
+		v.ExpiresAt = &s
 	}
 	if r.LastUsedAt != nil {
-		ts := r.LastUsedAt.UTC().Format(time.RFC3339)
-		v.LastUsedAt = &ts
+		s := apiresp.FormatRFC3339(r.LastUsedAt)
+		v.LastUsedAt = &s
 	}
 	return v
 }

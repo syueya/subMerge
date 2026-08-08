@@ -7,3 +7,5 @@ export * from './is';
 export * from './GlobalErrorHandler';
 export * from './urlUtils';
 export * from './with-loading';
+export * from './clipboard';
+export * from './messages';

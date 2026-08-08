@@ -177,7 +177,7 @@ export class SessionHttpCacheService {
     if (/\/(login|bootstrap|logout|setup-status|register|initAdminStatus)(\/|$)/.test(path)) {
       return false;
     }
-	    // SubMerge 列表多为 GET /api/sources|/rules|/groups|/tokens|/apikeys|/releases|/proxies|/regions|/audit|/logs
+	    // SubMerge 列表多为 GET /api/sources|/rules|/groups|/tokens|/apikeys|/releases|/proxies|/regions|/logs
 	    if (
 	      path === '/api/sources' ||
 	      path === '/api/rules' ||
@@ -188,7 +188,6 @@ path === '/api/releases' ||
 		      path === '/api/releases/draft-status' ||
 		      path === '/api/proxies' ||
 		      path === '/api/regions' ||
-		      path === '/api/audit' ||
 		      path === '/api/logs' ||
 		      path === '/api/logs/details' ||
 		      path === '/api/geo/status' ||

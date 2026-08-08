@@ -2,26 +2,22 @@ package rule
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/apiresp"
-	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/geo"
-	"github.com/submerge/submerge/backend/internal/middleware"
 )
 
 // Handler 规则 HTTP
 type Handler struct {
-	svc   *Service
-	audit *audit.Service
-	geo   *geo.Service
+	svc *Service
+	geo *geo.Service
 }
 
-func NewHandler(svc *Service, auditSvc *audit.Service, geoSvc *geo.Service) *Handler {
-	return &Handler{svc: svc, audit: auditSvc, geo: geoSvc}
+func NewHandler(svc *Service, geoSvc *geo.Service) *Handler {
+	return &Handler{svc: svc, geo: geoSvc}
 }
 
 func (h *Handler) bindJSON(c *gin.Context, dst any) bool {
@@ -51,10 +47,6 @@ func (h *Handler) requireBatchIDs(c *gin.Context, ids []uint) bool {
 		return false
 	}
 	return true
-}
-
-func (h *Handler) logAction(c *gin.Context, action, resource, detail string) {
-	h.audit.Log(middleware.GetUsername(c), action, resource, detail, c.ClientIP())
 }
 
 // MatchRules 按调用方传入的规则快照模拟匹配（含 GEOSITE/GEOIP）。
@@ -98,7 +90,6 @@ func (h *Handler) CreateRule(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	h.logAction(c, "create_rule", "rule", item.Target)
 	apiresp.OK(c, item)
 }
 
@@ -120,7 +111,6 @@ func (h *Handler) BatchImportRules(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	h.logAction(c, "batch_import_rules", "rule", strconv.Itoa(res.Created)+" created")
 	apiresp.OK(c, res)
 }
 
@@ -138,7 +128,6 @@ func (h *Handler) UpdateRule(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	h.logAction(c, "update_rule", "rule", strconv.FormatUint(uint64(id), 10))
 	apiresp.OK(c, item)
 }
 
@@ -156,8 +145,6 @@ func (h *Handler) BatchUpdateRulesTarget(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	h.logAction(c, "batch_update_rules_target", "rule",
-		strconv.Itoa(n)+" → "+strings.TrimSpace(req.Target))
 	apiresp.OK(c, common.BatchUpdateRulesTargetResponse{Updated: n})
 }
 
@@ -171,11 +158,6 @@ func (h *Handler) BatchUpdateRulesEnabled(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "batch update rules enabled failed")
 		return
 	}
-	state := "disabled"
-	if req.Enabled {
-		state = "enabled"
-	}
-	h.logAction(c, "batch_update_rules_enabled", "rule", strconv.Itoa(n)+" "+state)
 	apiresp.OK(c, common.BatchUpdateRulesEnabledResponse{Updated: n})
 }
 
@@ -193,7 +175,6 @@ func (h *Handler) BatchUpdateRulesCategory(c *gin.Context) {
 	if cat == "" {
 		cat = "(未分类)"
 	}
-	h.logAction(c, "batch_update_rules_category", "rule", strconv.Itoa(n)+" → "+cat)
 	apiresp.OK(c, common.BatchUpdateRulesCategoryResponse{Updated: n})
 }
 
@@ -207,7 +188,6 @@ func (h *Handler) BatchDeleteRules(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "batch delete rules failed")
 		return
 	}
-	h.logAction(c, "batch_delete_rules", "rule", strconv.Itoa(n)+" deleted")
 	apiresp.OK(c, common.BatchDeleteRulesResponse{Deleted: n})
 }
 
@@ -220,8 +200,7 @@ func (h *Handler) DeleteRule(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "delete rule failed")
 		return
 	}
-	h.logAction(c, "delete_rule", "rule", strconv.FormatUint(uint64(id), 10))
-	apiresp.OK(c, map[string]bool{"success": true})
+	apiresp.Success(c)
 }
 
 func (h *Handler) ReorderRules(c *gin.Context) {
@@ -233,8 +212,7 @@ func (h *Handler) ReorderRules(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "reorder failed")
 		return
 	}
-	h.logAction(c, "reorder_rules", "rule", "")
-	apiresp.OK(c, map[string]bool{"success": true})
+	apiresp.Success(c)
 }
 
 func (h *Handler) ListGroups(c *gin.Context) {
@@ -256,7 +234,6 @@ func (h *Handler) CreateGroup(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	h.logAction(c, "create_group", "proxy_group", item.Name)
 	apiresp.OK(c, item)
 }
 
@@ -274,7 +251,6 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	h.logAction(c, "update_group", "proxy_group", item.Name)
 	apiresp.OK(c, item)
 }
 
@@ -288,6 +264,5 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "delete group failed")
 		return
 	}
-	h.logAction(c, "delete_group", "proxy_group", strconv.FormatUint(uint64(id), 10))
-	apiresp.OK(c, map[string]bool{"success": true})
+	apiresp.Success(c)
 }

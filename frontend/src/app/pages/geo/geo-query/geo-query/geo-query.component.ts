@@ -1,5 +1,7 @@
 import { Component, OnInit, ViewChild, effect, inject, signal } from '@angular/core';
+import { CmParentComponent } from '@common/parents/parent/parent.component';
 import { DialogService } from '@common/services/dialog.service';
+import { formatBytes, formatDateTime } from '@common/util';
 import {
 	BADGE_ERR,
 	BADGE_MUTED,
@@ -8,9 +10,8 @@ import {
 	GeoCategoriesResponse,
 	GeoStatus,
 } from '@data-struct';
-import { CmParentComponent } from '@common/parents/parent/parent.component';
-import { formatDateTime } from '@common/util';
 import { takeUntil } from 'rxjs';
+
 import { GeoService } from '../../services/geo.service';
 import { GeoCategorySearchComponent } from '../geo-category-search/geo-category-search.component';
 import { GeoDomainQueryComponent } from '../geo-domain-query/geo-domain-query.component';
@@ -118,11 +119,10 @@ export class GeoQueryComponent extends CmParentComponent implements OnInit {
 			return parts.join('\n');
 		}
 
-	formatBytes(size: number): string {
-		if (!size) return '—';
-		if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-		return `${(size / 1024 / 1024).toFixed(1)} MB`;
-	}
+formatBytes(size: number): string {
+			if (!size) return '—';
+			return formatBytes(size);
+		}
 
 				async update(): Promise<void> {
 					if (this.updating()) return;

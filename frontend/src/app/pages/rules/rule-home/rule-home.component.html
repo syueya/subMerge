@@ -228,16 +228,16 @@
                       </ng-container>
                       <ng-container matColumnDef="type">
                         <th mat-header-cell *matHeaderCellDef>类型</th>
-                        <td mat-cell *matCellDef="let rule" class="f-s-12 f-w-600">{{ ruleTypeText(rule.type) }}</td>
+                        <td mat-cell *matCellDef="let rule" class="f-s-12">{{ ruleTypeText(rule.type) }}</td>
                       </ng-container>
                       <ng-container matColumnDef="payload">
                         <th mat-header-cell *matHeaderCellDef>匹配</th>
-                        <td mat-cell *matCellDef="let rule" class="f-s-12 text-muted">{{ rule.payload || '—' }}</td>
+                        <td mat-cell *matCellDef="let rule" class="f-s-12">{{ rule.payload || '—' }}</td>
                       </ng-container>
                       <ng-container matColumnDef="target">
                         <th mat-header-cell *matHeaderCellDef>出口</th>
                         <td mat-cell *matCellDef="let rule" class="f-s-12">
-                          <span [class.text-warning]="isOrphanTarget(rule.target)" [class.text-muted]="!isOrphanTarget(rule.target)">
+                          <span [class.text-warning]="isOrphanTarget(rule.target)">
                             {{ rule.target }}
                           </span>
                           @if (isOrphanTarget(rule.target)) {

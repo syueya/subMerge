@@ -1,6 +1,9 @@
 import { Component, WritableSignal, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+import { DialogService } from '@common/services/dialog.service';
+import { MSG_NAME_REQUIRED } from '@common/util';
 import {
 	BADGE_WARN,
 	ProxyGroup,
@@ -11,10 +14,9 @@ import {
 	TokenGroupMode,
 	enumText,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { TokenService } from '../services/token.service';
-import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { finalize, takeUntil } from 'rxjs';
+
+import { TokenService } from '../services/token.service';
 
 @Component({
 	selector: 'app-token-form',
@@ -172,7 +174,7 @@ export class TokenFormComponent extends CmParentFormComponent {
 		if (!this.isEdit) {
 			name = String(this.editForm.get('name')?.value || '').trim();
 			if (!name) {
-				void this.dialog.error('请填写名称');
+				void this.dialog.error(MSG_NAME_REQUIRED);
 				return;
 			}
 		}

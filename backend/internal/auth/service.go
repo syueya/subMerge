@@ -8,6 +8,7 @@ import (
 	"time"
 
 	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
 	"golang.org/x/crypto/bcrypt"
@@ -311,10 +312,10 @@ func toAdminUser(a database.Admin) common.AdminUser {
 		Username:    a.Username,
 		DisplayName: display,
 		Avatar:      a.Avatar,
-		CreatedAt:   a.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:   apiresp.FormatRFC3339(&a.CreatedAt),
 	}
 	if a.LastLoginAt != nil {
-		s := a.LastLoginAt.UTC().Format(time.RFC3339)
+		s := apiresp.FormatRFC3339(a.LastLoginAt)
 		u.LastLoginAt = &s
 	}
 	return u

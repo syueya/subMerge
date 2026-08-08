@@ -1,5 +1,9 @@
 import { AfterViewInit, Component, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
+		import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+		import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+		import { DialogService } from '@common/services/dialog.service';
+		import { copyToClipboard, formatDateTime, MSG_COPIED, MSG_COPY_FAILED, msgDisabled, msgEnabled, msgRevoked, msgDeleted, TITLE_CONFIRM_DELETE, TITLE_CONFIRM_REVOKE } from '@common/util';
 import {
 		BADGE_MUTED,
 		BADGE_WARN,
@@ -13,14 +17,11 @@ TokenFormDialogData,
 			enumBadgeClass,
 			enumText,
 		} from '@data-struct';
-		import { DialogService } from '@common/services/dialog.service';
-		import { formatDateTime } from '@common/util';
+		import { finalize, takeUntil } from 'rxjs';
+
 		import { RuleService } from '../../rules/services/rule.service';
 		import { SourceService } from '../../sources/services/source.service';
 		import { TokenService } from '../services/token.service';
-		import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-		import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-		import { finalize, takeUntil } from 'rxjs';
 		import { TokenFormComponent } from '../token-form/token-form.component';
 
 @Component({
@@ -127,12 +128,12 @@ override displayedColumns: string[] = [
 		const i = url.lastIndexOf('/');
 		if (i < 0) {
 			if (url.length <= 4) return url;
-			return '**' + url.slice(-4);
+			return `**${  url.slice(-4)}`;
 		}
 		const base = url.slice(0, i + 1);
 		const token = url.slice(i + 1);
 		if (token.length <= 4) return url;
-		return base + '**' + token.slice(-4);
+		return `${base  }**${  token.slice(-4)}`;
 	}
 
 	sourceScopeLines(item: ShareToken): string[] {
@@ -203,25 +204,25 @@ openCreate(): void {
 				finalize(() => this.busy.set(false)),
 			)
 			.subscribe({
-				next: () => {
-					void this.dialog.success(`已禁用「${item.name}」`);
-					this.reloadTableDataByFirstPage();
-				},
-				error: (e: Error) => void this.dialog.error(e.message),
-			});
-	}
+next: () => {
+						void this.dialog.success(msgDisabled(item.name));
+						this.reloadTableDataByFirstPage();
+					},
+					error: (e: Error) => void this.dialog.error(e.message),
+				});
+		}
 
-	enable(item: ShareToken): void {
-		this.busy.set(true);
-		this.svc
-			.update(item.id, { status: TokenStatus.Active })
-			.pipe(
-				takeUntil(this.$destroy),
-				finalize(() => this.busy.set(false)),
-			)
-			.subscribe({
-				next: () => {
-					void this.dialog.success(`已启用「${item.name}」`);
+		enable(item: ShareToken): void {
+			this.busy.set(true);
+			this.svc
+				.update(item.id, { status: TokenStatus.Active })
+				.pipe(
+					takeUntil(this.$destroy),
+					finalize(() => this.busy.set(false)),
+				)
+				.subscribe({
+					next: () => {
+						void this.dialog.success(msgEnabled(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (e: Error) => void this.dialog.error(e.message),
@@ -231,7 +232,7 @@ openCreate(): void {
 	async revoke(item: ShareToken): Promise<void> {
 		const ok = await this.dialog.confirm(
 			`作废「${item.name}」？\n旧链接立即失效，记录与访问次数保留，之后可重新生成。`,
-			'作废确认',
+			TITLE_CONFIRM_REVOKE,
 			'作废',
 		);
 		if (!ok) return;
@@ -244,7 +245,7 @@ openCreate(): void {
 			)
 			.subscribe({
 				next: () => {
-					void this.dialog.success(`已作废「${item.name}」`);
+					void this.dialog.success(msgRevoked(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (e: Error) => void this.dialog.error(e.message),
@@ -279,7 +280,7 @@ openCreate(): void {
 	async remove(item: ShareToken): Promise<void> {
 		const ok = await this.dialog.confirm(
 			`永久删除「${item.name}」？\n记录不可恢复（与「作废」不同）。`,
-			'删除确认',
+			TITLE_CONFIRM_DELETE,
 			'删除',
 		);
 		if (!ok) return;
@@ -292,7 +293,7 @@ openCreate(): void {
 			)
 			.subscribe({
 				next: () => {
-					void this.dialog.success(`已删除「${item.name}」`);
+					void this.dialog.success(msgDeleted(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (e: Error) => void this.dialog.error(e.message),
@@ -301,34 +302,10 @@ openCreate(): void {
 
 	async copy(text: string): Promise<void> {
 		try {
-			await this.writeClipboard(text);
-			void this.dialog.success('已复制到剪贴板');
+			await copyToClipboard(text);
+			void this.dialog.success(MSG_COPIED);
 		} catch {
-			void this.dialog.error('复制失败，请手动选择文本');
-		}
-	}
-
-	/** Clipboard API 仅在 HTTPS / localhost 可用；HTTP 局域网访问时回退到 execCommand。 */
-	private async writeClipboard(text: string): Promise<void> {
-		if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText && window.isSecureContext) {
-			await navigator.clipboard.writeText(text);
-			return;
-		}
-		const ta = document.createElement('textarea');
-		ta.value = text;
-		ta.setAttribute('readonly', '');
-		ta.style.position = 'fixed';
-		ta.style.left = '-9999px';
-		ta.style.top = '0';
-		document.body.appendChild(ta);
-		ta.select();
-		ta.setSelectionRange(0, text.length);
-		try {
-			if (!document.execCommand('copy')) {
-				throw new Error('execCommand copy failed');
-			}
-		} finally {
-			document.body.removeChild(ta);
+			void this.dialog.error(MSG_COPY_FAILED);
 		}
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
@@ -470,11 +471,11 @@ func (s *Service) toView(r database.Source) (common.SubscriptionSource, error) {
 		TrafficDownload:  r.TrafficDownload,
 		TrafficTotal:     r.TrafficTotal,
 		TrafficExpire:    r.TrafficExpire,
-		CreatedAt:        r.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:        r.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:        apiresp.FormatRFC3339(&r.CreatedAt),
+		UpdatedAt:        apiresp.FormatRFC3339(&r.UpdatedAt),
 	}
 	if r.LastRefreshAt != nil {
-		s := r.LastRefreshAt.UTC().Format(time.RFC3339)
+		s := apiresp.FormatRFC3339(r.LastRefreshAt)
 		v.LastRefreshAt = &s
 	}
 	if r.LastError != "" {

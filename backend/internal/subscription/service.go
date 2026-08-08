@@ -196,7 +196,7 @@ func (s *Service) Regenerate(id uint) (common.ShareToken, error) {
 }
 
 // Delete 硬删除令牌行，释放 TokenHash 唯一索引。
-// 不可恢复；需要留痕时用 Revoke，审计记在 audit 表而非软删。
+// 不可恢复；需要撤销时用 Revoke。
 func (s *Service) Delete(id uint) error {
 	res := s.db.Unscoped().Delete(&database.ShareToken{}, id)
 	if res.Error != nil {

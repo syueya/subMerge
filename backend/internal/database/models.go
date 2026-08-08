@@ -104,7 +104,7 @@ type ProxyGroup struct {
 //
 // 生命周期语义：
 //   - Revoke：Status=revoked，行保留，旧链接立即 403；可再 Regenerate 恢复。
-//   - Delete：硬删整行，TokenHash 唯一索引释放；审计日志在 audit 表，不靠软删留痕。
+//   - Delete：硬删整行，TokenHash 唯一索引释放。
 //
 // TokenHash 用于校验；TokenEncrypted 存 AES 密文以便管理端展示完整订阅链接。
 // SourceIDsJSON 允许的订阅源 ID 列表（JSON 数组）；空 / [] 表示全部源。
@@ -165,17 +165,6 @@ type Release struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
-}
-
-// AuditLog 审计日志
-type AuditLog struct {
-	ID        uint      `gorm:"primaryKey"`
-	Actor     string    `gorm:"size:64;not null;index"`
-	Action    string    `gorm:"size:64;not null;index"`
-	Resource  string    `gorm:"size:128;not null"`
-	Detail    string    `gorm:"type:text"`
-	IP        string    `gorm:"size:64"`
-	CreatedAt time.Time `gorm:"index"`
 }
 
 type OutboundProxySetting struct {

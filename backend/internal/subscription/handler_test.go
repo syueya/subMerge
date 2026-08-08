@@ -8,7 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	common "github.com/submerge/submerge/backend/common"
-	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
 	"github.com/submerge/submerge/backend/internal/publish"
@@ -32,7 +31,7 @@ func TestSubscribeResponseIsNotCacheable(t *testing.T) {
 	}
 	publishSvc := publish.NewService(db, source.NewService(db, nil, 0, 0), rule.NewService(db))
 	svc := NewService(db, publishSvc, box, "http://example.test")
-	h := NewHandler(svc, (*audit.Service)(nil))
+	h := NewHandler(svc)
 
 	invalid := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(invalid)

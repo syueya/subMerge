@@ -404,12 +404,6 @@ type MeResponse struct {
 	User AdminUser `json:"user"`
 }
 
-// AuditListResponse 审计列表
-type AuditListResponse struct {
-	Items []AuditLog `json:"items"`
-	Total int64      `json:"total"`
-}
-
 // LogFileInfo 按日日志文件元信息（供管理端列表）
 type LogFileInfo struct {
 	Name      string `json:"name"`

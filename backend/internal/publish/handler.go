@@ -1,25 +1,22 @@
 package publish
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/apiresp"
-	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/middleware"
 )
 
 // Handler 发布 HTTP
 type Handler struct {
-	svc   *Service
-	audit *audit.Service
+	svc *Service
 }
 
-func NewHandler(svc *Service, auditSvc *audit.Service) *Handler {
-	return &Handler{svc: svc, audit: auditSvc}
+func NewHandler(svc *Service) *Handler {
+	return &Handler{svc: svc}
 }
 
 func (h *Handler) List(c *gin.Context) {
@@ -86,7 +83,6 @@ func (h *Handler) Publish(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "publish_failed", err.Error())
 		return
 	}
-	h.audit.Log(actor, "publish", "release", "v"+strconv.Itoa(res.Release.Version), c.ClientIP())
 	apiresp.OK(c, res)
 }
 
@@ -102,7 +98,6 @@ func (h *Handler) Rollback(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "rollback_failed", err.Error())
 		return
 	}
-	h.audit.Log(actor, "rollback", "release", "v"+strconv.Itoa(res.Version), c.ClientIP())
 	apiresp.OK(c, res)
 }
 
@@ -117,6 +112,5 @@ func (h *Handler) Delete(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "delete_failed", err.Error())
 		return
 	}
-	h.audit.Log(actor, "delete", "release", fmt.Sprintf("v(%d)", id), c.ClientIP())
-	apiresp.OK(c, gin.H{})
+	apiresp.Success(c)
 }

@@ -1,6 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
+import { DialogService } from '@common/services/dialog.service';
+import { MSG_NAME_REQUIRED } from '@common/util';
 import {
 	DEFAULT_EXCLUDE_NAME_REGEX,
 	DEFAULT_EXCLUDE_SERVERS,
@@ -10,11 +13,10 @@ import {
 	SourceFormDialogData,
 	regionOptionText,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { SourceService } from '../services/source.service';
-import { formatRefreshMsg } from '../services/source-refresh.util';
-import { CmParentFormComponent } from '@common/parents/parent-form/parent-form.component';
 import { concatMap, finalize, takeUntil } from 'rxjs';
+
+import { formatRefreshMsg } from '../services/source-refresh.util';
+import { SourceService } from '../services/source.service';
 
 @Component({
 	selector: 'app-source-form',
@@ -115,7 +117,7 @@ get regionMode(): RegionMode {
 		const mode = raw.regionMode as RegionMode;
 
 		if (!name) {
-			void this.dialog.error('请填写名称');
+			void this.dialog.error(MSG_NAME_REQUIRED);
 			return;
 		}
 		if (!this.isUpdate && !url) {

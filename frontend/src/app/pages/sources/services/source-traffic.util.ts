@@ -1,17 +1,5 @@
+import { formatBytes } from '@common/util';
 import { SubscriptionSource } from '@data-struct';
-
-export function formatBytes(n: number): string {
-	if (!Number.isFinite(n) || n < 0) n = 0;
-	const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-	let v = n;
-	let i = 0;
-	while (v >= 1024 && i < units.length - 1) {
-		v /= 1024;
-		i++;
-	}
-	const digits = i === 0 ? 0 : v >= 100 ? 0 : v >= 10 ? 1 : 2;
-	return `${v.toFixed(digits)} ${units[i]}`;
-}
 
 /** 是否有上游 Subscription-Userinfo */
 export function hasTraffic(item: SubscriptionSource): boolean {

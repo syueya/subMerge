@@ -7,6 +7,7 @@ import (
 	"time"
 
 	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/database"
 	"github.com/submerge/submerge/backend/internal/rule"
 	"github.com/submerge/submerge/backend/internal/source"
@@ -310,11 +311,11 @@ func toRelease(r database.Release) common.Release {
 		ProxyCount: r.ProxyCount,
 		RuleCount:  r.RuleCount,
 		ConfigHash: r.ConfigHash,
-		CreatedAt:  r.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:  apiresp.FormatRFC3339(&r.CreatedAt),
 		CreatedBy:  r.CreatedBy,
 	}
 	if r.PublishedAt != nil {
-		s := r.PublishedAt.UTC().Format(time.RFC3339)
+		s := apiresp.FormatRFC3339(r.PublishedAt)
 		out.PublishedAt = &s
 	}
 	return out

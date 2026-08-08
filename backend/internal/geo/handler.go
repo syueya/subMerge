@@ -8,17 +8,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/submerge/submerge/backend/internal/apiresp"
-	"github.com/submerge/submerge/backend/internal/audit"
-	"github.com/submerge/submerge/backend/internal/middleware"
 )
 
 type Handler struct {
-	svc   *Service
-	audit *audit.Service
+	svc *Service
 }
 
-func NewHandler(svc *Service, auditSvc *audit.Service) *Handler {
-	return &Handler{svc: svc, audit: auditSvc}
+func NewHandler(svc *Service) *Handler {
+	return &Handler{svc: svc}
 }
 
 func (h *Handler) Status(c *gin.Context) {
@@ -34,8 +31,7 @@ func (h *Handler) Query(c *gin.Context) {
 		Domain  string `json:"domain"`
 		Resolve bool   `json:"resolve"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	result, err := h.svc.Query(req.Domain, req.Resolve)
@@ -50,8 +46,7 @@ func (h *Handler) IPGeo(c *gin.Context) {
 	var req struct {
 		IP string `json:"ip"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
@@ -61,7 +56,6 @@ func (h *Handler) IPGeo(c *gin.Context) {
 		apiresp.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "lookup_ip_geo", "geo", result.IP, c.ClientIP())
 	apiresp.OK(c, result)
 }
 
@@ -72,8 +66,7 @@ func (h *Handler) Reverse(c *gin.Context) {
 		Limit    int    `json:"limit"`
 		Offset   int    `json:"offset"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	result, err := h.svc.Reverse(req.File, req.Category, req.Limit, req.Offset)
@@ -92,8 +85,7 @@ func (h *Handler) Search(c *gin.Context) {
 		Limit   int    `json:"limit"`
 		Offset  int    `json:"offset"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	result, err := h.svc.Search(req.File, req.Field, req.Keyword, req.Limit, req.Offset)
@@ -108,17 +100,6 @@ func (h *Handler) Update(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Minute)
 	defer cancel()
 	result := h.svc.Update(ctx)
-	failed := 0
-	for _, item := range result.Items {
-		if !item.Updated {
-			failed++
-		}
-	}
-	detail := "all resources updated"
-	if failed > 0 {
-		detail = "resource update completed with failures"
-	}
-	h.audit.Log(middleware.GetUsername(c), "update_geo", "geo", detail, c.ClientIP())
 	apiresp.OK(c, result)
 }
 

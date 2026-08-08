@@ -1,5 +1,9 @@
 import { AfterViewInit, Component, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
+import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+import { DialogService } from '@common/services/dialog.service';
+import { MSG_DELETE_IRREVERSIBLE, TITLE_CONFIRM_DELETE } from '@common/util';
 import {
 	MatchableRule,
 	RELEASE_STATUS_BADGE,
@@ -11,18 +15,16 @@ import {
 	enumBadgeClass,
 	enumText,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { DraftStatusStore, summarizeChanges } from '../services/draft-status.store';
-	import { ReleaseService } from '../services/release.service';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
 import { finalize, firstValueFrom, takeUntil } from 'rxjs';
+
 import { RuleMatchDialogComponent } from '../../_shared/rule-match-dialog/rule-match-dialog.component';
 import {
 	PublishNoteFormComponent,
 	PublishNoteFormResult,
 } from '../publish-note-form/publish-note-form.component';
 import { ReleaseDetailComponent } from '../release-detail/release-detail.component';
+import { DraftStatusStore, summarizeChanges } from '../services/draft-status.store';
+	import { ReleaseService } from '../services/release.service';
 
 @Component({
 	selector: 'app-release-list',
@@ -113,8 +115,8 @@ export class ReleaseListComponent extends CmParentTableComponent implements Afte
 
 	async remove(item: Release): Promise<void> {
 		const ok = await this.dialog.confirm(
-			`确认删除 v${item.version}？\n删除后不可恢复。`,
-			'删除确认',
+			`确认删除 v${item.version}？\n${MSG_DELETE_IRREVERSIBLE}`,
+			TITLE_CONFIRM_DELETE,
 			'删除',
 		);
 		if (!ok) return;

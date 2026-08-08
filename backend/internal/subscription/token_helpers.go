@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	common "github.com/submerge/submerge/backend/common"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/crypto"
 	"github.com/submerge/submerge/backend/internal/database"
 )
@@ -67,11 +67,11 @@ func (s *Service) toView(r database.ShareToken, nameByID map[uint]string) common
 		GroupMode:   mode,
 		GroupNames:  groupNames,
 		AccessCount: r.AccessCount,
-		CreatedAt:   r.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:   r.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:   apiresp.FormatRFC3339(&r.CreatedAt),
+		UpdatedAt:   apiresp.FormatRFC3339(&r.UpdatedAt),
 	}
 	if r.LastAccessAt != nil {
-		ts := r.LastAccessAt.UTC().Format(time.RFC3339)
+		ts := apiresp.FormatRFC3339(r.LastAccessAt)
 		v.LastAccessAt = &ts
 	}
 	if plain != "" {

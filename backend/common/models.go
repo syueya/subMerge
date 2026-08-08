@@ -167,14 +167,3 @@ type AdminUser struct {
 	CreatedAt   string  `json:"createdAt"`
 	LastLoginAt *string `json:"lastLoginAt,omitempty"`
 }
-
-// AuditLog 审计日志
-type AuditLog struct {
-	ID        uint   `json:"id"`
-	Actor     string `json:"actor"`
-	Action    string `json:"action"`
-	Resource  string `json:"resource"`
-	Detail    string `json:"detail,omitempty"`
-	IP        string `json:"ip,omitempty"`
-	CreatedAt string `json:"createdAt"`
-}

@@ -45,7 +45,7 @@ export function base64ToString(base64: string): string {
  */
 export function formatBytes(size: number): string {
   // 检查输入是否为 null 或 undefined
-  if (size === null || size === 0 || size === undefined) {
+  if (size === null || size === undefined || size < 0) {
     return `0 B`;
   }
 

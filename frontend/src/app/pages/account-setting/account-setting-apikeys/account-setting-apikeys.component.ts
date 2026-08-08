@@ -1,5 +1,9 @@
 import { AfterViewInit, Component, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
+import { CmDialogOpenService } from '@common/modules/dialog';
+import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+import { DialogService } from '@common/services/dialog.service';
+import { formatDateTime, msgDisabled, msgEnabled, msgRevoked, msgDeleted, TITLE_CONFIRM_DELETE, TITLE_CONFIRM_REVOKE } from '@common/util';
 import {
 	APIKey,
 	APIKeyFormDialogData,
@@ -11,10 +15,6 @@ import {
 	enumBadgeClass,
 	enumText,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime } from '@common/util';
-import { CmDialogOpenService } from '@common/modules/dialog';
-import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
 import { finalize, takeUntil } from 'rxjs';
 
 import { AccountSettingApikeyFormComponent } from '../account-setting-apikey-form/account-setting-apikey-form.component';
@@ -121,7 +121,7 @@ export class AccountSettingApikeysComponent extends CmParentTableComponent imple
 		this.dialogOpen.openSmallForm(AccountSettingApikeySecretComponent, data);
 	}
 
-	disable(item: APIKey): void {
+disable(item: APIKey): void {
 		this.busy.set(true);
 		this.svc
 			.update(item.id, { status: APIKeyStatus.Disabled })
@@ -131,7 +131,7 @@ export class AccountSettingApikeysComponent extends CmParentTableComponent imple
 			)
 			.subscribe({
 				next: () => {
-					void this.dialog.success(`已禁用「${item.name}」`);
+					void this.dialog.success(msgDisabled(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (e: Error) => void this.dialog.error(e.message),
@@ -148,7 +148,7 @@ export class AccountSettingApikeysComponent extends CmParentTableComponent imple
 			)
 			.subscribe({
 				next: () => {
-					void this.dialog.success(`已启用「${item.name}」`);
+					void this.dialog.success(msgEnabled(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (e: Error) => void this.dialog.error(e.message),
@@ -158,7 +158,7 @@ export class AccountSettingApikeysComponent extends CmParentTableComponent imple
 	async revoke(item: APIKey): Promise<void> {
 		const ok = await this.dialog.confirm(
 			`作废「${item.name}」？\n旧密钥立即失效，记录保留，之后可重新生成。`,
-			'作废确认',
+			TITLE_CONFIRM_REVOKE,
 			'作废',
 		);
 		if (!ok) return;
@@ -171,7 +171,7 @@ export class AccountSettingApikeysComponent extends CmParentTableComponent imple
 			)
 			.subscribe({
 				next: () => {
-					void this.dialog.success(`已作废「${item.name}」`);
+					void this.dialog.success(msgRevoked(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (e: Error) => void this.dialog.error(e.message),
@@ -208,7 +208,7 @@ export class AccountSettingApikeysComponent extends CmParentTableComponent imple
 	async remove(item: APIKey): Promise<void> {
 		const ok = await this.dialog.confirm(
 			`永久删除「${item.name}」？\n记录不可恢复（与「作废」不同）。`,
-			'删除确认',
+			TITLE_CONFIRM_DELETE,
 			'删除',
 		);
 		if (!ok) return;
@@ -221,10 +221,10 @@ export class AccountSettingApikeysComponent extends CmParentTableComponent imple
 			)
 			.subscribe({
 				next: () => {
-					void this.dialog.success(`已删除「${item.name}」`);
+					void this.dialog.success(msgDeleted(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (e: Error) => void this.dialog.error(e.message),
-			});
+				});
 	}
 }

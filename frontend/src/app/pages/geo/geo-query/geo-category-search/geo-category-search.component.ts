@@ -1,14 +1,13 @@
 import { Component, Input, OnChanges, OnDestroy, SimpleChanges, inject, signal } from '@angular/core';
 import { MatChipListboxChange } from '@angular/material/chips';
-import { MatDialogRef } from '@angular/material/dialog';
-import { DialogService } from '@common/services/dialog.service';
-import { GeoCategoriesResponse, GeoCategory, GeoEntriesDialogData, GeoEntriesDialogResult, GeoEntryRow, GeoReverseResponse, GeoSearchResponse } from '@data-struct';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
 import { CmParentComponent } from '@common/parents/parent/parent.component';
+import { DialogService } from '@common/services/dialog.service';
+import { GeoCategoriesResponse, GeoCategory, GeoEntryRow, GeoReverseResponse, GeoSearchResponse } from '@data-struct';
 import { takeUntil } from 'rxjs';
-import { GeoEntriesComponent } from '../../geo-entries/geo-entries.component';
-import { GeoService } from '../../services/geo.service';
+
 import { RuleCreateService } from '../../../_shared/rule-create.service';
+import { GeoService } from '../../services/geo.service';
+import { GeoEntriesDialogHelper } from '../geo-entries-dialog.helper';
 
 @Component({
   selector: 'app-geo-category-search',
@@ -18,8 +17,8 @@ import { RuleCreateService } from '../../../_shared/rule-create.service';
 export class GeoCategorySearchComponent extends CmParentComponent implements OnChanges, OnDestroy {
   private readonly svc = inject(GeoService);
   private readonly dialog = inject(DialogService);
-  private readonly dialogOpen = inject(CmDialogOpenService);
   private readonly ruleCreate = inject(RuleCreateService);
+  private readonly entriesDialog = inject(GeoEntriesDialogHelper);
 
   /** 由父组件加载后的分类元数据 */
   @Input() categories: GeoCategoriesResponse = {
@@ -53,7 +52,13 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
   private searchContextFile = '';
   private searchContextField = '';
   private searchContextKeyword = '';
-  private entriesDialogRef: MatDialogRef<GeoEntriesComponent, GeoEntriesDialogResult> | null = null;
+
+  /** 当前条目弹窗的 addRule（reverse 模式按分类，search 模式无） */
+  private currentAddRule(): { type: 'GEOSITE' | 'GEOIP'; payload: string } | undefined {
+    return this.entriesMode === 'reverse'
+      ? { type: this.reverseFile === 'geosite' ? 'GEOSITE' : 'GEOIP', payload: this.reverseCategory }
+      : undefined;
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['categories']) {
@@ -63,13 +68,13 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
 
   override ngOnDestroy(): void {
     if (this.reverseKeywordTimer) clearTimeout(this.reverseKeywordTimer);
-    this.entriesDialogRef?.close(null);
+    this.entriesDialog.close();
     super.ngOnDestroy();
   }
 
   clearResult(): void {
     this.reverseResult.set(null);
-    this.closeEntries();
+    this.entriesDialog.close();
   }
 
   categoriesForFile(): GeoCategory[] {
@@ -199,8 +204,8 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
       type: item.type,
       value: item.value
     }));
-    this.openOrUpdateEntries(
-      {
+    this.entriesDialog.openOrUpdate({
+      data: {
         title: `${fileName} · ${result.category}`,
         subtitle: `共 ${result.total} 条`,
         items,
@@ -209,17 +214,27 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
         limit: result.limit || this.entriesLimit,
         loading: false,
         paginated: true,
-        addRule:
-          this.reverseFile === 'geosite' || this.reverseFile === 'geoip' ? { type: this.reverseFile === 'geosite' ? 'GEOSITE' : 'GEOIP', payload: result.category } : undefined
+        addRule: this.currentAddRule()
       },
-      openDialog
-    );
+      forceOpen: openDialog,
+      onPage: (pageIndex, pageSize) => this.onEntriesPage(pageIndex, pageSize)
+    });
   }
 
   private loadDatabaseSearch(openDialog = false): void {
     this.searchLoading.set(true);
     this.entriesLoading.set(true);
-    this.markEntriesLoading();
+    this.entriesDialog.markLoading(true, () => ({
+      title: '',
+      subtitle: '',
+      items: [],
+      total: 0,
+      offset: this.reverseOffset,
+      limit: this.entriesLimit,
+      loading: true,
+      paginated: true,
+      addRule: undefined
+    }));
     this.svc
       .search(this.searchContextFile, this.searchContextField, this.searchContextKeyword, this.entriesLimit, this.reverseOffset)
       .pipe(takeUntil(this.$destroy))
@@ -229,8 +244,8 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
           this.entriesLoading.set(false);
           const title = `${this.searchContextFile === 'asn' ? 'ASN' : 'MetaDB'} · ${this.searchContextKeyword}`;
           const subtitle = result.message || `共 ${result.total} 条`;
-          this.openOrUpdateEntries(
-            {
+          this.entriesDialog.openOrUpdate({
+            data: {
               title,
               subtitle,
               items: result.items || [],
@@ -241,21 +256,27 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
               paginated: true,
               addRule: undefined
             },
-            openDialog
-          );
+            forceOpen: openDialog,
+            onPage: (pageIndex, pageSize) => this.onEntriesPage(pageIndex, pageSize)
+          });
         },
         error: (err: Error) => {
           this.searchLoading.set(false);
           this.entriesLoading.set(false);
-          this.markEntriesLoading(false);
+          this.entriesDialog.markLoading(false, () => ({
+            title: '',
+            subtitle: '',
+            items: [],
+            total: 0,
+            offset: this.reverseOffset,
+            limit: this.entriesLimit,
+            loading: false,
+            paginated: true,
+            addRule: undefined
+          }));
           void this.dialog.error(err.message);
         }
       });
-  }
-
-  private closeEntries(): void {
-    this.entriesDialogRef?.close(null);
-    this.entriesDialogRef = null;
   }
 
   /** mat-paginator 翻页 / 改每页条数 */
@@ -269,28 +290,20 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
     this.reloadReversePage();
   }
 
-  /** 已打开的条目弹窗显示 loading，不关窗 */
-  private markEntriesLoading(loading = true): void {
-    const ref = this.entriesDialogRef;
-    if (!ref) return;
-    const inst = ref.componentInstance;
-    inst.applyData({
-      title: inst.title,
-      subtitle: inst.subtitle,
-      items: inst.items,
-      total: inst.total,
-      offset: this.reverseOffset,
-      limit: this.entriesLimit,
-      loading,
-      paginated: true,
-      addRule: this.entriesMode === 'reverse' ? { type: this.reverseFile === 'geosite' ? 'GEOSITE' : 'GEOIP', payload: this.reverseCategory } : undefined
-    });
-  }
-
   private reloadReversePage(): void {
     if (!this.reverseCategory) return;
     this.entriesLoading.set(true);
-    this.markEntriesLoading(true);
+    this.entriesDialog.markLoading(true, () => ({
+      title: '',
+      subtitle: '',
+      items: [],
+      total: 0,
+      offset: this.reverseOffset,
+      limit: this.entriesLimit,
+      loading: true,
+      paginated: true,
+      addRule: this.currentAddRule()
+    }));
     this.svc
       .reverse(this.reverseFile, this.reverseCategory, this.entriesLimit, this.reverseOffset)
       .pipe(takeUntil(this.$destroy))
@@ -302,35 +315,19 @@ export class GeoCategorySearchComponent extends CmParentComponent implements OnC
         },
         error: (err: Error) => {
           this.entriesLoading.set(false);
-          this.markEntriesLoading(false);
+          this.entriesDialog.markLoading(false, () => ({
+            title: '',
+            subtitle: '',
+            items: [],
+            total: 0,
+            offset: this.reverseOffset,
+            limit: this.entriesLimit,
+            loading: false,
+            paginated: true,
+            addRule: this.currentAddRule()
+          }));
           void this.dialog.error(err.message);
         }
       });
-  }
-
-  private openOrUpdateEntries(data: GeoEntriesDialogData, forceOpen: boolean): void {
-    const payload: GeoEntriesDialogData = {
-      ...data,
-      onPage: (pageIndex, pageSize) => this.onEntriesPage(pageIndex, pageSize)
-    };
-
-    if (this.entriesDialogRef) {
-      this.entriesDialogRef.componentInstance.applyData(payload);
-      return;
-    }
-    if (!forceOpen && !payload.items.length && !payload.loading) return;
-
-    const ref = this.dialogOpen.openContent(GeoEntriesComponent, payload, {
-      width: CM_DIALOG_WIDTH.large
-    });
-    this.entriesDialogRef = ref;
-    ref.afterClosed().subscribe((result: GeoEntriesDialogResult) => {
-      if (this.entriesDialogRef === ref) {
-        this.entriesDialogRef = null;
-      }
-      if (result?.action === 'add') {
-        this.ruleCreate.open(result.context);
-      }
-    });
   }
 }

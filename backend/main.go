@@ -8,7 +8,6 @@ import (
 
 	"github.com/submerge/submerge/backend/internal/apikey"
 	"github.com/submerge/submerge/backend/internal/applog"
-	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/auth"
 	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/crypto"
@@ -63,7 +62,6 @@ func main() {
 		applog.Fatalf("crypto: %v", err)
 	}
 
-	auditSvc := audit.NewService(db)
 	authSvc := auth.NewService(db, cfg.SessionTTL)
 	// 管理员仅通过网页首次注册创建，不在环境变量里配置
 
@@ -82,27 +80,27 @@ func main() {
 	}
 	publishSvc := publish.NewService(db, sourceSvc, ruleSvc)
 	subSvc := subscription.NewService(db, publishSvc, box, cfg.PublicBaseURL)
-	authHandler := auth.NewHandler(authSvc, auditSvc, cfg.SessionTTL, cfg.CookieSecure)
+	authHandler := auth.NewHandler(authSvc, cfg.SessionTTL, cfg.CookieSecure)
 	apiKeySvc := apikey.NewService(db, box)
 	geoSvc := geo.NewService(cfg.GeoDir, geo.URLs{
 		GeoIP: cfg.GeoIPURL, GeoSite: cfg.GeoSiteURL, MetaDB: cfg.MetaDBURL, ASN: cfg.ASNURL,
 	})
 	geoSvc.SetIPGeoClient(ipGeoClient)
 	geoSvc.Load()
-var sysProxyURL string
-		netCheckSvc := netcheck.NewService(db, func() string { return sysProxyURL })
-		refreshScheduler := systemsettings.NewRefreshScheduler(cfg.RefreshInterval, func() { sourceSvc.RefreshAll() })
-		defer refreshScheduler.Close()
-		applySettings := func(settings systemsettings.Settings) error {
+	var sysProxyURL string
+	netCheckSvc := netcheck.NewService(db, func() string { return sysProxyURL })
+	refreshScheduler := systemsettings.NewRefreshScheduler(cfg.RefreshInterval, func() { sourceSvc.RefreshAll() })
+	defer refreshScheduler.Close()
+	applySettings := func(settings systemsettings.Settings) error {
 		if err := sourceSvc.SetRuntimeOptions(settings.SourceFetchTimeout, settings.SourceMaxBytes, settings.SourceFetchUA); err != nil {
 			return err
 		}
 		proxyURL := settings.ProxyURL
-if !settings.ProxyEnabled {
-				proxyURL = ""
-			}
-			sysProxyURL = proxyURL
-			if err := sourceSvc.SetProxy(proxyURL); err != nil {
+		if !settings.ProxyEnabled {
+			proxyURL = ""
+		}
+		sysProxyURL = proxyURL
+		if err := sourceSvc.SetProxy(proxyURL); err != nil {
 			return err
 		}
 		if err := geoSvc.SetURLs(geo.URLs{GeoIP: settings.GeoIPURL, GeoSite: settings.GeoSiteURL, MetaDB: settings.GeoDBURL, ASN: settings.GeoASNURL}); err != nil {
@@ -201,17 +199,16 @@ if !settings.ProxyEnabled {
 	r := server.NewRouter(server.Deps{
 		Cfg:            cfg,
 		Auth:           authHandler,
-		Source:         source.NewHandler(sourceSvc, auditSvc),
-		Rule:           rule.NewHandler(ruleSvc, auditSvc, geoSvc),
-		Publish:        publish.NewHandler(publishSvc, auditSvc),
-		Sub:            subscription.NewHandler(subSvc, auditSvc),
-		APIKey:         apikey.NewHandler(apiKeySvc, auditSvc),
-		Geo:            geo.NewHandler(geoSvc, auditSvc),
-		NetCheck:       netcheck.NewHandler(netCheckSvc, auditSvc),
-		Outbound:       outbound.NewHandler(proxyAdapter, auditSvc),
-		SystemSettings: systemsettings.NewHandler(settingsManager, auditSvc),
+		Source:         source.NewHandler(sourceSvc),
+		Rule:           rule.NewHandler(ruleSvc, geoSvc),
+		Publish:        publish.NewHandler(publishSvc),
+		Sub:            subscription.NewHandler(subSvc),
+		APIKey:         apikey.NewHandler(apiKeySvc),
+		Geo:            geo.NewHandler(geoSvc),
+		NetCheck:       netcheck.NewHandler(netCheckSvc),
+		Outbound:       outbound.NewHandler(proxyAdapter),
+		SystemSettings: systemsettings.NewHandler(settingsManager),
 		Logs:           logs.NewHandler(logs.NewService(cfg.LogDir)),
-		Audit:          auditSvc,
 		AuthMW:         middleware.AuthRequired(db, apiKeySvc),
 		LoginRL:        middleware.RateLimit(cfg.RateLimitLogin),
 		SubRL:          middleware.RateLimit(cfg.RateLimitSub),

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/oschwald/maxminddb-golang"
+	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/ipgeo"
 	"github.com/submerge/submerge/backend/internal/outbound"
 )
@@ -269,7 +270,8 @@ func fileStatus(name, path string, body []byte) ResourceStatus {
 	hash := sha256Hex(body)
 	status := ResourceStatus{Name: name, Available: false, Size: int64(len(body)), SHA256: hash, Version: "sha256:" + hash[:16]}
 	if st, err := os.Stat(path); err == nil {
-		status.ModifiedAt = st.ModTime().UTC().Format(time.RFC3339)
+		mt := st.ModTime()
+		status.ModifiedAt = apiresp.FormatRFC3339(&mt)
 	}
 	return status
 }

@@ -1,5 +1,9 @@
 import { AfterViewInit, Component, computed, effect, inject, signal } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
+import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
+import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
+import { DialogService } from '@common/services/dialog.service';
+import { formatDateTime, msgDisabled, msgEnabled, msgDeleted, TITLE_CONFIRM_DELETE } from '@common/util';
 import {
 	BADGE_MUTED,
 	BADGE_WARN,
@@ -14,9 +18,8 @@ import {
 	enumText,
 	regionOptionText,
 } from '@data-struct';
-import { DialogService } from '@common/services/dialog.service';
-import { formatDateTime } from '@common/util';
-import { SourceService } from '../services/source.service';
+import { finalize, takeUntil } from 'rxjs';
+
 import {
 	hasTraffic,
 	trafficExpireText,
@@ -24,9 +27,7 @@ import {
 	trafficText,
 	trafficTitle,
 } from '../services/source-traffic.util';
-import { CM_DIALOG_WIDTH, CmDialogOpenService } from '@common/modules/dialog';
-import { CmParentTableComponent } from '@common/parents/parent-table/parent-table.component';
-import { finalize, takeUntil } from 'rxjs';
+import { SourceService } from '../services/source.service';
 import { SourceFormComponent } from '../source-form/source-form.component';
 import { SourceProxiesComponent } from '../source-proxies/source-proxies.component';
 
@@ -278,7 +279,7 @@ export class SourceListComponent extends CmParentTableComponent implements After
 			.pipe(takeUntil(this.$destroy))
 			.subscribe({
 				next: () => {
-					void this.dialog.success(item.enabled ? `已禁用「${item.name}」` : `已启用「${item.name}」`);
+					void this.dialog.success(item.enabled ? msgDisabled(item.name) : msgEnabled(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (err: Error) => void this.dialog.error(err.message),
@@ -288,7 +289,7 @@ export class SourceListComponent extends CmParentTableComponent implements After
 	async remove(item: SubscriptionSource): Promise<void> {
 		const ok = await this.dialog.confirm(
 			`确认删除订阅源「${item.name}」？\n其节点也会一并删除（订阅 URL 已加密保存在库中，删除后不可恢复）。`,
-			'删除确认',
+			TITLE_CONFIRM_DELETE,
 			'删除',
 		);
 		if (!ok) return;
@@ -301,7 +302,7 @@ export class SourceListComponent extends CmParentTableComponent implements After
 			)
 			.subscribe({
 				next: () => {
-					void this.dialog.success(`已删除「${item.name}」`);
+					void this.dialog.success(msgDeleted(item.name));
 					this.reloadTableDataByFirstPage();
 				},
 				error: (err: Error) => void this.dialog.error(err.message),

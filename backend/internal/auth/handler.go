@@ -10,21 +10,19 @@ import (
 	"github.com/gin-gonic/gin"
 	common "github.com/submerge/submerge/backend/common"
 	"github.com/submerge/submerge/backend/internal/apiresp"
-	"github.com/submerge/submerge/backend/internal/audit"
 	"github.com/submerge/submerge/backend/internal/middleware"
 )
 
 // Handler HTTP 处理器
 type Handler struct {
 	svc          *Service
-	audit        *audit.Service
 	sessionTTL   time.Duration
 	secureMu     sync.RWMutex
 	secureCookie bool
 }
 
-func NewHandler(svc *Service, auditSvc *audit.Service, sessionTTL time.Duration, secureCookie bool) *Handler {
-	return &Handler{svc: svc, audit: auditSvc, sessionTTL: sessionTTL, secureCookie: secureCookie}
+func NewHandler(svc *Service, sessionTTL time.Duration, secureCookie bool) *Handler {
+	return &Handler{svc: svc, sessionTTL: sessionTTL, secureCookie: secureCookie}
 }
 
 func (h *Handler) SetCookieSecure(secure bool) {
@@ -50,8 +48,7 @@ func (h *Handler) SetupStatus(c *gin.Context) {
 
 func (h *Handler) Bootstrap(c *gin.Context) {
 	var req common.BootstrapRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid setup payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	token, user, err := h.svc.Bootstrap(req.Username, req.Password, req.DisplayName)
@@ -68,15 +65,13 @@ func (h *Handler) Bootstrap(c *gin.Context) {
 		}
 		return
 	}
-	h.audit.Log(req.Username, "bootstrap", "auth", "admin created", c.ClientIP())
 	h.setSessionCookie(c, token)
 	apiresp.OK(c, common.LoginResponse{User: user})
 }
 
 func (h *Handler) Login(c *gin.Context) {
 	var req common.LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid login payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	// 空库时引导创建管理员
@@ -93,7 +88,6 @@ func (h *Handler) Login(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "login failed")
 		return
 	}
-	h.audit.Log(req.Username, "login", "auth", "success", c.ClientIP())
 	h.setSessionCookie(c, token)
 	apiresp.OK(c, common.LoginResponse{User: user})
 }
@@ -102,8 +96,7 @@ func (h *Handler) Logout(c *gin.Context) {
 	token := bearerToken(c)
 	_ = h.svc.Logout(token)
 	h.clearSessionCookie(c)
-	h.audit.Log(middleware.GetUsername(c), "logout", "auth", "", c.ClientIP())
-	apiresp.OK(c, map[string]bool{"success": true})
+	apiresp.Success(c)
 }
 
 func (h *Handler) Me(c *gin.Context) {
@@ -117,8 +110,7 @@ func (h *Handler) Me(c *gin.Context) {
 
 func (h *Handler) ChangePassword(c *gin.Context) {
 	var req common.ChangePasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	err := h.svc.ChangePassword(middleware.GetAdminID(c), req.OldPassword, req.NewPassword)
@@ -135,14 +127,12 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "change password failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "change_password", "auth", "", c.ClientIP())
-	apiresp.OK(c, map[string]bool{"success": true})
+	apiresp.Success(c)
 }
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	var req common.UpdateProfileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "invalid payload")
+	if !apiresp.BindJSON(c, &req) {
 		return
 	}
 	if req.Username == nil && req.DisplayName == nil && req.Avatar == nil {
@@ -169,7 +159,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		apiresp.Fail(c, http.StatusInternalServerError, "internal", "update profile failed")
 		return
 	}
-	h.audit.Log(middleware.GetUsername(c), "update_profile", "auth", user.DisplayName, c.ClientIP())
 	apiresp.OK(c, common.MeResponse{User: user})
 }
 
