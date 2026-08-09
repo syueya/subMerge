@@ -1,7 +1,7 @@
 <cm-dialog-header modalTitle="发布配置"></cm-dialog-header>
 
 <form class="form" autocomplete="off" [formGroup]="editForm" (ngSubmit)="submit()" #formDirective="ngForm">
-  <div mat-dialog-content class="dialog-body-no-scroll">
+  <div mat-dialog-content>
     <cm-form-field class="d-block" [help]="'可选。只写在发布历史里，方便以后回看这次改了什么。'">
       <mat-label>发布备注</mat-label>
       <mat-form-field appearance="outline" class="w-full" color="primary">
@@ -16,7 +16,7 @@
       发布后「全部源 + 自动」的订阅链接将使用新配置，请确认变更内容后再发布。
     </div>
 
-    <div class="m-b-0" style="max-height: min(60vh, 28rem); overflow: auto">
+    <div class="m-b-0">
       <cm-collapse-panel [expanded]="true" title="变更内容">
         @if (summary) {
           <p class="f-s-12 text-warning m-b-12">{{ summary }}</p>

@@ -14,6 +14,8 @@ rules:
   - { category: 常用, type: DOMAIN-SUFFIX, payload: omdbapi.com, target: 日本JP, enabled: true, note: OMDb }
   - { category: 常用, type: DOMAIN, payload: giffgaff.com, target: 直连, enabled: true, note: GG卡 }
   - { category: 常用, type: DOMAIN-REGEX, payload: '^[0-9]{6}\.xyz$', target: 直连, enabled: true, note: 6位xyz域名 }
+  - { category: 常用, type: DOMAIN, payload: fanart.tv, target: 日本JP, enabled: true, note: Fanart }
+
 
   # ========== PT站 ==========
   - { category: PT站, type: DOMAIN, payload: pt.0ff.cc, target: 直连, enabled: true, note: 自由农场 }
@@ -241,30 +243,28 @@ rules:
 
 
   # ========== 代理集 ==========
-  - { category: GEOSITE, type: GEOSITE, payload: category-ai-!cn, target: 美国US, enabled: true, note: 海外AI }
-  - { category: GEOSITE, type: GEOSITE, payload: category-ai-cn, target: 直连, enabled: true, note: 国内AI }
-  - { category: GEOSITE, type: GEOSITE, payload: telegram, target: 香港HK, enabled: true, note: 电报 }
-  - { category: GEOSITE, type: GEOSITE, payload: github, target: 日本JP, enabled: true, note: GitHub }
-  - { category: GEOSITE, type: GEOSITE, payload: docker, target: 日本JP, enabled: true, note: Docker }
-  - { category: GEOSITE, type: GEOSITE, payload: bitwarden, target: 直连, enabled: true, note: 密码 }
-  - { category: GEOSITE, type: GEOSITE, payload: bing, target: 日本JP, enabled: true, note: 搜索 }
-  - { category: GEOSITE, type: GEOSITE, payload: google, target: 日本JP, enabled: true, note: google }
-  - { category: GEOSITE, type: GEOSITE, payload: tmdb, target: 日本JP, enabled: true, note: TMDB }
-  - { category: GEOSITE, type: DOMAIN, payload: fanart.tv, target: 日本JP, enabled: true, note: Fanart }
-  - { category: GEOSITE, type: GEOSITE, payload: imdb, target: 日本JP, enabled: true, note: IMDb }
-  - { category: GEOSITE, type: GEOSITE, payload: metabrainz, target: 日本JP, enabled: true, note: 元数据 }
-  - { category: GEOSITE, type: GEOSITE, payload: netflix, target: 美国US, enabled: true, note: 奈飞 }
-  - { category: GEOSITE, type: GEOSITE, payload: disney, target: 美国US, enabled: true, note: 迪士尼 }
-  - { category: GEOSITE, type: GEOSITE, payload: hulu, target: 美国US, enabled: true, note: hulu }
-  - { category: GEOSITE, type: GEOSITE, payload: spotify, target: 美国US, enabled: true, note: spotify }
-  - { category: GEOSITE, type: GEOSITE, payload: youtube, target: 美国US, enabled: true, note: youtube }
-  - { category: GEOSITE, type: GEOSITE, payload: twitter, target: 香港HK, enabled: true, note: twitter }
-  - { category: GEOSITE, type: GEOSITE, payload: instagram, target: 香港HK, enabled: true, note: instagram }
-  - { category: GEOSITE, type: GEOSITE, payload: facebook, target: 香港HK, enabled: true, note: facebook }
-  - { category: GEOSITE, type: GEOSITE, payload: discord, target: 香港HK, enabled: true, note: discord }
-  - { category: GEOSITE, type: GEOSITE, payload: reddit, target: 香港HK, enabled: true, note: reddit }
-  - { category: GEOSITE, type: GEOSITE, payload: cloudflare, target: 直连, enabled: true, note: cloudflare }
-  - { category: GEOSITE, type: GEOSITE, payload: epicgames, target: 直连, enabled: true, note: epicgames }
-  - { category: GEOSITE, type: GEOSITE, payload: z-library, target: 日本JP, enabled: true, note: Z站 }
-  - { category: GEOSITE, type: GEOSITE, payload: microsoft, target: 直连, enabled: true, note: 微软 }
-
+  - { category: GEO, type: GEOSITE, payload: category-ai-!cn, target: 美国US, enabled: true, note: 海外AI }
+  - { category: GEO, type: GEOSITE, payload: category-ai-cn, target: 直连, enabled: true, note: 国内AI }
+  - { category: GEO, type: GEOSITE, payload: telegram, target: 香港HK, enabled: true, note: 电报 }
+  - { category: GEO, type: GEOSITE, payload: github, target: 日本JP, enabled: true, note: GitHub }
+  - { category: GEO, type: GEOSITE, payload: docker, target: 日本JP, enabled: true, note: Docker }
+  - { category: GEO, type: GEOSITE, payload: bitwarden, target: 直连, enabled: true, note: 密码 }
+  - { category: GEO, type: GEOSITE, payload: bing, target: 日本JP, enabled: true, note: 搜索 }
+  - { category: GEO, type: GEOSITE, payload: google, target: 日本JP, enabled: true, note: google }
+  - { category: GEO, type: GEOSITE, payload: tmdb, target: 日本JP, enabled: true, note: TMDB }
+  - { category: GEO, type: GEOSITE, payload: imdb, target: 日本JP, enabled: true, note: IMDb }
+  - { category: GEO, type: GEOSITE, payload: metabrainz, target: 日本JP, enabled: true, note: 元数据 }
+  - { category: GEO, type: GEOSITE, payload: netflix, target: 美国US, enabled: true, note: 奈飞 }
+  - { category: GEO, type: GEOSITE, payload: disney, target: 美国US, enabled: true, note: 迪士尼 }
+  - { category: GEO, type: GEOSITE, payload: hulu, target: 美国US, enabled: true, note: hulu }
+  - { category: GEO, type: GEOSITE, payload: spotify, target: 美国US, enabled: true, note: spotify }
+  - { category: GEO, type: GEOSITE, payload: youtube, target: 美国US, enabled: true, note: youtube }
+  - { category: GEO, type: GEOSITE, payload: twitter, target: 香港HK, enabled: true, note: twitter }
+  - { category: GEO, type: GEOSITE, payload: instagram, target: 香港HK, enabled: true, note: instagram }
+  - { category: GEO, type: GEOSITE, payload: facebook, target: 香港HK, enabled: true, note: facebook }
+  - { category: GEO, type: GEOSITE, payload: discord, target: 香港HK, enabled: true, note: discord }
+  - { category: GEO, type: GEOSITE, payload: reddit, target: 香港HK, enabled: true, note: reddit }
+  - { category: GEO, type: GEOSITE, payload: cloudflare, target: 直连, enabled: true, note: cloudflare }
+  - { category: GEO, type: GEOSITE, payload: epicgames, target: 直连, enabled: true, note: epicgames }
+  - { category: GEO, type: GEOSITE, payload: z-library, target: 日本JP, enabled: true, note: Z站 }
+  - { category: GEO, type: GEOSITE, payload: microsoft, target: 直连, enabled: true, note: 微软 }

@@ -36,7 +36,8 @@ export class RuleCreateService {
       extraCategories: [],
       defaultTarget: defaultRuleTarget(groups.map(group => group.name)) || '直连',
       defaultType: context.type,
-      defaultPayload: context.payload
+      defaultPayload: context.payload,
+      defaultCategory: 'Geo'
     };
     const ref = this.dialogOpen.openForm(RuleFormComponent, data, {
       width: CM_DIALOG_WIDTH.form
