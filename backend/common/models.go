@@ -14,6 +14,7 @@ type SubscriptionSource struct {
 	Name             string        `json:"name"`
 	Region           Region        `json:"region"`
 	URLMasked        string        `json:"urlMasked"`
+	URL              string        `json:"url"`
 	Enabled          bool          `json:"enabled"`
 	RegionMode       RegionMode    `json:"regionMode"`
 	ExcludeNameRegex string        `json:"excludeNameRegex"`

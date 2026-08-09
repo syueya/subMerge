@@ -87,7 +87,7 @@
                     <mat-slide-toggle formControlName="proxyEnabled"></mat-slide-toggle>
                   </cm-form-field>
 
-                  <cm-form-field class="col-24 col-md-12" [help]="'支持 http、https、socks5、socks5h，可包含认证信息；不会回填密码。用于订阅源和 Geo 更新，不影响网络检测临时代理，空 URL 会清除代理并直连。'">
+                  <cm-form-field class="col-24 col-md-12" [help]="'支持 http、https、socks5、socks5h，可包含认证信息。用于订阅源和 Geo 更新，不影响网络检测临时代理，空 URL 会清除代理并直连。'">
                     <mat-label>代理 URL</mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput formControlName="proxyUrl" placeholder="http://127.0.0.1:7890">
@@ -124,7 +124,7 @@
                     </mat-form-field>
                   </cm-form-field>
 
-                  <cm-form-field class="col-24 col-md-6" [help]="help('自动刷新订阅的间隔，范围 1-720 小时。', 'source.refresh.hours') + '保存后立即影响后续拉取；刷新间隔保存后需重启服务生效。'">
+                  <cm-form-field class="col-24 col-md-6" [help]="help('自动刷新订阅的间隔，范围 1-720 小时。', 'source.refresh.hours') + '保存后立即生效。'">
                     <mat-label>自动刷新间隔（小时）<cm-required-mark class="m-l-4"></cm-required-mark></mat-label>
                     <mat-form-field appearance="outline" class="w-full">
                       <input matInput type="number" formControlName="refreshInterval">

@@ -460,6 +460,7 @@ func (s *Service) toView(r database.Source) (common.SubscriptionSource, error) {
 		Name:             r.Name,
 		Region:           common.Region(r.Region),
 		URLMasked:        crypto.MaskURL(urlPlain),
+			URL:              urlPlain,
 		Enabled:          r.Enabled,
 		RegionMode:       mode,
 		ExcludeNameRegex: r.ExcludeNameRegex,

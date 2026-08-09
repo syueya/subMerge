@@ -26,7 +26,7 @@ export class NetCheckPageComponent extends CmParentComponent implements OnInit, 
   private readonly dialog = inject(DialogService);
   private readonly dialogOpen = inject(CmDialogOpenService);
 
-  readonly config = signal<NetCheckConfig>({ timeout: 10, autoRefresh: 0, targets: [] });
+  readonly config = signal<NetCheckConfig>({ timeout: 5, autoRefresh: 0, targets: [] });
   readonly results = signal<NetCheckResult[]>([]);
   readonly summary = signal<NetCheckSummary | null>(null);
   readonly proxyInfo = signal('');

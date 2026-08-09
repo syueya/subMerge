@@ -11,6 +11,5 @@ export * from './geo';
 export * from './rule-match';
 export * from './rule-ui';
 export * from './dialogs';
-export * from './outbound-proxy';
 export * from './system-settings';
 export * from './SystemLogs';

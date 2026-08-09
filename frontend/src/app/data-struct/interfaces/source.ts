@@ -13,6 +13,7 @@ export interface SubscriptionSource {
   name: string;
   region: Region;
   urlMasked: string;
+  url: string;
   enabled: boolean;
   regionMode: RegionMode;
   excludeNameRegex: string;

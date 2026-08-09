@@ -17,7 +17,6 @@ import (
 	"github.com/submerge/submerge/backend/internal/logs"
 	"github.com/submerge/submerge/backend/internal/middleware"
 	"github.com/submerge/submerge/backend/internal/netcheck"
-	"github.com/submerge/submerge/backend/internal/outbound"
 	"github.com/submerge/submerge/backend/internal/publish"
 	"github.com/submerge/submerge/backend/internal/rule"
 	"github.com/submerge/submerge/backend/internal/server"
@@ -146,7 +145,6 @@ func main() {
 	}
 	startupSettings := settingsManager.View().Settings
 	cfg.TrustedProxies = systemsettings.TrustedProxyList(startupSettings.TrustedProxies)
-	proxyAdapter := systemsettings.NewProxyAdapter(settingsManager)
 
 	// Geo：任一必需文件不可用时后台自动拉取一次（Docker 空 volume 首次启动）；失败只记日志
 	go func() {
@@ -205,9 +203,8 @@ func main() {
 		Sub:            subscription.NewHandler(subSvc),
 		APIKey:         apikey.NewHandler(apiKeySvc),
 		Geo:            geo.NewHandler(geoSvc),
-		NetCheck:       netcheck.NewHandler(netCheckSvc),
-		Outbound:       outbound.NewHandler(proxyAdapter),
-		SystemSettings: systemsettings.NewHandler(settingsManager),
+NetCheck:       netcheck.NewHandler(netCheckSvc),
+			SystemSettings: systemsettings.NewHandler(settingsManager),
 		Logs:           logs.NewHandler(logs.NewService(cfg.LogDir)),
 		AuthMW:         middleware.AuthRequired(db, apiKeySvc),
 		LoginRL:        middleware.RateLimit(cfg.RateLimitLogin),

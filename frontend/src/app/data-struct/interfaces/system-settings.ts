@@ -15,6 +15,7 @@ export interface SystemSettingsView {
     logRetentionDays: number;
     proxyEnabled: boolean;
     proxyConfigured: boolean;
+    proxyUrl: string;
     proxyMaskedUrl?: string;
     publicBaseUrl: string;
     trustedProxies: string;

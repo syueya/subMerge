@@ -49,7 +49,7 @@ export class SettingSettingsComponent extends CmParentFormComponent {
   load(): void {
     this.loading.set(true);
     this.svc.get().pipe(takeUntil(this.$destroy), finalize(() => this.loading.set(false))).subscribe({
-      next: (view) => { this.view.set(view); this.form.patchValue({ ...view.settings, sourceMaxBytes: Math.round(view.settings.sourceMaxBytes / 1048576) }, { emitEvent: false }); this.form.patchValue({ proxyUrl: '' }, { emitEvent: false }); },
+      next: (view) => { this.view.set(view); this.form.patchValue({ ...view.settings, sourceMaxBytes: Math.round(view.settings.sourceMaxBytes / 1048576) }, { emitEvent: false }); },
       error: (err: Error) => void this.dialog.error(err.message),
     });
   }
@@ -61,7 +61,7 @@ export class SettingSettingsComponent extends CmParentFormComponent {
     const raw = this.form.getRawValue();
     const payload = { ...raw, sourceMaxBytes: raw.sourceMaxBytes * 1048576 };
     this.svc.save(payload).pipe(takeUntil(this.$destroy), finalize(() => this.saving.set(false))).subscribe({
-      next: (view) => { this.view.set(view); this.form.patchValue({ ...view.settings, sourceMaxBytes: Math.round(view.settings.sourceMaxBytes / 1048576) }, { emitEvent: false }); this.form.patchValue({ proxyUrl: '' }, { emitEvent: false }); void this.dialog.success(view.restartRequired ? '系统设置已保存，可信代理配置将在重启服务后生效' : '系统设置已保存'); },
+      next: (view) => { this.view.set(view); this.form.patchValue({ ...view.settings, sourceMaxBytes: Math.round(view.settings.sourceMaxBytes / 1048576) }, { emitEvent: false }); void this.dialog.success(view.restartRequired ? '系统设置已保存，可信代理配置将在重启服务后生效' : '系统设置已保存'); },
       error: (err: Error) => void this.dialog.error(err.message),
     });
   }
@@ -72,7 +72,7 @@ export class SettingSettingsComponent extends CmParentFormComponent {
       if (!confirmed) return;
       this.saving.set(true);
       this.svc.reset().pipe(takeUntil(this.$destroy), finalize(() => this.saving.set(false))).subscribe({
-        next: (view) => { this.view.set(view); this.form.patchValue({ ...view.settings, sourceMaxBytes: Math.round(view.settings.sourceMaxBytes / 1048576) }, { emitEvent: false }); this.form.patchValue({ proxyUrl: '' }, { emitEvent: false }); void this.dialog.success(view.restartRequired ? '系统设置已恢复，可信代理配置将在重启服务后生效' : '系统设置已恢复为默认值'); },
+        next: (view) => { this.view.set(view); this.form.patchValue({ ...view.settings, sourceMaxBytes: Math.round(view.settings.sourceMaxBytes / 1048576) }, { emitEvent: false }); void this.dialog.success(view.restartRequired ? '系统设置已恢复，可信代理配置将在重启服务后生效' : '系统设置已恢复为默认值'); },
         error: (err: Error) => void this.dialog.error(err.message),
       });
     });

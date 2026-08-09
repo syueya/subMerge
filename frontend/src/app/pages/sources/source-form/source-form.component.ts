@@ -48,7 +48,7 @@ isUpdate: boolean;
 			name: [item?.name || '', [Validators.required, Validators.maxLength(64)]],
 			regionMode: [mode as RegionMode, [Validators.required]],
 			region: [region, [Validators.required]],
-			url: ['', hostValidator()],
+			url: [item?.url || '', hostValidator()],
 			enabled: [item?.enabled ?? true],
 			excludeNameRegex: [item?.excludeNameRegex ?? DEFAULT_EXCLUDE_NAME_REGEX],
 			excludeServers: [item?.excludeServers ?? DEFAULT_EXCLUDE_SERVERS],

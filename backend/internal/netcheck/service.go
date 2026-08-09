@@ -29,7 +29,7 @@ func NewService(db *gorm.DB, systemProxyURL func() string) *Service {
 
 func DefaultConfig() Config {
 	return Config{
-		Timeout:     10,
+		Timeout:     5,
 		AutoRefresh: 0,
 		Targets: []Target{
 			{Name: "Google", URL: "https://www.google.com/generate_204", Enabled: true},

@@ -149,6 +149,50 @@ func TestPublicBaseURLValidation(t *testing.T) {
 	}
 }
 
+func TestRestartRequiredOnlyWhenTrustedProxiesChanged(t *testing.T) {
+	db, err := database.Open(filepath.Join(t.TempDir(), "settings.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, _ := db.DB()
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	box, err := crypto.NewBox("0123456789abcdef0123456789abcdef")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := NewManager(db, box, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 只改代理 URL，trustedProxies 提交相同的空值 → 不应要求重启
+	proxy := "http://proxy.test:7890"
+	empty := ""
+	view, err := m.Save(UpdateRequest{ProxyURL: &proxy, TrustedProxies: &empty})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.RestartRequired {
+		t.Fatalf("proxy-only save reported restartRequired=true")
+	}
+	// 真的改了 trustedProxies → 应要求重启
+	tp := "127.0.0.1"
+	view, err = m.Save(UpdateRequest{TrustedProxies: &tp})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !view.RestartRequired {
+		t.Fatalf("trusted-proxy change did not report restartRequired=true")
+	}
+	// 再次提交相同值，不再要求重启
+	view, err = m.Save(UpdateRequest{TrustedProxies: &tp})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.RestartRequired {
+		t.Fatalf("unchanged trusted-proxy still reported restartRequired=true")
+	}
+}
+
 var errApplyFailed = applyError("apply failed")
 
 type applyError string

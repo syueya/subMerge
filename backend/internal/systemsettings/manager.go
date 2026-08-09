@@ -2,8 +2,6 @@ package systemsettings
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -100,7 +98,8 @@ type SettingsView struct {
 	LogRetentionDays   int    `json:"logRetentionDays"`
 	ProxyEnabled       bool   `json:"proxyEnabled"`
 	ProxyConfigured    bool   `json:"proxyConfigured"`
-	ProxyMaskedURL     string `json:"proxyMaskedUrl,omitempty"`
+	ProxyURL           string `json:"proxyUrl"`
+		ProxyMaskedURL     string `json:"proxyMaskedUrl,omitempty"`
 	PublicBaseURL      string `json:"publicBaseUrl"`
 	TrustedProxies     string `json:"trustedProxies"`
 	CookieSecure       bool   `json:"cookieSecure"`
@@ -114,7 +113,6 @@ type Manager struct {
 	current         Settings
 	overrides       map[string]bool
 	production      bool
-	restartRequired bool
 }
 
 func Defaults() Settings {
@@ -182,53 +180,20 @@ func (m *Manager) load(settings Settings) (Settings, error) {
 			return settings, err
 		}
 		m.overrides[row.Key] = true
-	}
-	// Compatibility with the former single-row proxy table.
-	if !m.overrides[KeyProxyURL] {
-		var old database.OutboundProxySetting
-		if err := m.db.First(&old, 1).Error; err == nil && old.HasOverride {
-			plain, err := m.box.Decrypt(old.URLCiphertext)
-			if err != nil {
-				return settings, err
-			}
-			tx := m.db.Begin()
-			if tx.Error != nil {
-				return settings, tx.Error
-			}
-			urlRow := database.SystemSetting{Key: KeyProxyURL, Value: old.URLCiphertext, Encrypted: true}
-			enabledRow := database.SystemSetting{Key: KeyProxyEnabled, Value: strconv.FormatBool(old.Enabled), Encrypted: false}
-			if err := tx.Where("key = ?", KeyProxyURL).Assign(urlRow).FirstOrCreate(&urlRow).Error; err != nil {
-				tx.Rollback()
-				return settings, err
-			}
-			if err := tx.Where("key = ?", KeyProxyEnabled).Assign(enabledRow).FirstOrCreate(&enabledRow).Error; err != nil {
-				tx.Rollback()
-				return settings, err
-			}
-			if err := tx.Delete(&database.OutboundProxySetting{}, 1).Error; err != nil {
-				tx.Rollback()
-				return settings, err
-			}
-			if err := tx.Commit().Error; err != nil {
-				return settings, err
-			}
-			settings.ProxyURL, settings.ProxyEnabled = plain, old.Enabled
-			m.overrides[KeyProxyURL], m.overrides[KeyProxyEnabled] = true, true
-		}
-	}
-	return settings, nil
 }
+		return settings, nil
+	}
 
 func (m *Manager) View() View {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.viewLocked()
+	return m.viewLocked(false)
 }
 
-func (m *Manager) viewLocked() View {
+func (m *Manager) viewLocked(restartRequired bool) View {
 	s := m.current
-	sv := SettingsView{SourceFetchUA: s.SourceFetchUA, SourceFetchTimeout: int(s.SourceFetchTimeout / time.Second), SourceMaxBytes: s.SourceMaxBytes, RefreshInterval: int(s.RefreshInterval / time.Hour), GeoIPURL: s.GeoIPURL, GeoSiteURL: s.GeoSiteURL, GeoDBURL: s.GeoDBURL, GeoASNURL: s.GeoASNURL, IPGeoURL: s.IPGeoURL, IPGeoTimeout: int(s.IPGeoTimeout / time.Second), LogOutput: s.LogOutput, DebugLogging: s.DebugLogging, LogRetentionDays: s.LogRetentionDays, ProxyEnabled: s.ProxyEnabled, ProxyConfigured: s.ProxyURL != "", ProxyMaskedURL: outbound.MaskURL(s.ProxyURL), PublicBaseURL: s.PublicBaseURL, TrustedProxies: s.TrustedProxies, CookieSecure: s.CookieSecure}
-	return View{Settings: sv, Source: m.sources(), Override: copyBoolMap(m.overrides), RestartRequired: m.restartRequired}
+	sv := SettingsView{SourceFetchUA: s.SourceFetchUA, SourceFetchTimeout: int(s.SourceFetchTimeout / time.Second), SourceMaxBytes: s.SourceMaxBytes, RefreshInterval: int(s.RefreshInterval / time.Hour), GeoIPURL: s.GeoIPURL, GeoSiteURL: s.GeoSiteURL, GeoDBURL: s.GeoDBURL, GeoASNURL: s.GeoASNURL, IPGeoURL: s.IPGeoURL, IPGeoTimeout: int(s.IPGeoTimeout / time.Second), LogOutput: s.LogOutput, DebugLogging: s.DebugLogging, LogRetentionDays: s.LogRetentionDays, ProxyEnabled: s.ProxyEnabled, ProxyConfigured: s.ProxyURL != "", ProxyURL: s.ProxyURL, ProxyMaskedURL: outbound.MaskURL(s.ProxyURL), PublicBaseURL: s.PublicBaseURL, TrustedProxies: s.TrustedProxies, CookieSecure: s.CookieSecure}
+	return View{Settings: sv, Source: m.sources(), Override: copyBoolMap(m.overrides), RestartRequired: restartRequired}
 }
 
 func (m *Manager) sources() map[string]string {
@@ -278,11 +243,10 @@ func (m *Manager) Save(req UpdateRequest) (View, error) {
 		_ = m.apply(m.current)
 		return View{}, err
 	}
+	oldTrustedProxies := m.current.TrustedProxies
 	m.current = candidate
-	if containsKey(changedKeys(req), KeyTrustedProxies) {
-		m.restartRequired = true
-	}
-	return m.viewLocked(), nil
+	trustedChanged := req.TrustedProxies != nil && *req.TrustedProxies != oldTrustedProxies
+	return m.viewLocked(trustedChanged), nil
 }
 
 func (m *Manager) Reset() (View, error) { return m.ResetKeys(allKeys) }
@@ -320,10 +284,7 @@ func (m *Manager) ResetKeys(keys []string) (View, error) {
 	for _, key := range keys {
 		delete(m.overrides, key)
 	}
-	if containsKey(keys, KeyTrustedProxies) {
-		m.restartRequired = true
-	}
-	return m.viewLocked(), nil
+	return m.viewLocked(containsKey(keys, KeyTrustedProxies)), nil
 }
 
 func (m *Manager) loadExcept(settings *Settings, excluded []string) error {
@@ -379,42 +340,6 @@ func (m *Manager) persist(settings Settings, req UpdateRequest) error {
 		m.overrides[key] = true
 	}
 	return nil
-}
-
-func (m *Manager) proxyView() outbound.View {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return proxyView(m.viewLocked().Settings, m.overrides)
-}
-
-func (m *Manager) SaveProxy(req outbound.UpdateRequest) (outbound.View, error) {
-	reqURL := req.URL
-	enabled := req.Enabled
-	update := UpdateRequest{ProxyURL: &reqURL, ProxyEnabled: enabled}
-	m.mu.RLock()
-	current := m.current
-	m.mu.RUnlock()
-	if strings.TrimSpace(req.URL) == "" && current.ProxyURL != "" {
-		update.ProxyURL = nil
-	}
-	view, err := m.Save(update)
-	if err != nil {
-		return outbound.View{}, err
-	}
-	return proxyView(view.Settings, view.Override), nil
-}
-func (m *Manager) ResetProxy() (outbound.View, error) {
-	view, err := m.ResetKeys([]string{KeyProxyURL, KeyProxyEnabled})
-	if err != nil {
-		return outbound.View{}, err
-	}
-	return proxyView(view.Settings, view.Override), nil
-}
-func (m *Manager) SaveProxyCompat(req outbound.UpdateRequest) (outbound.View, error) {
-	return m.SaveProxy(req)
-}
-func proxyView(s SettingsView, overrides map[string]bool) outbound.View {
-	return outbound.View{Enabled: s.ProxyEnabled, Configured: s.ProxyConfigured, Source: map[bool]string{true: "web", false: "default"}[overrides[KeyProxyURL]], MaskedURL: s.ProxyMaskedURL, HasOverride: overrides[KeyProxyURL]}
 }
 
 var allKeys = []string{KeySourceFetchUA, KeySourceFetchTimeout, KeySourceMaxBytes, KeySourceRefreshHours, KeyGeoIPURL, KeyGeoSiteURL, KeyGeoDBURL, KeyGeoASNURL, KeyIPGeoURL, KeyIPGeoTimeout, KeyLogOutput, KeyDebugLogging, KeyLogRetentionDays, KeyProxyEnabled, KeyProxyURL, KeyPublicBaseURL, KeyTrustedProxies, KeyCookieSecure}

@@ -19,7 +19,6 @@ import (
 	"github.com/submerge/submerge/backend/internal/logs"
 	"github.com/submerge/submerge/backend/internal/middleware"
 	"github.com/submerge/submerge/backend/internal/netcheck"
-	"github.com/submerge/submerge/backend/internal/outbound"
 	"github.com/submerge/submerge/backend/internal/publish"
 	"github.com/submerge/submerge/backend/internal/rule"
 	"github.com/submerge/submerge/backend/internal/source"
@@ -38,7 +37,6 @@ type Deps struct {
 	APIKey         *apikey.Handler
 	Geo            *geo.Handler
 	NetCheck       *netcheck.Handler
-	Outbound       *outbound.Handler
 	SystemSettings *systemsettings.Handler
 	Logs           *logs.Handler
 	AuthMW         gin.HandlerFunc
@@ -146,11 +144,6 @@ func NewRouter(d Deps) *gin.Engine {
 			secured.POST("/geo/search", scopeRead, d.Geo.Search)
 			secured.POST("/geo/update", scopeWrite, d.Geo.Update)
 
-			if d.Outbound != nil {
-				secured.GET("/outbound-proxy", sessionOnly, d.Outbound.Get)
-				secured.PUT("/outbound-proxy", sessionOnly, d.Outbound.Save)
-				secured.POST("/outbound-proxy/reset", sessionOnly, d.Outbound.Reset)
-			}
 			if d.SystemSettings != nil {
 				secured.GET("/system-settings", sessionOnly, d.SystemSettings.Get)
 				secured.PUT("/system-settings", sessionOnly, d.SystemSettings.Save)
