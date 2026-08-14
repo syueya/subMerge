@@ -105,22 +105,37 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - id: tags
+      - id: release-tags
+        name: Derive container tags from release version
+        shell: bash
+        env:
+          VERSION: ${{ needs.release-assets.outputs.version }}
+        run: |
+          base_version="${VERSION%%-*}"
+          major_minor="$(printf '%s' "$base_version" | cut -d. -f1-2)"
+          echo "major-minor=${major_minor}" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - id: metadata
         uses: docker/metadata-action@v5
         with:
           images: ${{ needs.release-assets.outputs.image }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ !contains(needs.release-assets.outputs.version, '-') }}
+            type=raw,value=${{ needs.release-assets.outputs.version }}
+            type=raw,value=${{ steps.release-tags.outputs.major-minor }}
+            type=raw,value=latest,enable=${{ steps.release-tags.outputs.stable == 'true' }}
 
       - uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.tags.outputs.tags }}
-          labels: ${{ steps.tags.outputs.labels }}
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
           build-args: |
             VERSION=${{ needs.release-assets.outputs.version }}
             VCS_REF=${{ github.sha }}
