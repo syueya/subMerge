@@ -2,7 +2,7 @@
 .zcode/*
 .vscode/*
 test/bin/
-dist/
+/dist/
 deploy/data/
 deploy/bin/
 backend/internal/webui/dist/*
