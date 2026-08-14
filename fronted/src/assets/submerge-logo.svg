@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="SubMerge">
+  <defs>
+    <linearGradient id="sm-grad" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <!-- left stream -->
+  <path d="M10 18c8 0 12 6 18 14s10 14 18 14" stroke="url(#sm-grad)" stroke-width="5" stroke-linecap="round"/>
+  <!-- right stream -->
+  <path d="M10 46c8 0 12-6 18-14s10-14 18-14" stroke="url(#sm-grad)" stroke-width="5" stroke-linecap="round" opacity="0.75"/>
+  <!-- merge node -->
+  <circle cx="46" cy="32" r="7" fill="url(#sm-grad)"/>
+  <circle cx="46" cy="32" r="3" fill="#0f172a"/>
+</svg>

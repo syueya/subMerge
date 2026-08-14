@@ -1,39 +1,27 @@
-# 不把源码/依赖打进构建上下文；镜像只 COPY 预编译产物
+.git/
+.github/
 .env
 .env.*
 !.env.example
-.git/
 .zcode/
-**/.DS_Store
+.vscode/
+docs/
+test/bin/
 
-# 源码与开发依赖（运行镜像不需要）
-backend/
-frontend/src/
-frontend/public/
-frontend/node_modules/
-frontend/.angular/
-frontend/*.json
-frontend/*.md
-frontend/.editorconfig
-frontend/.prettierrc
-frontend/.postcssrc.json
-frontend/.vscode/
+# Frontend development artifacts are not needed in the production image.
+fronted/node_modules/
+fronted/dist/
+fronted/playwright-report/
+fronted/test-results/
 
-# 运行时与杂项
+# Runtime state and large Geo databases are mounted into the final image.
+backend/data/
+backend/log/
+backend/defaults/geo/
+backend/internal/webui/dist/*
+!backend/internal/webui/dist/README.txt
 data/
 log/
 *.db
 *.db-*
 *.log
-backend/data/
-backend/log/
-*.md
-docker-compose.yml
-docker-compose*.yml
-
-# 生产镜像不需要 source map（调试用，体积大）
-frontend/dist/**/*.map
-
-# 允许进上下文（供 COPY）：
-#   bin/submerge-linux
-#   frontend/dist/submerge/browser/

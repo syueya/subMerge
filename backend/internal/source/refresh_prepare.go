@@ -56,6 +56,29 @@ func prepareProxies(
 	proxies []ParsedProxy,
 	filter *CompiledFilter,
 ) (refreshStats, error) {
+	return prepareProxiesWithOptions(sourceID, sourceName, mode, defaultRegion, proxies, filter, true)
+}
+
+// prepareManualProxies 保留用户手工输入的节点名称，不应用订阅信息节点过滤。
+func prepareManualProxies(
+	sourceID uint,
+	sourceName, mode, defaultRegion string,
+	proxies []ParsedProxy,
+) (refreshStats, error) {
+	filter, err := CompileFilter(FilterOptions{})
+	if err != nil {
+		return refreshStats{}, err
+	}
+	return prepareProxiesWithOptions(sourceID, sourceName, mode, defaultRegion, proxies, filter, false)
+}
+
+func prepareProxiesWithOptions(
+	sourceID uint,
+	sourceName, mode, defaultRegion string,
+	proxies []ParsedProxy,
+	filter *CompiledFilter,
+	applyInfoNodeFilter bool,
+) (refreshStats, error) {
 	stats := refreshStats{
 		kept:            make([]preparedProxy, 0, len(proxies)),
 		filterDropped:   map[string]int{},
@@ -70,7 +93,7 @@ func prepareProxies(
 
 	for _, p := range proxies {
 		// 始终丢弃明显信息节点（即使该源过滤规则是旧的）
-		if IsInfoNodeName(p.Name) {
+		if applyInfoNodeFilter && IsInfoNodeName(p.Name) {
 			stats.dropFiltered(sourceID, p, "info_node", "信息节点")
 			continue
 		}

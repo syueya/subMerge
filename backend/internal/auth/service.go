@@ -85,7 +85,7 @@ func (s *Service) NeedsSetup() (bool, error) {
 }
 
 // Bootstrap 首次创建管理员并直接登录（仅空库）
-func (s *Service) Bootstrap(username, password, displayName string) (token string, user common.AdminUser, err error) {
+func (s *Service) Bootstrap(username, password, displayName, avatar string) (token string, user common.AdminUser, err error) {
 	username = strings.TrimSpace(username)
 	if err := validateUsername(username); err != nil {
 		return "", user, err
@@ -99,6 +99,15 @@ func (s *Service) Bootstrap(username, password, displayName string) (token strin
 	}
 	if len([]rune(displayName)) > 32 {
 		return "", user, fmt.Errorf("display name too long")
+	}
+	avatar = strings.TrimSpace(avatar)
+	if avatar != "" {
+		if len(avatar) > maxAvatarBytes {
+			return "", user, fmt.Errorf("avatar too large")
+		}
+		if !isAllowedAvatarDataURL(avatar) {
+			return "", user, fmt.Errorf("avatar must be a PNG/JPEG/WebP/GIF data URL")
+		}
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -121,6 +130,7 @@ func (s *Service) Bootstrap(username, password, displayName string) (token strin
 			Username:     username,
 			PasswordHash: string(hash),
 			DisplayName:  displayName,
+			Avatar:       avatar,
 		}).Error
 	})
 	if err != nil {

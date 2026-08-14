@@ -2,12 +2,18 @@ package main
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/submerge/submerge/backend/internal/apikey"
 	"github.com/submerge/submerge/backend/internal/applog"
+	"github.com/submerge/submerge/backend/internal/appupdate"
 	"github.com/submerge/submerge/backend/internal/auth"
 	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/crypto"
@@ -50,6 +56,10 @@ func main() {
 	if err != nil {
 		applog.Fatalf("database: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		applog.Fatalf("database handle: %v", err)
+	}
 
 	// argon2id 强派生需要持久化盐（首次运行生成，0600 权限，存于数据目录）
 	salt, err := crypto.LoadOrCreateSalt(filepath.Join(cfg.DataDir, "crypto.salt"))
@@ -89,7 +99,9 @@ func main() {
 	var sysProxyURL string
 	netCheckSvc := netcheck.NewService(db, func() string { return sysProxyURL })
 	refreshScheduler := systemsettings.NewRefreshScheduler(cfg.RefreshInterval, func() { sourceSvc.RefreshAll() })
-	defer refreshScheduler.Close()
+	var closeSchedulerOnce sync.Once
+	closeScheduler := func() { closeSchedulerOnce.Do(refreshScheduler.Close) }
+	defer closeScheduler()
 	applySettings := func(settings systemsettings.Settings) error {
 		if err := sourceSvc.SetRuntimeOptions(settings.SourceFetchTimeout, settings.SourceMaxBytes, settings.SourceFetchUA); err != nil {
 			return err
@@ -194,6 +206,11 @@ func main() {
 		}
 	}()
 
+	shutdownRequests := make(chan appupdate.ShutdownRequest, 1)
+	updateService := appupdate.NewService(cfg.Version, "", cfg.DBPath, func(request appupdate.ShutdownRequest) {
+		shutdownRequests <- request
+	})
+
 	r := server.NewRouter(server.Deps{
 		Cfg:            cfg,
 		Auth:           authHandler,
@@ -203,18 +220,96 @@ func main() {
 		Sub:            subscription.NewHandler(subSvc),
 		APIKey:         apikey.NewHandler(apiKeySvc),
 		Geo:            geo.NewHandler(geoSvc),
-NetCheck:       netcheck.NewHandler(netCheckSvc),
-			SystemSettings: systemsettings.NewHandler(settingsManager),
+		NetCheck:       netcheck.NewHandler(netCheckSvc),
+		SystemSettings: systemsettings.NewHandler(settingsManager),
 		Logs:           logs.NewHandler(logs.NewService(cfg.LogDir)),
+		Update:         appupdate.NewHandler(updateService),
 		AuthMW:         middleware.AuthRequired(db, apiKeySvc),
 		LoginRL:        middleware.RateLimit(cfg.RateLimitLogin),
 		SubRL:          middleware.RateLimit(cfg.RateLimitSub),
 	})
 
+	httpServer := &http.Server{
+		Addr:              cfg.HTTPAddr,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	runContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+	serverErrors := make(chan error, 1)
+	go func() { serverErrors <- httpServer.ListenAndServe() }()
+
+	// 正式签名构建后台检查；开发构建因没有内嵌公钥会直接跳过。
+	if updateService.Status().Enabled {
+		go backgroundUpdateChecks(runContext, updateService)
+	}
+
 	applog.Info("submerge %s listening on %s (db=%s log=%s dir=%s retain=%dd)",
 		cfg.Version, cfg.HTTPAddr, filepath.Clean(cfg.DBPath),
 		cfg.LogOutput, filepath.Clean(cfg.LogDir), cfg.LogRetentionDays)
-	if err := r.Run(cfg.HTTPAddr); err != nil {
-		applog.Fatalf("server: %v", err)
+
+	var updateRequest *appupdate.ShutdownRequest
+	select {
+	case err := <-serverErrors:
+		if !errors.Is(err, http.ErrServerClosed) {
+			applog.Fatalf("server: %v", err)
+		}
+		return
+	case <-runContext.Done():
+		applog.Info("shutdown signal received")
+	case request := <-shutdownRequests:
+		updateRequest = &request
+		applog.Info("update %s requested; stopping HTTP before replacing files", request.Action)
+	}
+
+	shutdownContext, cancelShutdown := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancelShutdown()
+	if err := httpServer.Shutdown(shutdownContext); err != nil {
+		applog.Warn("HTTP shutdown: %v", err)
+	}
+	closeScheduler()
+	if err := sqlDB.Close(); err != nil {
+		applog.Warn("database close: %v", err)
+	}
+	if updateRequest != nil {
+		installContext, cancelInstall := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancelInstall()
+		if err := updateRequest.Execute(installContext); err != nil {
+			applog.Fatalf("update %s failed after shutdown: %v", updateRequest.Action, err)
+		}
+		applog.Info("update %s completed; exiting for supervisor restart", updateRequest.Action)
+	}
+}
+
+func backgroundUpdateChecks(ctx context.Context, service *appupdate.Service) {
+	check := func() {
+		checkContext, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		status, err := service.Check(checkContext)
+		if err != nil {
+			applog.Warn("background update check: %v", err)
+			return
+		}
+		if status.Available {
+			applog.Info("update %s is available (current %s)", status.LatestVersion, status.CurrentVersion)
+		}
+	}
+	initial := time.NewTimer(15 * time.Second)
+	defer initial.Stop()
+	select {
+	case <-ctx.Done():
+		return
+	case <-initial.C:
+		check()
+	}
+	ticker := time.NewTicker(30 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			check()
+		}
 	}
 }

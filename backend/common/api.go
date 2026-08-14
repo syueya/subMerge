@@ -37,6 +37,7 @@ type BootstrapRequest struct {
 	Username    string `json:"username" binding:"required"`
 	Password    string `json:"password" binding:"required,min=10"`
 	DisplayName string `json:"displayName"`
+	Avatar      string `json:"avatar"`
 }
 
 // ChangePasswordRequest 修改密码
@@ -77,6 +78,32 @@ type UpdateSourceRequest struct {
 	ExcludeNameRegex *string     `json:"excludeNameRegex"`
 	ExcludeServers   *string     `json:"excludeServers"`
 	IncludeNameRegex *string     `json:"includeNameRegex"`
+}
+
+// ManualSourceRequest 创建或整体更新一批手工节点分享链接。
+type ManualSourceRequest struct {
+	Name       string      `json:"name" binding:"required"`
+	Region     Region      `json:"region"`
+	Enabled    *bool       `json:"enabled"`
+	RegionMode *RegionMode `json:"regionMode"`
+	Content    string      `json:"content" binding:"required"`
+}
+
+// ManualSourceImportResponse 手工节点导入统计。
+type ManualSourceImportResponse struct {
+	Source                SubscriptionSource `json:"source"`
+	InputTotal            int                `json:"inputTotal"`
+	Parsed                int                `json:"parsed"`
+	Previous              int                `json:"previous"`
+	Kept                  int                `json:"kept"`
+	Added                 int                `json:"added"`
+	Removed               int                `json:"removed"`
+	Modified              int                `json:"modified"`
+	ParseDropped          map[string]int     `json:"parseDropped,omitempty"`
+	RegionCounts          map[string]int     `json:"regionCounts,omitempty"`
+	RegionConflictTotal   int                `json:"regionConflictTotal,omitempty"`
+	RegionConflicts       []RegionConflict   `json:"regionConflicts,omitempty"`
+	RegionConflictOmitted int                `json:"regionConflictOmitted,omitempty"`
 }
 
 // SourceListResponse 订阅源列表

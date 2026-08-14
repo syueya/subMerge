@@ -8,7 +8,7 @@
 - 分流在 Clash Meta / Clash Verge 客户端执行
 - 管理端提供 Geo 数据查询与更新页面（`/geo`）
 
-版本见 `frontend/version.ts`（唯一来源；Docker/CI 构建时同步到 `backend/version/VERSION` 供后端 embed）。
+版本唯一来源是根目录 [`VERSION`](VERSION)。React、正式 Go 二进制、GitHub Release 和容器镜像均从这里读取。`main` 上提交的版本变更会自动创建对应的 `v<版本>` Tag 并发布；构建时版本通过链接参数写入二进制，部署和运行时不需要额外复制该文件。
 
 ## 本地开发
 
@@ -17,8 +17,8 @@ cp .env.example .env   # 新环境可留空 ENCRYPTION_KEY；已有部署请保�
 
 cd backend && go run .
 
-# http://localhost:4200 → API :8080
-cd frontend && npm start
+# React 重构版：http://localhost:4202 → API :8080
+cd fronted && npm install && npm start
 ```
 
 首次打开网页创建管理员。探活：`GET /api/health`。
@@ -48,10 +48,14 @@ Docker 部署请挂载 volume 到 `/app/defaults/geo`（见 compose 的 `./geo`�
 
 
 ```bash
-cd frontend && npm ci && npm run build
-cd backend && go build -o ../bin/submerge .
+cd fronted && npm ci && npm run build
+cd backend && go build -ldflags "-X github.com/submerge/submerge/backend/version.Value=$(tr -d '[:space:]' < ../VERSION)" -o ../bin/submerge .
 ../bin/submerge   # Windows: ..\bin\submerge.exe
 ```
+
+React 产物会直接写入 `backend/internal/webui/dist/` 并由 Go `embed.FS` 打进二进制。部署时只需要 `submerge` 可执行文件，不需要额外复制网页文件。Linux amd64/arm64 二进制、签名更新清单和多架构容器镜像均由 GitHub Actions 自动发布。
+
+使用 Docker 时，可直接从对应 GitHub Release 下载 `docker-compose.yml`，然后在该目录运行 `docker compose up -d`；该文件会拉取与该 Release 匹配的镜像版本。
 
 
 ## 主流程
@@ -95,7 +99,7 @@ Clash 规则行只含 `TYPE,payload,target`（`MATCH,target`），不含业务�
 | `APP_ENV` | `production` |
 | `TZ` | 与运维时区一致，默认 `Asia/Shanghai` |
 
-本地可直接改 `.env`；Docker 改 `docker-public/docker-submerge/docker-compose.yaml` 的 `environment`。公开访问地址、可信反向代理和 Cookie Secure，以及订阅源、Geo、日志和出站代理请在「设置 → 系统设置」修改；可信反向代理变更后需要重启服务。
+本地可直接改 `.env`；Docker 改仓库内 [`deploy/docker-compose.yml`](deploy/docker-compose.yml) 的 `environment`。公开访问地址、可信反向代理和 Cookie Secure，以及订阅源、Geo、日志和出站代理请在「设置 → 系统设置」修改；可信反向代理变更后需要重启服务。
 
 ### 2. Docker Compose 示例改法
 
@@ -106,9 +110,10 @@ environment:
   # 已有部署请继续注入原 ENCRYPTION_KEY，不要改成空值
   - TZ=Asia/Shanghai
 volumes:
-  - ./data:/app/data   # SQLite 与密钥材料，务必备份
-  - ./log:/app/log
-  - ./geo:/app/defaults/geo  # 首次 /geo「更新数据」后保留；镜像不自带
+  - ./data:/app/data       # SQLite 与密钥材料，务必备份
+  - ./data/log:/app/log
+  - ./data/geo:/app/defaults/geo  # 首次 /geo「更新数据」后保留；镜像不自带
+  - ./bin:/app/runtime     # 在线更新后的二进制；必须持久化
 ```
 
 管理端口不要直接裸暴露公网；更稳妥是反代只对内网开放面板，公网仅放行 `/subscribe/*`（按你的反代策略裁剪）。
@@ -118,7 +123,7 @@ volumes:
 ```text
 1. GET /api/health → ok
 2. 首次打开 → bootstrap 管理员（或已有账号登录）
-3. （Docker）等约 1–3 分钟后管理端 /geo 四个资源 Available（空 volume 会自动 bootstrap；失败可手动「更新数据」）
+3. （Docker）等待约 1–3 分钟，直到管理端 /geo 的四个资源显示“可用”（空 volume 会自动初始化；失败时可手动点击「更新数据」）
 4. 添加订阅源 → 拉取成功 → 节点有地区前缀
 5. 策略组 / 分流规则可编辑
 6. 发布版本成功
@@ -138,25 +143,25 @@ volumes:
 
 - 单机 SQLite，适合自托管；非多租户 SaaS
 - 单管理员；协作可用共享账号或 API Key，无「普通成员」角色
-- Docker/CI 构建文件在同级 `docker-public/docker-submerge/`
+- 在线更新目前发布 Linux amd64/arm64 资产；其他平台的开发构建不会安装不匹配资产
 
 ## 技术栈
 
-Angular + Material + Tailwind · Go + Gin + SQLite · Docker Compose
+React + shadcn/ui + Tailwind · Go + Gin + SQLite · Docker Compose
 
 ## 目录
 
 ```text
 submerge/
 ├── backend/          Go 服务、defaults/、data/、log/
-├── frontend/         Angular 面板
-├── bin/              编译产物（gitignore）
+├── fronted/          React + shadcn/ui 面板
+├── docker/           容器入口脚本
+├── scripts/          可复现发布构建脚本
+├── Dockerfile
+├── deploy/           Docker Compose 配置
+│   └── docker-compose.yml
+├── test/             本地测试启动脚本与可再生测试产物
+│   └── test-run.bat
 ├── .env.example
-└── （Docker 部署文件见同级 docker-public/docker-submerge/）
+└── .github/workflows CI 与发布工作流
 ```
-
-Docker 部署文件：
-
-- `docker-public/docker-submerge/Dockerfile`
-- `docker-public/docker-submerge/docker-compose.yaml`
-- `docker-public/.github/workflows/submerge-build.yml`

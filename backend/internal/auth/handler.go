@@ -51,7 +51,7 @@ func (h *Handler) Bootstrap(c *gin.Context) {
 	if !apiresp.BindJSON(c, &req) {
 		return
 	}
-	token, user, err := h.svc.Bootstrap(req.Username, req.Password, req.DisplayName)
+	token, user, err := h.svc.Bootstrap(req.Username, req.Password, req.DisplayName, req.Avatar)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrSetupNotNeeded):
@@ -60,6 +60,8 @@ func (h *Handler) Bootstrap(c *gin.Context) {
 			apiresp.Fail(c, http.StatusBadRequest, "weak_password", "password must be at least 10 characters and not a common weak password")
 		case errors.Is(err, ErrInvalidUsername):
 			apiresp.Fail(c, http.StatusBadRequest, "bad_username", "username: 1-32 letters, digits, _ - .")
+		case strings.Contains(err.Error(), "avatar") || strings.Contains(err.Error(), "display name"):
+			apiresp.FailDetails(c, http.StatusBadRequest, "bad_request", "invalid profile", err.Error())
 		default:
 			apiresp.Fail(c, http.StatusInternalServerError, "internal", "setup failed")
 		}

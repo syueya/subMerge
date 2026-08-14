@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
-  <circle cx="120" cy="120" r="88" stroke="#E8EEF7" stroke-width="16"/>
-  <path d="M120 32a88 88 0 0 1 88 88" stroke="#5D87FF" stroke-width="16" stroke-linecap="round">
-    <animateTransform attributeName="transform" type="rotate" from="0 120 120" to="360 120 120" dur="1s" repeatCount="indefinite"/>
-  </path>
-  <circle cx="120" cy="120" r="36" fill="#5D87FF" opacity="0.12"/>
-  <circle cx="120" cy="120" r="10" fill="#5D87FF"/>
-</svg>

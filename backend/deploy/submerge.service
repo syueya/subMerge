@@ -4,15 +4,15 @@ After=network.target
 
 [Service]
 Type=simple
-# 工作目录为安装根，路径走程序默认（勿再设 DATA_DIR/DB_PATH/STATIC_DIR）：
-#   ./data  ./log  ./frontend/dist/submerge/browser
+# 工作目录为安装根，路径走程序默认（勿再设 DATA_DIR/DB_PATH）：
+#   ./data  ./log；前端已内嵌在单个可执行文件中
 # 二进制可放 bin/submerge，或直接 /opt/submerge/submerge（改 ExecStart 即可）
 WorkingDirectory=/opt/submerge
 ExecStart=/opt/submerge/bin/submerge
 EnvironmentFile=/opt/submerge/.env
-	# .env 仅保留部署、安全和进程参数；应用配置请在「设置 → 系统设置」中修改
-	# 应用配置请登录「设置 → 系统设置」修改并保存到 SQLite
-Restart=on-failure
+# .env 仅保留部署、安全和进程参数；应用配置请登录网页修改并保存到 SQLite。
+# 在线更新安装完成后进程正常退出，由 systemd 拉起新二进制。
+Restart=always
 RestartSec=3
 
 [Install]

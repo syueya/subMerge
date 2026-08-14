@@ -55,7 +55,6 @@ type Config struct {
 	PublicBaseURL      string
 	DataDir            string
 	DBPath             string
-	StaticDir          string
 	EncryptionKey      string
 	SessionTTL         time.Duration
 	SourceFetchTimeout time.Duration
@@ -124,7 +123,6 @@ func Load() (*Config, error) {
 		PublicBaseURL:      DefaultPublicBaseURL,
 		DataDir:            dataDir,
 		DBPath:             filepath.Join(dataDir, "submerge.db"),
-		StaticDir:          defaultStaticDir(),
 		EncryptionKey:      encryptionKey,
 		SessionTTL:         sessionTTL,
 		SourceFetchTimeout: DefaultSourceFetchTimeout,
@@ -192,17 +190,6 @@ func defaultLogDir() string {
 		return filepath.Clean("./backend/log")
 	}
 	return filepath.Clean("./log")
-}
-
-// defaultStaticDir 相对工作目录；Docker 将静态资源放在 ./frontend/dist/submerge/browser
-func defaultStaticDir() string {
-	if isDir("frontend/dist/submerge/browser") {
-		return filepath.Clean("./frontend/dist/submerge/browser")
-	}
-	if isDir("../frontend/dist/submerge/browser") {
-		return filepath.Clean("../frontend/dist/submerge/browser")
-	}
-	return filepath.Clean("./frontend/dist/submerge/browser")
 }
 
 func defaultGeoDir() string {

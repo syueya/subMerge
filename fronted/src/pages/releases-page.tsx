@@ -1,0 +1,50 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Beaker, Eye, History, Rocket, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { toast } from "sonner"
+
+import { ConfirmAction } from "@/components/confirm-action"
+import { DataPanel } from "@/components/data-panel"
+import { PageHeader } from "@/components/page-header"
+import { ResourceState } from "@/components/resource-state"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { api } from "@/lib/api"
+import { queryKeys } from "@/lib/query-keys"
+import type { DraftStatus, ListResponse, Release, ReleaseDetail } from "@/lib/types"
+import { formatDateTime } from "@/lib/types"
+
+type MatchResult = { matched: boolean; fallbackMatch: boolean; note: string; rule?: { type: string; payload?: string; target: string } }
+const statusText: Record<string, string> = { published: "当前发布", rolled_back: "已回滚", draft: "草稿" }
+const changeText: Record<string, string> = { added: "新增", removed: "删除", modified: "修改", proxy: "节点", group: "策略组", rule: "规则" }
+
+export function ReleasesPage() {
+  const client = useQueryClient()
+  const [publishOpen, setPublishOpen] = useState(false)
+  const [note, setNote] = useState("")
+  const [detail, setDetail] = useState<ReleaseDetail | null>(null)
+  const [detailTab, setDetailTab] = useState("rules")
+  const [matchInput, setMatchInput] = useState("")
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
+  const releases = useQuery({ queryKey: queryKeys.releases, queryFn: () => api.get<ListResponse<Release>>("/releases") })
+  const draft = useQuery({ queryKey: queryKeys.draft, queryFn: () => api.get<DraftStatus>("/releases/draft-status", { params: { changes: 1 } }) })
+  const invalidate = async () => { await Promise.all([client.invalidateQueries({ queryKey: queryKeys.releases }), client.invalidateQueries({ queryKey: queryKeys.draft }), client.invalidateQueries({ queryKey: queryKeys.dashboard })]) }
+  const publish = useMutation({ mutationFn: () => api.post<{ release: Release }>("/releases/publish", { note: note.trim() }), onSuccess: async (result) => { toast.success(`已发布 v${result.release.version}`); setPublishOpen(false); setNote(""); await invalidate() }, onError: (e: Error) => toast.error(e.message) })
+  const rollback = useMutation({ mutationFn: (id: number) => api.post<Release>(`/releases/${id}/rollback`), onSuccess: async (result) => { toast.success(`已回滚，新版本 v${result.version}`); await invalidate() }, onError: (e: Error) => toast.error(e.message) })
+  const remove = useMutation({ mutationFn: (id: number) => api.delete(`/releases/${id}`), onSuccess: async () => { toast.success("发布记录已删除"); await invalidate() }, onError: (e: Error) => toast.error(e.message) })
+  const loadDetail = useMutation({ mutationFn: ({ id }: { id: number; tab: "rules" | "test" }) => api.get<ReleaseDetail>(`/releases/${id}`), onSuccess: (value, variables) => { setDetail(value); setDetailTab(variables.tab); setMatchResult(null) }, onError: (e: Error) => toast.error(e.message) })
+  const match = useMutation({ mutationFn: () => api.post<MatchResult>("/rules/match", { input: matchInput, rules: detail?.rules.map((item) => ({ type: item.type, payload: item.payload, target: item.target, enabled: true, raw: item.raw })) ?? [], resolve: detail?.rules.some((item) => item.type === "GEOIP") }), onSuccess: setMatchResult, onError: (e: Error) => toast.error(e.message) })
+  const items = releases.data?.items ?? []
+  return <div className="flex flex-col gap-4 md:gap-6">
+    <PageHeader title="发布" description="草稿只有发布后才会进入订阅链接；回滚会生成一条新的发布记录。" actions={<Button onClick={() => setPublishOpen(true)} disabled={!!draft.data?.buildError}><Rocket />{draft.data?.dirty ? "发布更改" : "重新发布"}</Button>} />
+    {draft.data ? <div className={`flex flex-col gap-3 rounded-lg border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${draft.data.buildError ? "border-destructive/50" : draft.data.dirty ? "border-warning/50" : ""}`}><div><div className="text-sm font-medium">{draft.data.buildError ? "草稿无法生成" : !draft.data.hasPublished ? "尚未发布" : draft.data.dirty ? "有未发布更改" : "草稿与线上一致"}</div><p className="mt-0.5 text-xs leading-5 text-muted-foreground">{draft.data.buildError || (draft.data.changes?.length ? `${draft.data.changes.length} 项实体变更` : draft.data.publishedVersion ? `当前 v${draft.data.publishedVersion}` : "完成配置后发布首个版本")}</p></div>{draft.data.dirty ? <Badge variant="secondary">待发布</Badge> : <Badge variant="outline">已同步</Badge>}</div> : null}
+    <ResourceState pending={releases.isPending} error={releases.error} empty={!items.length} onRetry={() => void releases.refetch()}><DataPanel title="发布历史" description={`共 ${items.length} 个版本${draft.data?.publishedVersion ? `，当前 v${draft.data.publishedVersion}` : ""}`}><Table><TableHeader><TableRow><TableHead>版本</TableHead><TableHead>规模</TableHead><TableHead>备注</TableHead><TableHead>摘要</TableHead><TableHead>发布者</TableHead><TableHead>时间</TableHead><TableHead className="w-36" /></TableRow></TableHeader><TableBody>{items.map((item) => <TableRow key={item.id}><TableCell><div className="flex items-center gap-2"><span className="font-semibold">v{item.version}</span><Badge variant={item.status === "published" ? "default" : "outline"}>{statusText[item.status] ?? item.status}</Badge></div></TableCell><TableCell>{item.proxyCount} 节点 / {item.ruleCount} 规则</TableCell><TableCell className="max-w-56 truncate" title={item.note}>{item.note || "-"}</TableCell><TableCell><code className="text-xs text-muted-foreground">{item.configHash.slice(0, 10)}</code></TableCell><TableCell>{item.createdBy}</TableCell><TableCell className="text-muted-foreground">{formatDateTime(item.publishedAt ?? item.createdAt)}</TableCell><TableCell><div className="flex justify-end"><Button variant="ghost" size="icon" aria-label="查看详情" onClick={() => loadDetail.mutate({ id: item.id, tab: "rules" })}><Eye /></Button><Button variant="ghost" size="icon" aria-label="测试历史规则" onClick={() => loadDetail.mutate({ id: item.id, tab: "test" })}><Beaker /></Button>{item.status !== "published" ? <><ConfirmAction title={`回滚到 v${item.version}`} description="将基于该版本配置生成一个新的发布版本，当前历史不会被覆盖。" confirmLabel="回滚" onConfirm={() => rollback.mutate(item.id)} trigger={<Button variant="ghost" size="icon" aria-label="回滚"><History /></Button>} /><ConfirmAction title={`删除 v${item.version}`} description="发布记录删除后无法恢复。" confirmLabel="删除" destructive onConfirm={() => remove.mutate(item.id)} trigger={<Button variant="ghost" size="icon" aria-label="删除"><Trash2 /></Button>} /></> : null}</div></TableCell></TableRow>)}</TableBody></Table></DataPanel></ResourceState>
+    <Dialog open={publishOpen} onOpenChange={setPublishOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{draft.data?.dirty ? "发布当前更改" : "重新发布当前配置"}</DialogTitle><DialogDescription>发布会立即影响所有引用当前配置的订阅链接。</DialogDescription></DialogHeader>{draft.data?.changes?.length ? <div className="max-h-52 space-y-2 overflow-y-auto rounded-md border p-3">{draft.data.changes.map((change, index) => <div key={`${change.kind}-${change.name}-${index}`} className="text-sm"><Badge variant="outline" className="mr-2">{changeText[change.action]}{changeText[change.kind]}</Badge>{change.name}{change.detail ? <div className="ml-20 text-xs text-muted-foreground">{change.detail}</div> : null}</div>)}</div> : null}<Textarea maxLength={255} value={note} onChange={(e) => setNote(e.target.value)} placeholder="发布说明（可选）" /><DialogFooter><Button variant="outline" onClick={() => setPublishOpen(false)}>取消</Button><Button disabled={publish.isPending || !!draft.data?.buildError} onClick={() => publish.mutate()}>{publish.isPending ? "发布中..." : "确认发布"}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={!!detail} onOpenChange={(open) => !open && setDetail(null)}><DialogContent className="sm:max-w-5xl"><DialogHeader><DialogTitle>v{detail?.version} 详情</DialogTitle><DialogDescription>{detail?.proxyCount} 个节点，{detail?.ruleCount} 条规则，{detail?.groups.length} 个策略组</DialogDescription></DialogHeader><Tabs value={detailTab} onValueChange={setDetailTab}><TabsList><TabsTrigger value="rules">规则</TabsTrigger><TabsTrigger value="yaml">完整 YAML</TabsTrigger><TabsTrigger value="test">匹配测试</TabsTrigger></TabsList><TabsContent value="rules"><div className="max-h-[55vh] overflow-auto rounded-md border"><Table><TableHeader><TableRow><TableHead>类型</TableHead><TableHead>内容</TableHead><TableHead>目标</TableHead></TableRow></TableHeader><TableBody>{detail?.rules.map((rule, index) => <TableRow key={`${rule.raw}-${index}`}><TableCell>{rule.type}</TableCell><TableCell className="font-mono text-xs">{rule.payload || "-"}</TableCell><TableCell>{rule.target}</TableCell></TableRow>)}</TableBody></Table></div></TabsContent><TabsContent value="yaml"><pre className="max-h-[55vh] overflow-auto rounded-md bg-muted p-4 text-xs leading-5">{detail?.configYaml}</pre></TabsContent><TabsContent value="test"><form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); match.mutate() }}><Input value={matchInput} onChange={(e) => setMatchInput(e.target.value)} placeholder="输入域名、URL 或 IP" required /><Button type="submit" disabled={match.isPending}>测试</Button></form>{matchResult ? <div className="mt-4 rounded-md border p-4"><Badge>{matchResult.matched ? "命中" : matchResult.fallbackMatch ? "兜底" : "未命中"}</Badge><span className="ml-2 font-medium">{matchResult.rule?.target ?? "-"}</span><p className="mt-2 text-sm text-muted-foreground">{matchResult.note}</p></div> : null}</TabsContent></Tabs></DialogContent></Dialog>
+  </div>
+}

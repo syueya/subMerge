@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: fronted/package-lock.json
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Verify React application
+        working-directory: fronted
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
+
+      - name: Verify Go application and Linux targets
+        working-directory: backend
+        run: |
+          go test ./...
+          mkdir -p ../dist
+          version="$(tr -d '[:space:]' < ../VERSION)"
+          test -n "$version"
+          ldflags="-X github.com/submerge/submerge/backend/version.Value=${version}"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -ldflags="$ldflags" -o ../dist/submerge-linux-amd64 .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -buildvcs=false -ldflags="$ldflags" -o ../dist/submerge-linux-arm64 .
+
+      - name: Verify unsigned builds disable installation
+        working-directory: backend
+        run: |
+          if go run ./cmd/update-key-check; then
+            echo "unsigned build unexpectedly contained an update key" >&2
+            exit 1
+          fi
+
+      - name: Verify Docker entrypoint selection
+        run: sh docker/entrypoint_test.sh
+
+      - name: Verify release workflow contract
+        shell: pwsh
+        run: ./scripts/validate-release-workflows.ps1
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Export root version for container metadata
+        shell: bash
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          test -n "$version"
+          echo "APP_VERSION=${version}" >> "$GITHUB_ENV"
+
+      - name: Verify production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: submerge:ci
+          build-args: VERSION=${{ env.APP_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test production container
+        shell: bash
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          docker compose -f deploy/docker-compose.yml config --quiet
+          container="$(docker run --detach --publish 127.0.0.1::8080 submerge:ci)"
+          trap 'docker logs "$container"; docker rm --force "$container"' EXIT
+          port="$(docker port "$container" 8080/tcp | sed 's/.*://')"
+          for attempt in $(seq 1 30); do
+            response="$(curl --fail --silent "http://127.0.0.1:${port}/api/health" || true)"
+            if printf '%s' "$response" | grep --fixed-strings --quiet "\"version\":\"${version}\""; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "container did not become healthy" >&2
+          exit 1

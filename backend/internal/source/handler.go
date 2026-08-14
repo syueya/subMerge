@@ -86,6 +86,70 @@ func (h *Handler) Create(c *gin.Context) {
 	apiresp.OK(c, item)
 }
 
+func (h *Handler) CreateManual(c *gin.Context) {
+	var req common.ManualSourceRequest
+	if !apiresp.BindJSON(c, &req) {
+		return
+	}
+	if !h.normalizeManualRequest(c, &req) {
+		return
+	}
+	res, err := h.svc.CreateManual(req)
+	if err != nil {
+		apiresp.FailDetails(c, http.StatusBadRequest, "manual_import_failed", "manual node import failed", err.Error())
+		return
+	}
+	apiresp.OK(c, res)
+}
+
+func (h *Handler) UpdateManual(c *gin.Context) {
+	id, ok := apiresp.RequireID(c)
+	if !ok {
+		return
+	}
+	var req common.ManualSourceRequest
+	if !apiresp.BindJSON(c, &req) {
+		return
+	}
+	if !h.normalizeManualRequest(c, &req) {
+		return
+	}
+	res, err := h.svc.UpdateManual(id, req)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			apiresp.Fail(c, http.StatusNotFound, "not_found", "source not found")
+			return
+		}
+		apiresp.FailDetails(c, http.StatusBadRequest, "manual_import_failed", "manual node import failed", err.Error())
+		return
+	}
+	apiresp.OK(c, res)
+}
+
+func (h *Handler) normalizeManualRequest(c *gin.Context, req *common.ManualSourceRequest) bool {
+	mode := string(common.RegionModeAuto)
+	if req.RegionMode != nil {
+		m := common.RegionMode(normalizeRegionMode(string(*req.RegionMode)))
+		req.RegionMode = &m
+		mode = string(m)
+	}
+	rawRegion := strings.TrimSpace(string(req.Region))
+	if rawRegion == "" {
+		if mode == string(common.RegionModeFixed) {
+			apiresp.Fail(c, http.StatusBadRequest, "bad_request", "fixed mode requires a region code")
+			return false
+		}
+		rawRegion = fallbackRegionCode()
+	}
+	region, ok := normalizeRegion(rawRegion)
+	if !ok {
+		apiresp.Fail(c, http.StatusBadRequest, "bad_request", "region must be 1-16 letters/digits (e.g. US, JP, HK, UNK)")
+		return false
+	}
+	req.Region = common.Region(region)
+	return true
+}
+
 func (h *Handler) Update(c *gin.Context) {
 	id, ok := apiresp.RequireID(c)
 	if !ok {

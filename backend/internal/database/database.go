@@ -64,10 +64,14 @@ func Open(dbPath string) (*gorm.DB, error) {
 		&ShareToken{},
 		&APIKey{},
 		&Release{},
-&NetCheckSetting{},
-			&SystemSetting{},
+		&NetCheckSetting{},
+		&SystemSetting{},
 	); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
+	}
+	// SQLite 的既有行在新增列后可能仍为空；统一回填为远程订阅源，保持历史行为。
+	if err := db.Model(&Source{}).Where("kind IS NULL OR kind = ?", "").Update("kind", "remote").Error; err != nil {
+		return nil, fmt.Errorf("migrate source kind: %w", err)
 	}
 	return db, nil
 }

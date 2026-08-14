@@ -94,18 +94,17 @@ func splitURILines(s string) []string {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		// 一行内空格分隔的多条链接
-		if strings.Contains(line, "://") && strings.ContainsAny(line, " \t") {
-			for _, part := range strings.Fields(line) {
-				part = strings.TrimSpace(part)
-				if hasShareURIPrefix(part) {
-					out = append(out, part)
-				}
-			}
+		// 既支持一行一条，也支持空白分隔的批量粘贴。保留无效项给调用方
+		// 统计，而不是静默忽略它们。
+		parts := strings.Fields(line)
+		if len(parts) == 0 {
 			continue
 		}
-		if hasShareURIPrefix(line) {
-			out = append(out, line)
+		for _, part := range parts {
+			if strings.HasPrefix(part, "#") {
+				break
+			}
+			out = append(out, part)
 		}
 	}
 	return out

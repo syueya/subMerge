@@ -8,13 +8,24 @@ const (
 	RegionModeFixed RegionMode = "fixed"
 )
 
+// SourceKind 区分 HTTP 订阅源和手工导入的分享链接批次。
+type SourceKind string
+
+const (
+	SourceKindRemote SourceKind = "remote"
+	SourceKindManual SourceKind = "manual"
+)
+
 // SubscriptionSource 订阅源（脱敏视图）
 type SubscriptionSource struct {
-	ID               uint          `json:"id"`
-	Name             string        `json:"name"`
-	Region           Region        `json:"region"`
-	URLMasked        string        `json:"urlMasked"`
-	URL              string        `json:"url"`
+	ID        uint       `json:"id"`
+	Name      string     `json:"name"`
+	Region    Region     `json:"region"`
+	Kind      SourceKind `json:"kind"`
+	URLMasked string     `json:"urlMasked"`
+	URL       string     `json:"url"`
+	// ManualContent 仅对已鉴权的管理 API 返回，供手工节点源编辑回填。
+	ManualContent    string        `json:"manualContent,omitempty"`
 	Enabled          bool          `json:"enabled"`
 	RegionMode       RegionMode    `json:"regionMode"`
 	ExcludeNameRegex string        `json:"excludeNameRegex"`

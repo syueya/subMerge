@@ -122,7 +122,7 @@ func TestLoadDefaults(t *testing.T) {
 		t.Fatalf("expected LogRetentionDays=7, got %d", cfg.LogRetentionDays)
 	}
 	if cfg.Version == "" {
-		t.Fatal("expected Version from embedded VERSION (synced from frontend/version.ts)")
+		t.Fatal("expected Version linked into the binary from the root VERSION file")
 	}
 	// 环境变量不应覆盖版本 / 路径
 	t.Setenv("APP_VERSION", "9.9.9")
@@ -143,9 +143,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg2.LogDir != cfg.LogDir {
 		t.Fatalf("LOG_DIR env must not override fixed log dir: %q vs %q", cfg.LogDir, cfg2.LogDir)
 	}
-	if cfg2.DataDir != cfg.DataDir || cfg2.DBPath != cfg.DBPath || cfg2.StaticDir != cfg.StaticDir {
-		t.Fatalf("path envs must not override defaults: data=%q db=%q static=%q",
-			cfg2.DataDir, cfg2.DBPath, cfg2.StaticDir)
+	if cfg2.DataDir != cfg.DataDir || cfg2.DBPath != cfg.DBPath {
+		t.Fatalf("path envs must not override defaults: data=%q db=%q",
+			cfg2.DataDir, cfg2.DBPath)
 	}
 }
 

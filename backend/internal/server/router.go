@@ -2,9 +2,10 @@ package server
 
 import (
 	"fmt"
+	"io/fs"
+	"mime"
 	"net/http"
-	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/submerge/submerge/backend/internal/apikey"
 	"github.com/submerge/submerge/backend/internal/apiresp"
 	"github.com/submerge/submerge/backend/internal/applog"
+	"github.com/submerge/submerge/backend/internal/appupdate"
 	"github.com/submerge/submerge/backend/internal/auth"
 	"github.com/submerge/submerge/backend/internal/config"
 	"github.com/submerge/submerge/backend/internal/geo"
@@ -24,6 +26,7 @@ import (
 	"github.com/submerge/submerge/backend/internal/source"
 	"github.com/submerge/submerge/backend/internal/subscription"
 	"github.com/submerge/submerge/backend/internal/systemsettings"
+	"github.com/submerge/submerge/backend/internal/webui"
 )
 
 // Deps 路由依赖
@@ -39,9 +42,11 @@ type Deps struct {
 	NetCheck       *netcheck.Handler
 	SystemSettings *systemsettings.Handler
 	Logs           *logs.Handler
+	Update         *appupdate.Handler
 	AuthMW         gin.HandlerFunc
 	LoginRL        gin.HandlerFunc
 	SubRL          gin.HandlerFunc
+	WebUI          fs.FS
 }
 
 func safeLogFormatter() gin.LogFormatter {
@@ -126,6 +131,8 @@ func NewRouter(d Deps) *gin.Engine {
 
 			secured.GET("/sources", scopeRead, d.Source.List)
 			secured.POST("/sources", scopeWrite, d.Source.Create)
+			secured.POST("/sources/manual", scopeWrite, d.Source.CreateManual)
+			secured.PUT("/sources/manual/:id", scopeWrite, d.Source.UpdateManual)
 			secured.PUT("/sources/:id", scopeWrite, d.Source.Update)
 			secured.POST("/sources/batch-delete", scopeWrite, d.Source.BatchDelete)
 			secured.DELETE("/sources/:id", scopeWrite, d.Source.Delete)
@@ -192,37 +199,66 @@ func NewRouter(d Deps) *gin.Engine {
 				secured.GET("/logs", scopeRead, d.Logs.List)
 				secured.GET("/logs/details", scopeRead, d.Logs.Details)
 			}
+
+			// 应用更新会替换正在运行的二进制，只允许当前网页登录会话操作。
+			if d.Update != nil {
+				secured.GET("/update/status", sessionOnly, d.Update.Status)
+				secured.POST("/update/check", sessionOnly, d.Update.Check)
+				secured.POST("/update/download", sessionOnly, d.Update.Download)
+				secured.POST("/update/install", sessionOnly, d.Update.Install)
+				secured.POST("/update/rollback", sessionOnly, d.Update.Rollback)
+			}
 		}
 	}
 
-	// 托管前端静态资源（Angular browser 输出）
-	staticDir := d.Cfg.StaticDir
-	if info, err := os.Stat(staticDir); err == nil && info.IsDir() {
-		r.StaticFS("/assets", http.Dir(filepath.Join(staticDir, "assets")))
-		r.NoRoute(func(c *gin.Context) {
-			path := c.Request.URL.Path
-			if strings.HasPrefix(path, "/api") || strings.HasPrefix(path, "/subscribe") {
-				apiresp.Fail(c, http.StatusNotFound, "not_found", "not found")
-				return
-			}
-			// 优先返回真实静态文件（main-*.js / styles-*.css / favicon 等）
-			candidate := filepath.Join(staticDir, filepath.Clean("/"+path))
-			if !strings.HasPrefix(candidate, filepath.Clean(staticDir)) {
-				apiresp.Fail(c, http.StatusNotFound, "not_found", "not found")
-				return
-			}
-			if fi, err := os.Stat(candidate); err == nil && !fi.IsDir() {
-				c.File(candidate)
-				return
-			}
-			index := filepath.Join(staticDir, "index.html")
-			if _, err := os.Stat(index); err == nil {
-				c.File(index)
-				return
-			}
-			c.String(http.StatusNotFound, "frontend not built")
-		})
+	webFS := d.WebUI
+	webReady := webFS != nil
+	if webFS == nil {
+		webFS, webReady = webui.FileSystem()
 	}
+	mountWebUI(r, webFS, webReady)
 
 	return r
+}
+
+func mountWebUI(r *gin.Engine, webFS fs.FS, ready bool) {
+	r.NoRoute(func(c *gin.Context) {
+		requestPath := c.Request.URL.Path
+		if strings.HasPrefix(requestPath, "/api") || strings.HasPrefix(requestPath, "/subscribe") {
+			apiresp.Fail(c, http.StatusNotFound, "not_found", "not found")
+			return
+		}
+		if !ready || webFS == nil {
+			c.String(http.StatusNotFound, "frontend not built")
+			return
+		}
+
+		name := strings.TrimPrefix(path.Clean("/"+requestPath), "/")
+		if name == "." || name == "" {
+			name = "index.html"
+		}
+		if !fs.ValidPath(name) {
+			apiresp.Fail(c, http.StatusNotFound, "not_found", "not found")
+			return
+		}
+		if info, err := fs.Stat(webFS, name); err != nil || info.IsDir() {
+			name = "index.html"
+		}
+		data, err := fs.ReadFile(webFS, name)
+		if err != nil {
+			c.String(http.StatusNotFound, "frontend not built")
+			return
+		}
+
+		if name == "index.html" {
+			c.Header("Cache-Control", "no-store")
+		} else if strings.HasPrefix(name, "assets/") {
+			c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		contentType := mime.TypeByExtension(path.Ext(name))
+		if contentType == "" {
+			contentType = http.DetectContentType(data)
+		}
+		c.Data(http.StatusOK, contentType, data)
+	})
 }

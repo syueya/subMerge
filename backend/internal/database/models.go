@@ -28,21 +28,23 @@ type Session struct {
 	CreatedAt time.Time
 }
 
-// Source 订阅源
+// Source 订阅源或手工节点源。
 type Source struct {
-	ID               uint   `gorm:"primaryKey"`
-	Name             string `gorm:"size:128;not null"`
-	Region           string `gorm:"size:16;not null;index"` // 默认/回退地区；fixed 模式强制使用
-	URLEncrypted     string `gorm:"type:text;not null"`
-	Enabled          bool   `gorm:"not null;default:true"`
-	RegionMode       string `gorm:"size:16;not null;default:auto"` // auto | fixed
-	ExcludeNameRegex string `gorm:"type:text"`
-	ExcludeServers   string `gorm:"type:text"`
-	IncludeNameRegex string `gorm:"type:text"`
-	RefreshStatus    string `gorm:"size:16;not null;default:idle"`
-	LastRefreshAt    *time.Time
-	LastError        string `gorm:"type:text"`
-	SnapshotYAML     string `gorm:"type:text"` // 上次成功快照
+	ID                     uint   `gorm:"primaryKey"`
+	Name                   string `gorm:"size:128;not null"`
+	Region                 string `gorm:"size:16;not null;index"` // 默认/回退地区；fixed 模式强制使用
+	URLEncrypted           string `gorm:"type:text;not null"`
+	Kind                   string `gorm:"size:16;not null;default:remote;index"` // remote | manual
+	ManualContentEncrypted string `gorm:"type:text"`                             // 手工节点分享链接原文（AES-GCM 密文）
+	Enabled                bool   `gorm:"not null;default:true"`
+	RegionMode             string `gorm:"size:16;not null;default:auto"` // auto | fixed
+	ExcludeNameRegex       string `gorm:"type:text"`
+	ExcludeServers         string `gorm:"type:text"`
+	IncludeNameRegex       string `gorm:"type:text"`
+	RefreshStatus          string `gorm:"size:16;not null;default:idle"`
+	LastRefreshAt          *time.Time
+	LastError              string `gorm:"type:text"`
+	SnapshotYAML           string `gorm:"type:text"` // 上次成功快照
 	// 上游 Subscription-Userinfo（字节；0 表示未知/未提供）
 	TrafficUpload   int64 `gorm:"not null;default:0"`
 	TrafficDownload int64 `gorm:"not null;default:0"`

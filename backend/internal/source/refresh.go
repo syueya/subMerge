@@ -16,6 +16,13 @@ import (
 // Refresh 拉取上游订阅并更新节点；失败时保留旧快照。
 // 网络拉取不持全局锁，仅用 per-source 防重入，避免阻塞其它源/节点操作。
 func (s *Service) Refresh(id uint) (common.RefreshSourceResponse, error) {
+	var initial database.Source
+	if err := s.db.First(&initial, id).Error; err != nil {
+		return common.RefreshSourceResponse{}, err
+	}
+	if normalizeSourceKind(initial.Kind) == common.SourceKindManual {
+		return common.RefreshSourceResponse{}, fmt.Errorf("manual node sources cannot be refreshed")
+	}
 	s.refreshMu.Lock()
 	if _, ok := s.refreshing[id]; ok {
 		s.refreshMu.Unlock()
@@ -163,39 +170,10 @@ func (s *Service) persistRefresh(
 		if err := tx.First(&current, row.ID).Error; err != nil {
 			return err
 		}
-		var oldProxies []database.Proxy
-		if err := tx.Where("source_id = ?", row.ID).Find(&oldProxies).Error; err != nil {
-			return fmt.Errorf("load existing proxies: %w", err)
-		}
-		changeStats = diffProxySnapshots(oldProxies, kept)
-
-		oldEnabled := map[string]bool{}
-		for _, op := range oldProxies {
-			if op.Fingerprint != "" {
-				oldEnabled[op.Fingerprint] = op.Enabled
-			}
-		}
-		if err := tx.Unscoped().Where("source_id = ?", row.ID).Delete(&database.Proxy{}).Error; err != nil {
+		var err error
+		changeStats, err = replaceSourceProxies(tx, row.ID, kept)
+		if err != nil {
 			return err
-		}
-		for _, p := range kept {
-			enabled := true
-			if prev, ok := oldEnabled[p.fingerprint]; ok {
-				enabled = prev
-			}
-			if err := tx.Create(&database.Proxy{
-				SourceID:    row.ID,
-				Name:        p.name,
-				Region:      p.region,
-				Type:        p.typ,
-				Server:      p.server,
-				Port:        p.port,
-				Enabled:     enabled,
-				Fingerprint: p.fingerprint,
-				RawJSON:     p.rawJSON,
-			}).Error; err != nil {
-				return err
-			}
 		}
 		now := time.Now()
 		updates := map[string]interface{}{
@@ -219,6 +197,45 @@ func (s *Service) persistRefresh(
 	})
 	if err != nil {
 		return proxyChangeStats{}, err
+	}
+	return changeStats, nil
+}
+
+// replaceSourceProxies 原子替换一个源的节点，并按指纹保留既有 enabled 状态。
+func replaceSourceProxies(tx *gorm.DB, sourceID uint, kept []preparedProxy) (proxyChangeStats, error) {
+	var oldProxies []database.Proxy
+	if err := tx.Where("source_id = ?", sourceID).Find(&oldProxies).Error; err != nil {
+		return proxyChangeStats{}, fmt.Errorf("load existing proxies: %w", err)
+	}
+	changeStats := diffProxySnapshots(oldProxies, kept)
+	oldEnabled := map[string]bool{}
+	for _, op := range oldProxies {
+		if op.Fingerprint != "" {
+			oldEnabled[op.Fingerprint] = op.Enabled
+		}
+	}
+	if err := tx.Unscoped().Where("source_id = ?", sourceID).Delete(&database.Proxy{}).Error; err != nil {
+		return proxyChangeStats{}, err
+	}
+	for _, p := range kept {
+		enabled := true
+		if prev, ok := oldEnabled[p.fingerprint]; ok {
+			enabled = prev
+		}
+		row := database.Proxy{
+			SourceID: sourceID, Name: p.name, Region: p.region, Type: p.typ, Server: p.server,
+			Port: p.port, Enabled: enabled, Fingerprint: p.fingerprint, RawJSON: p.rawJSON,
+		}
+		if err := tx.Create(&row).Error; err != nil {
+			return proxyChangeStats{}, err
+		}
+		// GORM 会在 Create 时将带 default:true 的 bool 零值省略，导致禁用
+		// 节点被 SQLite 默认值重置为 true。显式 UPDATE 保证重导入保留状态。
+		if !enabled {
+			if err := tx.Model(&database.Proxy{}).Where("id = ?", row.ID).Update("enabled", false).Error; err != nil {
+				return proxyChangeStats{}, err
+			}
+		}
 	}
 	return changeStats, nil
 }
@@ -282,7 +299,7 @@ func (s *Service) ResetStuckRefresh() error {
 // RefreshAll 刷新所有启用源（串行；单源失败不影响后续）
 func (s *Service) RefreshAll() common.RefreshAllResponse {
 	var rows []database.Source
-	if err := s.db.Where("enabled = ?", true).Order("id asc").Find(&rows).Error; err != nil {
+	if err := s.db.Where("enabled = ? AND kind = ?", true, string(common.SourceKindRemote)).Order("id asc").Find(&rows).Error; err != nil {
 		applog.Error("[refresh-all] 获取启用订阅源失败: %v", err)
 		return common.RefreshAllResponse{}
 	}

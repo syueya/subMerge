@@ -174,6 +174,7 @@ func (s *Service) Create(req common.CreateSourceRequest) (common.SubscriptionSou
 		Name:             strings.TrimSpace(req.Name),
 		Region:           string(req.Region),
 		URLEncrypted:     enc,
+		Kind:             string(common.SourceKindRemote),
 		Enabled:          enabled,
 		RegionMode:       regionMode,
 		ExcludeNameRegex: excludeName,
@@ -191,6 +192,9 @@ func (s *Service) Update(id uint, req common.UpdateSourceRequest) (common.Subscr
 	var row database.Source
 	if err := s.db.First(&row, id).Error; err != nil {
 		return common.SubscriptionSource{}, err
+	}
+	if normalizeSourceKind(row.Kind) == common.SourceKindManual {
+		return common.SubscriptionSource{}, fmt.Errorf("manual node sources must be updated through the manual import endpoint")
 	}
 	oldRegion := row.Region
 	oldMode := row.RegionMode
@@ -446,11 +450,20 @@ func (s *Service) EnabledProxiesBySourceIDs(sourceIDs []uint) ([]map[string]inte
 }
 
 func (s *Service) toView(r database.Source) (common.SubscriptionSource, error) {
+	kind := normalizeSourceKind(r.Kind)
 	urlPlain := ""
-	if r.URLEncrypted != "" {
+	manualContent := ""
+	if kind == common.SourceKindRemote && r.URLEncrypted != "" {
 		if plain, err := s.box.Decrypt(r.URLEncrypted); err == nil {
 			urlPlain = plain
 		}
+	}
+	if kind == common.SourceKindManual && r.ManualContentEncrypted != "" {
+		plain, err := s.box.Decrypt(r.ManualContentEncrypted)
+		if err != nil {
+			return common.SubscriptionSource{}, fmt.Errorf("decrypt manual content: %w", err)
+		}
+		manualContent = plain
 	}
 	var count int64
 	_ = s.db.Model(&database.Proxy{}).Where("source_id = ?", r.ID).Count(&count).Error
@@ -459,8 +472,10 @@ func (s *Service) toView(r database.Source) (common.SubscriptionSource, error) {
 		ID:               r.ID,
 		Name:             r.Name,
 		Region:           common.Region(r.Region),
+		Kind:             kind,
 		URLMasked:        crypto.MaskURL(urlPlain),
-			URL:              urlPlain,
+		URL:              urlPlain,
+		ManualContent:    manualContent,
 		Enabled:          r.Enabled,
 		RegionMode:       mode,
 		ExcludeNameRegex: r.ExcludeNameRegex,
@@ -484,4 +499,13 @@ func (s *Service) toView(r database.Source) (common.SubscriptionSource, error) {
 		v.LastError = &e
 	}
 	return v, nil
+}
+
+// normalizeSourceKind keeps rows created before the kind column existed on the
+// remote subscription path even if a migration has not run yet.
+func normalizeSourceKind(raw string) common.SourceKind {
+	if strings.EqualFold(strings.TrimSpace(raw), string(common.SourceKindManual)) {
+		return common.SourceKindManual
+	}
+	return common.SourceKindRemote
 }
