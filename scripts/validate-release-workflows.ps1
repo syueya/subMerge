@@ -33,7 +33,7 @@ Assert-Contains $releaseWorkflow 'update-manifest.json.sig' "detached signature 
 Assert-Contains $releaseWorkflow 'needs: [release-assets, container]' "release publication gate"
 Assert-Contains $releaseWorkflow 'dist/release/submerge-linux-amd64' "amd64 release asset"
 Assert-Contains $releaseWorkflow 'dist/release/submerge-linux-arm64' "arm64 release asset"
-Assert-Contains $releaseWorkflow 'dist/release/docker-compose.yml' "pinned Docker Compose release asset"
+Assert-Contains $releaseWorkflow 'dist/release/docker-compose.yml' "Docker Compose release asset"
 Assert-Contains $releaseWorkflow 'Smoke-test published image' "published image smoke test"
 Assert-Contains $releaseWorkflow 'published container did not become healthy' "release health gate"
 
@@ -70,5 +70,6 @@ Assert-Contains (Get-Content (Join-Path $repoRoot "scripts/build-release.ps1") -
 Assert-Contains (Get-Content (Join-Path $repoRoot "scripts/build-release.ps1") -Raw) 'Join-Path $repoRoot "fronted"' "release React frontend path"
 Assert-Contains (Get-Content (Join-Path $repoRoot "scripts/build-release.ps1") -Raw) 'docker-compose.yml' "generated Docker Compose release asset"
 Assert-Contains (Get-Content (Join-Path $repoRoot "scripts/build-release.ps1") -Raw) 'ToLowerInvariant' "lower-case GHCR release image"
+Assert-Contains (Get-Content (Join-Path $repoRoot "scripts/build-release.ps1") -Raw) '):latest"' "latest-tag Docker Compose release image"
 
 Write-Output "release workflow contract passed"

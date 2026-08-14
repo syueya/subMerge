@@ -1,167 +1,192 @@
 # SubMerge
 
-小型 Clash 订阅合并与配置下发面板。
+自托管的 Clash 订阅合并与配置下发面板。
 
-- 合并多源 Clash 订阅（节点按地区码加前缀，如 `US-xxx`）
-- 网页分开展示：策略组管出口成员，分流规则管业务匹配；预览后发布
-- 独立订阅链接，隐藏上游地址；令牌可绑定部分源
-- 分流在 Clash Meta / Clash Verge 客户端执行
-- 管理端提供 Geo 数据查询与更新页面（`/geo`）
+- 合并多个 Clash 订阅，节点按地区码添加前缀（如 `US-xxx`）
+- 在网页中维护策略组、分流规则、订阅源和分享 Token
+- 通过 `/subscribe/{token}` 向客户端提供订阅
+- 提供 Geo 数据查询和更新页面（`/geo`）
 
-版本唯一来源是根目录 [`VERSION`](VERSION)。React、正式 Go 二进制、GitHub Release 和容器镜像均从这里读取。`main` 上提交的版本变更会自动创建对应的 `v<版本>` Tag 并发布；构建时版本通过链接参数写入二进制，部署和运行时不需要额外复制该文件。
+推荐使用 Docker Compose 部署。应用运行后，首次在网页中创建管理员账号，再添加订阅源并发布配置即可。
+
+## Docker Compose 部署（推荐）
+
+已安装 Docker Engine 和 Compose 插件，并确认 `docker compose version` 能正常输出版本后，进入部署目录执行：
+
+```bash
+curl -fsSL https://github.com/syueya/subMerge/releases/latest/download/docker-compose.yml -o docker-compose.yml
+docker compose up -d
+```
+
+`docker-compose.yml` 使用 `latest` 镜像标签，会拉取最新稳定版容器镜像。首次启动会把数据库、密钥和 Geo 数据写入当前目录的 `data/`，不需要额外创建 `.env`。
+
+如需修改端口、时区或自行保管加密密钥，请在**首次启动前**于同一目录创建 `.env`：
+
+```dotenv
+SUBMERGE_PORT=8080
+TZ=Asia/Shanghai
+
+# 可选；至少 32 个字符。已有部署不能随意更换。
+ENCRYPTION_KEY=
+```
+
+需要自行生成密钥时，可执行：
+
+```bash
+printf 'ENCRYPTION_KEY=%s\n' "$(openssl rand -hex 32)" > .env
+```
+
+启动后验活：
+
+```bash
+docker compose ps
+curl http://127.0.0.1:8080/api/health
+```
+
+最后一条应返回包含 `"version"` 的 JSON。若未正常启动，查看日志：
+
+```bash
+docker compose logs --tail=200 submerge
+```
+
+浏览器访问 `http://服务器地址:8080`，首次打开时创建管理员账号。
+
+首次使用空目录时，Geo 数据会在后台自动下载，通常需要 1–3 分钟；可在管理端 `/geo` 查看四个数据文件是否均为「可用」。下载失败不会阻止面板启动，可在 `/geo` 重新执行「更新数据」。
+
+### 持久化数据与备份
+
+Compose 文件使用相对于 `docker-compose.yml` 的目录挂载；不要删除 `data/`：
+
+| 本机目录 | 容器目录 | 用途 |
+|---|---|---|
+| `./data` | `/app/data` | SQLite 数据库、加密盐和自动生成的密钥 |
+| `./data/log` | `/app/log` | 应用日志 |
+| `./data/geo` | `/app/defaults/geo` | Geo 数据 |
+| `./bin` | `/app/runtime` | 在线更新下载的二进制及回滚文件 |
+
+升级、迁移或修改密钥前，至少备份 `data/`：
+
+```bash
+tar -czf submerge-data-$(date +%F).tar.gz data
+```
+
+`ENCRYPTION_KEY`、`data/crypto.key` 和 `data/crypto.salt` 均与已加密的订阅源、Token 和 API Key 有关。更换或丢失它们会导致既有加密数据无法解密。
+
+### 上线后的必要设置
+
+登录后打开「设置 → 系统设置」：
+
+1. 若通过域名或反向代理访问，设置「公开访问地址」为完整地址，例如 `https://sub.example.com`。
+2. 填写反向代理的可信 IP/CIDR；保存后重启容器：`docker compose restart`。
+3. HTTPS 反向代理场景开启 Cookie Secure；仅 HTTP 访问时保持关闭。
+4. 按需调整订阅源请求、Geo 下载、出站代理、日志和刷新周期。
+
+这些网页设置保存在 SQLite 中；`PUBLIC_BASE_URL`、`TRUSTED_PROXIES`、`COOKIE_SECURE`、Geo 和日志等同名环境变量不会生效。
+
+不要把管理端口直接暴露到不受信任的公网。使用反向代理时，应同时配置 HTTPS、访问控制和防火墙规则；分享订阅仅使用 `/subscribe/{token}`。
+
+### 更新
+
+未使用管理端在线更新时，更新镜像只需：
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+管理端在线更新会校验正式 Release 的签名，更新完成后容器自动重启，并将新二进制保存到 `./bin`。此后的 `./bin/submerge` 会优先于镜像内二进制；使用过在线更新的实例请继续在管理端完成后续更新。**不要删除 `data/`。**
+
+## 不使用 Docker：Linux 二进制部署
+
+Release 同时提供 `submerge-linux-amd64` 和 `submerge-linux-arm64`。下载与服务器架构相符的文件并改名为 `submerge`。以下示例使用 systemd；它会在在线更新完成后负责重启进程。
+
+```bash
+sudo install -d -m 755 /opt/submerge
+sudo install -m 755 ./submerge-linux-amd64 /opt/submerge/submerge
+if ! id -u submerge >/dev/null 2>&1; then
+  sudo useradd --system --home /opt/submerge --shell /usr/sbin/nologin submerge
+fi
+sudo chown -R submerge:submerge /opt/submerge
+```
+
+创建 `/etc/systemd/system/submerge.service`：
+
+```ini
+[Unit]
+Description=SubMerge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=submerge
+Group=submerge
+WorkingDirectory=/opt/submerge
+Environment=APP_ENV=production
+Environment=HTTP_ADDR=:8080
+Environment=TZ=Asia/Shanghai
+ExecStart=/opt/submerge/submerge
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启动并验活：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now submerge
+curl http://127.0.0.1:8080/api/health
+sudo journalctl -u submerge -f
+```
+
+二进制部署的数据目录分别为 `/opt/submerge/data`、`/opt/submerge/log` 和 `/opt/submerge/backend/defaults/geo`；首次启动会自动创建并初始化。请确保运行用户对它们有写权限，并将这几个目录纳入备份。
 
 ## 本地开发
 
-```bash
-cp .env.example .env   # 新环境可留空 ENCRYPTION_KEY；已有部署请保留原密钥
+需要 Go（版本以 [`backend/go.mod`](backend/go.mod) 为准）和 Node.js 24。
 
+```bash
+cp .env.example .env
+
+# 终端一：后端 API
 cd backend && go run .
 
-# React 重构版：http://localhost:4202 → API :8080
-cd fronted && npm install && npm start
+# 终端二：React 前端 http://localhost:4202
+cd fronted && npm ci && npm start
 ```
 
-首次打开网页创建管理员。探活：`GET /api/health`。
+Windows 可双击 [`test/test-run.bat`](test/test-run.bat) 启动本地测试环境；它会将测试二进制和 npm 缓存写到 `test/bin/`。
 
-路径由工作目录决定（无 `DATA_DIR` 等环境变量）：
+本地开发路径由工作目录决定：从项目根运行后端时使用 `backend/data`、`backend/log`、`backend/defaults/geo`；在 `backend/` 目录运行时使用 `data`、`log`、`defaults/geo`。
 
-| 工作目录 | 数据 | 日志 |
-|----------|------|------|
-| 项目根 | `backend/data` | `backend/log` |
-| `backend/` 或 Docker `/app` | `./data` | `./log` |
+## 发布与版本
 
-## Geo 数据
+根目录 [`VERSION`](VERSION) 是唯一版本来源。向 `main` 提交该文件的版本变更会触发 GitHub Actions：构建 React、Linux amd64/arm64 二进制、多架构容器镜像，生成签名更新清单，并创建 `v<版本>` Tag 与 GitHub Release。
 
-管理端 `/geo` 页面读取 Geo 目录下的四个文件，并显示文件大小、SHA256、MMDB build 时间或数据哈希版本。域名查询默认只匹配 `geosite.dat` 的分类；勾选 DNS 解析后，还会用解析出的 IP 查询 `geoip.dat`、`geoip.metadb` 和 `GeoLite2-ASN.mmdb`。
+Release 附件包括：
 
-| 运行方式 | Geo 目录 |
-|----------|----------|
-| 本地开发（项目根 / `backend/`） | `backend/defaults/geo/`（仓库可带默认文件） |
-| Docker（`WORKDIR=/app`） | `/app/defaults/geo`（**镜像不含默认数据**） |
+- `docker-compose.yml`：使用 `latest` 容器镜像，可直接部署
+- `submerge-linux-amd64`、`submerge-linux-arm64`：Linux 二进制
+- `update-manifest.json` 与 `update-manifest.json.sig`：在线更新清单及签名
 
-页面的「更新数据」会从系统设置中配置的地址下载并校验后原子覆盖该目录，服务随后重载索引。Geo 下载地址、订阅源 User-Agent、超时、刷新间隔、日志和出站代理统一在管理端「设置 → 系统设置」中修改，并保存到 SQLite；不再读取同名环境变量。运行进程必须对该目录有写权限。
+## 功能边界
 
-升级前如果 `.env` 中配置过这些网页设置项（包括公开访问地址、可信反向代理、Cookie Secure、订阅源、Geo、日志和出站代理），升级后不会继续生效，请登录系统设置页面重新保存。已有数据库中的出站代理配置会保留；没有数据库配置时使用代码默认值。
-Docker 部署请挂载 volume 到 `/app/defaults/geo`（见 compose 的 `./geo`）。首次启动若目录为空（或任一必需文件不可用），进程会**后台自动拉取一次**；失败只记日志，可稍后在 `/geo` 点「更新数据」或重启。不挂 volume 时容器重建会丢已下载文件并再次自动拉取。
-
-`geosite.dat` 支持按分类反查域名条目；GeoIP 文件反查的是其实际保存的 CIDR。`geoip.metadb` 与 ASN 数据库不保存域名，因此不能从分类反查域名。
-
-
-```bash
-cd fronted && npm ci && npm run build
-cd backend && go build -ldflags "-X github.com/submerge/submerge/backend/version.Value=$(tr -d '[:space:]' < ../VERSION)" -o ../bin/submerge .
-../bin/submerge   # Windows: ..\bin\submerge.exe
-```
-
-React 产物会直接写入 `backend/internal/webui/dist/` 并由 Go `embed.FS` 打进二进制。部署时只需要 `submerge` 可执行文件，不需要额外复制网页文件。Linux amd64/arm64 二进制、签名更新清单和多架构容器镜像均由 GitHub Actions 自动发布。
-
-使用 Docker 时，可直接从对应 GitHub Release 下载 `docker-compose.yml`，然后在该目录运行 `docker compose up -d`；该文件会拉取与该 Release 匹配的镜像版本。
-
-
-## 主流程
-
-```text
-登录 → 配置订阅源 → 拉取合并 → 改策略组 → 改分流规则 → 发布
-     → 创建分享 token → 客户端 /subscribe/{token}
-```
-
-- **策略组**（`/groups`）：出口容器。成员、测速方式；被规则引用为「目标出口」
-- **分流规则**（`/rules`）：匹配条件。按业务分类在面板浏览；`category` 仅后台用，不写入 Clash
-
-## 默认规则
-
-空库时从 `backend/defaults/` 写入（已有数据不覆盖；改 YAML 需重新编译）：
-
-- **策略组**：直连 / 拒绝 / 常用国家 / 其他国家
-- **分流**：业务规则见 `defaults/rules.yaml`；系统规则由代码固定生成（广告→拒绝、国内 GEOIP→直连、MATCH→香港）
-
-成员语法：`ALL`、`REGION:US`、`REGION:OTHER`、`SOURCE:源名`、`SOURCE:id:N`、`DIRECT`/`REJECT`、组名或节点名。
-
-Clash 规则行只含 `TYPE,payload,target`（`MATCH,target`），不含业务分类。
-
-## 安全
-
-- 管理后台登录；上游 URL 加密存储；token 只存哈希
-- 会话 Cookie：HttpOnly + SameSite=Lax；Secure 开关在「设置 → 系统设置」中配置，HTTPS 反代通常开启
-- 数据库与密钥不要放静态目录；Docker 用独立 volume；管理端口勿裸暴露公网
-- `ENCRYPTION_KEY` 可显式配置（建议生产环境使用外部 Secret）；留空时首次启动会在 `data/crypto.key` 自动生成 32 字节随机密钥。已有部署不要清空或更换原密钥
-- 可信反代 IP/CIDR 和公开访问地址在「设置 → 系统设置」中配置；可信代理变更后需重启服务。无反代时可信代理留空。
-- Cookie Secure 与可信代理独立：HTTPS 反代通常开启 Secure，纯 HTTP 访问保持关闭。
-- 单管理员模型：首次 bootstrap 建号；无多用户 / 角色体系。自动化用 API Key 作用域，客户端用分享 Token
-
-## 上线检查清单
-
-### 1. 环境变量（必改）
-
-| 变量 | 生产建议 |
-|------|----------|
-| `ENCRYPTION_KEY` | 新环境可省略，首次启动自动生成并保存到 `data/crypto.key`；已有部署继续使用原密钥，生产环境建议使用外部 Secret |
-| `APP_ENV` | `production` |
-| `TZ` | 与运维时区一致，默认 `Asia/Shanghai` |
-
-本地可直接改 `.env`；Docker 改仓库内 [`deploy/docker-compose.yml`](deploy/docker-compose.yml) 的 `environment`。公开访问地址、可信反向代理和 Cookie Secure，以及订阅源、Geo、日志和出站代理请在「设置 → 系统设置」修改；可信反向代理变更后需要重启服务。
-
-### 2. Docker Compose 示例改法
-
-```yaml
-environment:
-  - APP_ENV=production
-  # 新环境可省略 ENCRYPTION_KEY；首次启动会在 /app/data/crypto.key 生成
-  # 已有部署请继续注入原 ENCRYPTION_KEY，不要改成空值
-  - TZ=Asia/Shanghai
-volumes:
-  - ./data:/app/data       # SQLite 与密钥材料，务必备份
-  - ./data/log:/app/log
-  - ./data/geo:/app/defaults/geo  # 首次 /geo「更新数据」后保留；镜像不自带
-  - ./bin:/app/runtime     # 在线更新后的二进制；必须持久化
-```
-
-管理端口不要直接裸暴露公网；更稳妥是反代只对内网开放面板，公网仅放行 `/subscribe/*`（按你的反代策略裁剪）。
-
-### 3. 发布前冒烟
-
-```text
-1. GET /api/health → ok
-2. 首次打开 → bootstrap 管理员（或已有账号登录）
-3. （Docker）等待约 1–3 分钟，直到管理端 /geo 的四个资源显示“可用”（空 volume 会自动初始化；失败时可手动点击「更新数据」）
-4. 添加订阅源 → 拉取成功 → 节点有地区前缀
-5. 策略组 / 分流规则可编辑
-6. 发布版本成功
-7. 创建分享 Token → 客户端 /subscribe/{token} 能拉到 YAML
-8. 账户：改昵称 / 改密码 / 改头像成功
-9. （可选）API Key 只读 scope 能调列表接口
-```
-
-### 4. 运维与备份
-
-- **备份**：定期拷贝 `data/`（含 SQLite、`crypto.salt` 与自动生成的 `crypto.key`）；升级或改 `ENCRYPTION_KEY` 前必须先备份
-- **日志**：`log/` 的保留天数在「设置 → 系统设置」中配置；排障时看审计与应用日志
-- **Geo**：Docker 镜像不含默认 geo；挂载 `/app/defaults/geo`；首次缺失时启动后台自动下载，也可在 `/geo` 手动更新；进程需对该目录有写权限（entrypoint 会 chown）
-- **密钥轮换**：更换 `ENCRYPTION_KEY` 或删除自动生成的 `data/crypto.key` 会导致已加密字段无法解密，需有迁移方案；日常不要随意改
-
-### 5. 已知产品边界
-
-- 单机 SQLite，适合自托管；非多租户 SaaS
-- 单管理员；协作可用共享账号或 API Key，无「普通成员」角色
-- 在线更新目前发布 Linux amd64/arm64 资产；其他平台的开发构建不会安装不匹配资产
-
-## 技术栈
-
-React + shadcn/ui + Tailwind · Go + Gin + SQLite · Docker Compose
+- 单机 SQLite，适合自托管，不是多租户 SaaS
+- 单管理员账号；自动化可使用 API Key，客户端使用分享 Token
+- 分流规则在 Clash Meta / Clash Verge 客户端执行
 
 ## 目录
 
 ```text
 submerge/
-├── backend/          Go 服务、defaults/、data/、log/
-├── fronted/          React + shadcn/ui 面板
+├── backend/          Go 服务与默认规则、Geo 数据
+├── fronted/          React 管理面板
+├── deploy/           Compose 模板
 ├── docker/           容器入口脚本
-├── scripts/          可复现发布构建脚本
-├── Dockerfile
-├── deploy/           Docker Compose 配置
-│   └── docker-compose.yml
+├── scripts/          自动发布和工作流校验脚本
 ├── test/             本地测试启动脚本与可再生测试产物
-│   └── test-run.bat
-├── .env.example
-└── .github/workflows CI 与发布工作流
+├── Dockerfile
+├── VERSION
+└── .github/workflows/ CI 与发布工作流
 ```

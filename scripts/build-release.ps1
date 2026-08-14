@@ -86,7 +86,8 @@ try {
     if (-not $composeTemplate.Contains($defaultImage)) {
         throw "deploy/docker-compose.yml does not contain the expected configurable SubMerge image"
     }
-    $releaseImage = "image: ghcr.io/$($Repository.ToLowerInvariant()):$version"
+    # Release 附带的 Compose 始终跟随稳定版 latest 镜像，而不是锁定本次构建版本。
+    $releaseImage = "image: ghcr.io/$($Repository.ToLowerInvariant()):latest"
     $releaseCompose = $composeTemplate.Replace($defaultImage, $releaseImage)
     Set-Content -LiteralPath (Join-Path $outputPath "docker-compose.yml") -Value $releaseCompose -NoNewline -Encoding utf8
 
