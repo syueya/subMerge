@@ -15,7 +15,7 @@ rules:
   - { category: 常用, type: DOMAIN, payload: giffgaff.com, target: 直连, enabled: true, note: GG卡 }
   - { category: 常用, type: DOMAIN-REGEX, payload: '^[0-9]{6}\.xyz$', target: 直连, enabled: true, note: 6位xyz域名 }
   - { category: 常用, type: DOMAIN, payload: fanart.tv, target: 日本JP, enabled: true, note: Fanart }
-
+  - { category: 常用, type: DOMAIN, payload: cn.bing.com, target: 直连, enabled: true, note: 必应中国 }
 
   # ========== PT站 ==========
   - { category: PT站, type: DOMAIN, payload: pt.0ff.cc, target: 直连, enabled: true, note: 自由农场 }
