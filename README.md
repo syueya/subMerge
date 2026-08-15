@@ -164,11 +164,19 @@ Windows 可双击 [`test/test-run.bat`](test/test-run.bat) 启动本地测试环
 
 根目录 [`VERSION`](VERSION) 是唯一版本来源。向 `main` 提交该文件的版本变更会触发 GitHub Actions：构建 React、Linux amd64/arm64 二进制、多架构容器镜像，生成签名更新清单，并创建 `v<版本>` Tag 与 GitHub Release。
 
+如需同步发布 Docker Hub 镜像，可在 GitHub Actions 手动运行 [Docker Hub 工作流](.github/workflows/dockerhub.yml)。该工作流使用 `docker/Dockerfile` 构建并推送 `DOCKER_USERNAME/submerge:<版本>`；稳定版本还会更新 `latest`。运行前只需要配置 `DOCKER_USERNAME` 和 `DOCKER_PASSWORD` 两个 Actions secret。Docker Hub 镜像不包含在线更新签名公钥，管理端在线更新不会启用；升级请使用 `docker compose pull && docker compose up -d`。默认部署仍使用 GHCR，Docker Hub 镜像可通过 `SUBMERGE_IMAGE` 和 `SUBMERGE_TAG` 覆盖 Compose 中的默认值。
+
 Release 附件包括：
 
 - `docker-compose.yml`：使用 `latest` 容器镜像，可直接部署
 - `submerge-linux-amd64`、`submerge-linux-arm64`：Linux 二进制
 - `update-manifest.json` 与 `update-manifest.json.sig`：在线更新清单及签名
+
+本地构建生产镜像时，保持仓库根目录作为构建上下文：
+
+```bash
+docker build -f docker/Dockerfile .
+```
 
 ## 功能边界
 
@@ -183,10 +191,9 @@ submerge/
 ├── backend/          Go 服务与默认规则、Geo 数据
 ├── fronted/          React 管理面板
 ├── deploy/           Compose 模板
-├── docker/           容器入口脚本
+├── docker/           容器 Dockerfile、入口脚本和测试
 ├── scripts/          自动发布和工作流校验脚本
 ├── test/             本地测试启动脚本与可再生测试产物
-├── Dockerfile
 ├── VERSION
 └── .github/workflows/ CI 与发布工作流
 ```
