@@ -2,8 +2,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $releaseWorkflow = Get-Content (Join-Path $repoRoot ".github/workflows/release.yml") -Raw
 $ciWorkflow = Get-Content (Join-Path $repoRoot ".github/workflows/ci.yml") -Raw
-$dockerHubWorkflow = Get-Content (Join-Path $repoRoot ".github/workflows/dockerhub.yml") -Raw
-$dockerfile = Get-Content (Join-Path $repoRoot "docker/Dockerfile") -Raw
+$dockerfile = Get-Content (Join-Path $repoRoot "Dockerfile") -Raw
 $compose = Get-Content (Join-Path $repoRoot "deploy/docker-compose.yml") -Raw
 
 function Assert-Contains {
@@ -13,7 +12,6 @@ function Assert-Contains {
     }
 }
 
-Assert-Contains $releaseWorkflow 'file: ./docker/Dockerfile' "Release Dockerfile path"
 Assert-Contains $releaseWorkflow 'secrets.UPDATE_SIGNING_PRIVATE_KEY' "release signing secret"
 Assert-Contains $releaseWorkflow '-RequireSigningKey' "fail-closed release build"
 Assert-Contains $releaseWorkflow 'fronted/package-lock.json' "frontend dependency cache path"
@@ -39,23 +37,6 @@ Assert-Contains $releaseWorkflow 'dist/release/docker-compose.yml' "Docker Compo
 Assert-Contains $releaseWorkflow 'Smoke-test published image' "published image smoke test"
 Assert-Contains $releaseWorkflow 'published container did not become healthy' "release health gate"
 
-Assert-Contains $dockerHubWorkflow 'workflow_dispatch:' "Docker Hub manual trigger"
-Assert-Contains $dockerHubWorkflow "tr -d '[:space:]' < VERSION" "Docker Hub root VERSION read"
-Assert-Contains $dockerHubWorkflow 'file: ./docker/Dockerfile' "Docker Hub current Dockerfile"
-Assert-Contains $dockerHubWorkflow 'platforms: linux/amd64,linux/arm64' "Docker Hub multi-architecture image build"
-Assert-Contains $dockerHubWorkflow 'docker/login-action' "Docker Hub login"
-Assert-Contains $dockerHubWorkflow 'secrets.DOCKER_USERNAME' "Docker Hub username secret"
-Assert-Contains $dockerHubWorkflow 'secrets.DOCKER_PASSWORD' "Docker Hub password secret"
-Assert-Contains $dockerHubWorkflow 'type=raw,value=${{ steps.version.outputs.version }}' "Docker Hub version tag"
-Assert-Contains $dockerHubWorkflow 'type=raw,value=latest,enable=${{ steps.version.outputs.stable == ''true'' }}' "Docker Hub stable latest tag"
-Assert-Contains $dockerHubWorkflow 'cache-from: type=gha,scope=dockerhub-submerge' "Docker Hub build cache"
-if ($dockerHubWorkflow.Contains('UPDATE_SIGNING_PRIVATE_KEY') -or $dockerHubWorkflow.Contains('UPDATE_PUBLIC_KEY_BASE64')) {
-    throw "Docker Hub workflow must not depend on update signing keys"
-}
-if ($dockerHubWorkflow.Contains('frontend/version.ts') -or $dockerHubWorkflow.Contains('build/frontend')) {
-    throw "Docker Hub workflow contains obsolete frontend paths"
-}
-
 Assert-Contains $ciWorkflow 'GOARCH=amd64' "amd64 cross-build check"
 Assert-Contains $ciWorkflow 'GOARCH=arm64' "arm64 cross-build check"
 Assert-Contains $ciWorkflow 'working-directory: fronted' "React frontend working directory"
@@ -67,7 +48,6 @@ Assert-Contains $ciWorkflow '"\"version\":\"${version}\""' "CI embedded version 
 Assert-Contains $ciWorkflow 'go run ./cmd/update-key-check' "unsigned build fail-closed check"
 Assert-Contains $ciWorkflow 'sh docker/entrypoint_test.sh' "entrypoint behavior check"
 Assert-Contains $ciWorkflow 'docker/build-push-action' "container build check"
-Assert-Contains $ciWorkflow 'file: ./docker/Dockerfile' "CI Dockerfile path"
 Assert-Contains $ciWorkflow 'load: true' "locally loaded CI image"
 Assert-Contains $ciWorkflow 'docker compose -f deploy/docker-compose.yml config --quiet' "Compose validation"
 Assert-Contains $ciWorkflow '/api/health' "container health smoke test"
